@@ -6,12 +6,15 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
+import { EmptyState } from '@/src/components/EmptyState';
+import { LoadingState } from '@/src/components/LoadingState';
 import { getWeeklyStats, getSevenDayTrend } from '@/src/services/stats';
 import { getTopTriggers } from '@/src/services/storage/sqlite';
 
 export default function InsightsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const [isLoading, setIsLoading] = useState(true);
   const [weeklyStats, setWeeklyStats] = useState({
     pausesTotal: 0,
     openedAnyway: 0,
@@ -24,6 +27,7 @@ export default function InsightsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      setIsLoading(true);
       (async () => {
         try {
           const weekly = await getWeeklyStats();
@@ -49,6 +53,8 @@ export default function InsightsScreen() {
           setTopTriggers(triggers);
         } catch (error) {
           console.error('Failed to load insights:', error);
+        } finally {
+          setIsLoading(false);
         }
       })();
     }, [])
@@ -178,6 +184,30 @@ export default function InsightsScreen() {
     habit: 'Habit',
     unsure: "I'm not sure",
   };
+
+  if (isLoading) {
+    return <LoadingState message="Loading insights..." />;
+  }
+
+  if (weeklyStats.pausesTotal === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Insights</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <EmptyState
+          icon="📊"
+          title="No Data Yet"
+          description="Start using GentleWait to see your insights. Complete your first pause to get started!"
+          actionLabel="Go Home"
+          onAction={() => router.back()}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

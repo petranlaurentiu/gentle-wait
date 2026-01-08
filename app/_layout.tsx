@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { NativeModules, AppState } from 'react-native';
 
 import { ThemeProvider } from '@/src/theme/ThemeProvider';
+import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import { useAppStore } from '@/src/services/storage';
 import { initializeDatabase } from '@/src/services/storage/sqlite';
 
@@ -73,8 +74,9 @@ export default function RootLayout() {
   }, [loadSettings]);
 
   return (
-    <ThemeProvider>
-      <Stack>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <Stack>
         <Stack.Screen
           name="index"
           options={{
@@ -129,8 +131,9 @@ export default function RootLayout() {
             gestureEnabled: false,
           }}
         />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
