@@ -9,6 +9,7 @@ import * as nativeService from '@/src/services/native';
 const SETTINGS_KEY = 'user_settings';
 const DEFAULT_SETTINGS: UserSettings = {
   id: 'default',
+  userName: '',
   pauseDurationSec: 15,
   promptFrequency: 'sometimes',
   selectedApps: [],

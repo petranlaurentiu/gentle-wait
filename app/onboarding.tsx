@@ -23,7 +23,7 @@ import { Button } from '@/src/components/Button';
 import { SelectedApp } from '@/src/domain/models';
 import { useFadeInAnimation } from '@/src/utils/animations';
 
-type OnboardingStep = 'welcome' | 'goals' | 'barriers' | 'emotional' | 'screen-time' | 'select-apps' | 'permissions' | 'duration' | 'done';
+type OnboardingStep = 'welcome' | 'name' | 'goals' | 'barriers' | 'emotional' | 'screen-time' | 'select-apps' | 'permissions' | 'duration' | 'done';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -39,6 +39,7 @@ export default function OnboardingScreen() {
   const [stepKey, setStepKey] = useState(0);
 
   // New onboarding state for expanded questionnaire
+  const [userName, setUserName] = useState('');
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
   const [selectedBarriers, setSelectedBarriers] = useState<Set<string>>(new Set());
   const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(new Set());
@@ -77,6 +78,7 @@ export default function OnboardingScreen() {
   const handleNext = async () => {
     const stepOrder: OnboardingStep[] = [
       'welcome',
+      'name',
       'goals',
       'barriers',
       'emotional',
@@ -97,6 +99,7 @@ export default function OnboardingScreen() {
       updateSettings({
         selectedApps,
         pauseDurationSec: pauseDuration,
+        userName,
       });
       await new Promise((resolve) => setTimeout(resolve, 500));
       router.replace('/home');
@@ -108,6 +111,7 @@ export default function OnboardingScreen() {
   const handleBack = () => {
     const stepOrder: OnboardingStep[] = [
       'welcome',
+      'name',
       'goals',
       'barriers',
       'emotional',
@@ -232,6 +236,28 @@ export default function OnboardingScreen() {
               <Text style={styles.description}>A gentle moment before distraction.</Text>
               <Text style={styles.description}>
                 Pause before opening apps you want to be more mindful about.
+              </Text>
+            </>
+          )}
+
+          {step === 'name' && (
+            <>
+              <Text style={styles.title}>What&apos;s your name?</Text>
+              <Text style={styles.description}>
+                Let&apos;s get to know you a bit better.
+              </Text>
+
+              <TextInput
+                style={[styles.searchInput, { marginVertical: spacing.lg, fontSize: 18, paddingVertical: spacing.lg }]}
+                placeholder="Enter your name..."
+                placeholderTextColor={colors.text}
+                value={userName}
+                onChangeText={setUserName}
+                autoFocus
+              />
+
+              <Text style={styles.description}>
+                We&apos;ll use this to personalize your experience.
               </Text>
             </>
           )}

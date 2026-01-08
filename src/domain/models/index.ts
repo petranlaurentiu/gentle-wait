@@ -10,6 +10,7 @@ export interface SelectedApp {
 
 export interface UserSettings {
   id: string; // singleton
+  userName?: string;
   pauseDurationSec: number; // 10-30
   promptFrequency: 'off' | 'sometimes' | 'always';
   selectedApps: SelectedApp[];
