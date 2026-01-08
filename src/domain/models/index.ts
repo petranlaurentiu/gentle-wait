@@ -25,7 +25,24 @@ export type InterceptionAction =
   | 'closed'
   | 'alternative_breathe'
   | 'alternative_reflect'
-  | 'alternative_grounding';
+  | 'alternative_grounding'
+  | 'alternative_exercise';
+
+export type ExerciseCategory = 'desk-stretch' | 'standing' | 'energy' | 'eye-posture';
+
+export interface Exercise {
+  id: string;
+  name: string;
+  category: ExerciseCategory;
+  durationSec: number;
+  reps?: number;
+  instructions: string;
+  imagePlaceholder: string;
+}
+
+export interface ExerciseProgram {
+  exercises: Exercise[];
+}
 
 export type ReflectionReason =
   | 'relax'

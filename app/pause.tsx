@@ -89,18 +89,29 @@ export default function PauseScreen() {
     router.back();
   };
 
-  const handleAlternative = async (type: 'breathe' | 'reflect' | 'grounding') => {
-    // Log the choice and navigate to alternatives
-    router.push({
-      pathname: '/alternatives',
-      params: {
-        type,
-        sessionId,
-        appPackage,
-        appLabel,
-        reason: selectedReason || undefined,
-      },
-    });
+  const handleAlternative = async (type: 'breathe' | 'reflect' | 'grounding' | 'exercise') => {
+    // Log the choice and navigate to alternatives or exercise
+    if (type === 'exercise') {
+      router.push({
+        pathname: '/exercise',
+        params: {
+          sessionId,
+          appPackage,
+          appLabel,
+        },
+      });
+    } else {
+      router.push({
+        pathname: '/alternatives',
+        params: {
+          type,
+          sessionId,
+          appPackage,
+          appLabel,
+          reason: selectedReason || undefined,
+        },
+      });
+    }
   };
 
   const styles = StyleSheet.create({
@@ -254,6 +265,13 @@ export default function PauseScreen() {
           onPress={() => handleAlternative('breathe')}
         >
           <Text style={styles.buttonText}>Take a short pause</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={() => handleAlternative('exercise')}
+        >
+          <Text style={styles.buttonText}>Quick movement break</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

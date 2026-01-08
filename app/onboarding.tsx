@@ -1,5 +1,5 @@
 /**
- * Onboarding flow screen
+ * Onboarding flow screen with hero welcome, program preview, and optional personalization
  */
 import { useState, useEffect } from 'react';
 import {
@@ -13,22 +13,70 @@ import {
   Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated from 'react-native-reanimated';
+import ReanimatedAnimated from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
 import { useAppStore } from '@/src/services/storage';
 import { getInstalledApps, filterApps } from '@/src/services/apps';
 import { Checkbox } from '@/src/components/Checkbox';
 import { Button } from '@/src/components/Button';
+import { ImagePlaceholder } from '@/src/components/ImagePlaceholder';
 import { SelectedApp } from '@/src/domain/models';
 import { useFadeInAnimation } from '@/src/utils/animations';
 
-type OnboardingStep = 'welcome' | 'name' | 'goals' | 'barriers' | 'emotional' | 'screen-time' | 'select-apps' | 'permissions' | 'duration' | 'done';
+type SetupPath = 'quick' | 'personalized' | null;
+
+type OnboardingStep =
+  | 'welcome-hero'
+  | 'program-preview'
+  | 'setup-choice'
+  | 'name'
+  | 'goals'
+  | 'barriers'
+  | 'emotional'
+  | 'screen-time'
+  | 'select-apps'
+  | 'permissions'
+  | 'duration'
+  | 'done';
+
+const getStepOrder = (setupPath: SetupPath): OnboardingStep[] => {
+  const baseSteps: OnboardingStep[] = [
+    'welcome-hero',
+    'program-preview',
+    'setup-choice',
+    'name',
+  ];
+
+  if (setupPath === 'personalized') {
+    return [
+      ...baseSteps,
+      'goals',
+      'barriers',
+      'emotional',
+      'screen-time',
+      'select-apps',
+      'permissions',
+      'duration',
+      'done',
+    ];
+  }
+
+  // Quick setup path
+  return [
+    ...baseSteps,
+    'select-apps',
+    'permissions',
+    'duration',
+    'done',
+  ];
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [step, setStep] = useState<OnboardingStep>('welcome');
+  const [step, setStep] = useState<OnboardingStep>('welcome-hero');
+  const [setupPath, setSetupPath] = useState<SetupPath>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [availableApps, setAvailableApps] = useState<SelectedApp[]>([]);
   const [selectedAppSet, setSelectedAppSet] = useState<Set<string>>(new Set());
@@ -38,17 +86,17 @@ export default function OnboardingScreen() {
   const updateSettings = useAppStore((state) => state.updateSettings);
   const [stepKey, setStepKey] = useState(0);
 
-  // New onboarding state for expanded questionnaire
+  // Onboarding state
   const [userName, setUserName] = useState('');
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
   const [selectedBarriers, setSelectedBarriers] = useState<Set<string>>(new Set());
   const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(new Set());
-  const [dailyScreenTime, setDailyScreenTime] = useState(3); // hours
+  const [dailyScreenTime, setDailyScreenTime] = useState(3);
 
-  // Animation hook for step transitions
+  // Animation hooks
   const stepAnimation = useFadeInAnimation();
 
-  // Reset animation key when step changes to trigger new animation
+  // Reset animation key when step changes
   useEffect(() => {
     setStepKey((prev) => prev + 1);
   }, [step]);
@@ -76,19 +124,13 @@ export default function OnboardingScreen() {
   };
 
   const handleNext = async () => {
-    const stepOrder: OnboardingStep[] = [
-      'welcome',
-      'name',
-      'goals',
-      'barriers',
-      'emotional',
-      'screen-time',
-      'select-apps',
-      'permissions',
-      'duration',
-      'done',
-    ];
+    const stepOrder = getStepOrder(setupPath);
     const currentIndex = stepOrder.indexOf(step);
+
+    if (step === 'setup-choice' && setupPath === null) {
+      // User hasn't chosen yet
+      return;
+    }
 
     if (currentIndex === stepOrder.length - 1) {
       // Onboarding complete - save settings
@@ -109,19 +151,9 @@ export default function OnboardingScreen() {
   };
 
   const handleBack = () => {
-    const stepOrder: OnboardingStep[] = [
-      'welcome',
-      'name',
-      'goals',
-      'barriers',
-      'emotional',
-      'screen-time',
-      'select-apps',
-      'permissions',
-      'duration',
-      'done',
-    ];
+    const stepOrder = getStepOrder(setupPath);
     const currentIndex = stepOrder.indexOf(step);
+
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
     }
@@ -148,13 +180,22 @@ export default function OnboardingScreen() {
       marginBottom: spacing.md,
       textAlign: 'center',
     },
-    description: {
+    subtitle: {
       fontSize: typography.prompt.fontSize,
       fontWeight: typography.prompt.fontWeight,
       color: colors.text,
       marginBottom: spacing.lg,
       textAlign: 'center',
       opacity: 0.8,
+    },
+    description: {
+      fontSize: typography.secondary.fontSize,
+      fontWeight: typography.secondary.fontWeight,
+      color: colors.text,
+      marginBottom: spacing.lg,
+      textAlign: 'center',
+      opacity: 0.8,
+      lineHeight: 22,
     },
     buttonContainer: {
       padding: spacing.lg,
@@ -211,6 +252,100 @@ export default function OnboardingScreen() {
       opacity: 0.7,
       marginTop: spacing.md,
     },
+    setupChoiceContainer: {
+      gap: spacing.lg,
+    },
+    setupOption: {
+      borderRadius: 16,
+      padding: spacing.lg,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.border,
+    },
+    setupOptionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    setupOptionTitle: {
+      fontSize: typography.prompt.fontSize,
+      fontWeight: typography.prompt.fontWeight,
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    setupOptionTitleSelected: {
+      color: colors.bg,
+    },
+    setupOptionSubtitle: {
+      fontSize: typography.secondary.fontSize,
+      fontWeight: typography.secondary.fontWeight,
+      color: colors.text,
+      opacity: 0.7,
+      marginBottom: spacing.sm,
+    },
+    setupOptionSubtitleSelected: {
+      color: colors.bg,
+      opacity: 0.9,
+    },
+    setupOptionTime: {
+      fontSize: typography.secondary.fontSize,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    setupOptionTimeSelected: {
+      color: colors.bg,
+    },
+    programDaysContainer: {
+      alignItems: 'center',
+      marginVertical: spacing.lg,
+    },
+    ratingContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    ratingText: {
+      fontSize: 32,
+      marginBottom: spacing.sm,
+    },
+    ratingScore: {
+      fontSize: typography.prompt.fontSize,
+      fontWeight: typography.prompt.fontWeight,
+      color: colors.text,
+    },
+    programDays: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      marginVertical: spacing.lg,
+    },
+    programDay: {
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    programDayIcon: {
+      fontSize: 32,
+    },
+    programDayLabel: {
+      fontSize: typography.secondary.fontSize,
+      fontWeight: typography.secondary.fontWeight,
+      color: colors.text,
+      opacity: 0.7,
+    },
+    textInput: {
+      marginVertical: spacing.lg,
+      fontSize: 18,
+      paddingVertical: spacing.lg,
+    },
+    imagePlaceholderContainer: {
+      alignItems: 'center',
+      marginVertical: spacing.lg,
+    },
+    appNameLarge: {
+      fontSize: 48,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
   });
 
   if (isLoading) {
@@ -228,15 +363,147 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} contentInsetAdjustmentBehavior="automatic">
-        <Animated.View key={stepKey} style={stepAnimation}>
-          {step === 'welcome' && (
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <ReanimatedAnimated.View key={stepKey} style={stepAnimation}>
+          {step === 'welcome-hero' && (
             <>
-              <Text style={styles.title}>GentleWait</Text>
-              <Text style={styles.description}>A gentle moment before distraction.</Text>
-              <Text style={styles.description}>
-                Pause before opening apps you want to be more mindful about.
+              <Text style={styles.appNameLarge}>GentleWait</Text>
+              <View style={styles.imagePlaceholderContainer}>
+                <ImagePlaceholder
+                  width={300}
+                  height={200}
+                  label="Your mindful break moment"
+                />
+              </View>
+              <Text style={styles.subtitle}>
+                Your Mindful Break Assistant
               </Text>
+              <Text style={styles.description}>
+                A gentle moment before distraction. Pause mindfully, move intentionally, and reclaim focus.
+              </Text>
+            </>
+          )}
+
+          {step === 'program-preview' && (
+            <>
+              <View style={styles.ratingContainer}>
+                <Text style={styles.ratingText}>⭐⭐⭐⭐⭐</Text>
+                <Text style={styles.ratingScore}>4.8 rating • 50k users</Text>
+              </View>
+
+              <Text style={styles.title}>Your Program Awaits</Text>
+              <Text style={styles.description}>
+                Let us build you a personalized program!
+              </Text>
+
+              <View style={styles.programDaysContainer}>
+                <View style={styles.programDays}>
+                  <View style={styles.programDay}>
+                    <Text style={styles.programDayIcon}>🧘</Text>
+                    <Text style={styles.programDayLabel}>Day 0</Text>
+                  </View>
+                  <Text style={styles.programDayLabel}>→</Text>
+                  <View style={styles.programDay}>
+                    <Text style={styles.programDayIcon}>🏃</Text>
+                    <Text style={styles.programDayLabel}>Day 3</Text>
+                  </View>
+                  <Text style={styles.programDayLabel}>→</Text>
+                  <View style={styles.programDay}>
+                    <Text style={styles.programDayIcon}>🌱</Text>
+                    <Text style={styles.programDayLabel}>Day 7</Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.description}>
+                Get personalized guidance and a program designed to unlock the potential within you. Break the scroll habit with intentional pauses and movement.
+              </Text>
+            </>
+          )}
+
+          {step === 'setup-choice' && (
+            <>
+              <Text style={styles.title}>How would you like to set up?</Text>
+              <Text style={styles.description}>
+                Choose your experience level
+              </Text>
+
+              <View style={styles.setupChoiceContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.setupOption,
+                    setupPath === 'quick' && styles.setupOptionSelected,
+                  ]}
+                  onPress={() => setSetupPath('quick')}
+                >
+                  <Text
+                    style={[
+                      styles.setupOptionTitle,
+                      setupPath === 'quick' && styles.setupOptionTitleSelected,
+                    ]}
+                  >
+                    ⚡ Quick Setup
+                  </Text>
+                  <Text
+                    style={[
+                      styles.setupOptionSubtitle,
+                      setupPath === 'quick' &&
+                        styles.setupOptionSubtitleSelected,
+                    ]}
+                  >
+                    Essential settings only
+                  </Text>
+                  <Text
+                    style={[
+                      styles.setupOptionTime,
+                      setupPath === 'quick' && styles.setupOptionTimeSelected,
+                    ]}
+                  >
+                    3 min
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.setupOption,
+                    setupPath === 'personalized' &&
+                      styles.setupOptionSelected,
+                  ]}
+                  onPress={() => setSetupPath('personalized')}
+                >
+                  <Text
+                    style={[
+                      styles.setupOptionTitle,
+                      setupPath === 'personalized' &&
+                        styles.setupOptionTitleSelected,
+                    ]}
+                  >
+                    🎯 Personalized Setup
+                  </Text>
+                  <Text
+                    style={[
+                      styles.setupOptionSubtitle,
+                      setupPath === 'personalized' &&
+                        styles.setupOptionSubtitleSelected,
+                    ]}
+                  >
+                    Deep personalization
+                  </Text>
+                  <Text
+                    style={[
+                      styles.setupOptionTime,
+                      setupPath === 'personalized' &&
+                        styles.setupOptionTimeSelected,
+                    ]}
+                  >
+                    5 min
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
@@ -248,7 +515,7 @@ export default function OnboardingScreen() {
               </Text>
 
               <TextInput
-                style={[styles.searchInput, { marginVertical: spacing.lg, fontSize: 18, paddingVertical: spacing.lg }]}
+                style={[styles.searchInput, styles.textInput]}
                 placeholder="Enter your name..."
                 placeholderTextColor={colors.text}
                 value={userName}
@@ -270,7 +537,14 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={styles.appList}>
-                {['Reduce screen time', 'Better focus', 'Improve sleep', 'More quality time', 'Boost productivity', 'Build healthy habits'].map((goal) => (
+                {[
+                  'Reduce screen time',
+                  'Better focus',
+                  'Improve sleep',
+                  'More quality time',
+                  'Boost productivity',
+                  'Build healthy habits',
+                ].map((goal) => (
                   <Checkbox
                     key={goal}
                     label={goal}
@@ -302,7 +576,14 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={styles.appList}>
-                {['FOMO (missing out)', 'Addictive design', 'Stress/boredom', 'Habit/automatic', 'Social pressure', 'Too easy to reach'].map((barrier) => (
+                {[
+                  'FOMO (missing out)',
+                  'Addictive design',
+                  'Stress/boredom',
+                  'Habit/automatic',
+                  'Social pressure',
+                  'Too easy to reach',
+                ].map((barrier) => (
                   <Checkbox
                     key={barrier}
                     label={barrier}
@@ -334,7 +615,14 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={styles.appList}>
-                {['Guilty', 'Anxious', 'Drained', 'Not present', 'Irritable', 'Regretful'].map((emotion) => (
+                {[
+                  'Guilty',
+                  'Anxious',
+                  'Drained',
+                  'Not present',
+                  'Irritable',
+                  'Regretful',
+                ].map((emotion) => (
                   <Checkbox
                     key={emotion}
                     label={emotion}
@@ -366,7 +654,14 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={{ alignItems: 'center', marginVertical: spacing.lg }}>
-                <Text style={{ fontSize: 48, fontWeight: 'bold', color: colors.primary, marginBottom: spacing.lg }}>
+                <Text
+                  style={{
+                    fontSize: 48,
+                    fontWeight: 'bold',
+                    color: colors.primary,
+                    marginBottom: spacing.lg,
+                  }}
+                >
                   {dailyScreenTime}h
                 </Text>
                 <ScrollView
@@ -374,13 +669,21 @@ export default function OnboardingScreen() {
                   showsHorizontalScrollIndicator={false}
                   style={{ marginBottom: spacing.lg }}
                 >
-                  <View style={{ flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      gap: spacing.sm,
+                      paddingHorizontal: spacing.lg,
+                    }}
+                  >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
                       <TouchableOpacity
                         key={hour}
                         style={[
                           styles.durationOption,
-                          dailyScreenTime === hour && { backgroundColor: colors.primary },
+                          dailyScreenTime === hour && {
+                            backgroundColor: colors.primary,
+                          },
                         ]}
                         onPress={() => setDailyScreenTime(hour)}
                       >
@@ -472,7 +775,9 @@ export default function OnboardingScreen() {
                     value={permissionEnabled}
                     onValueChange={setPermissionEnabled}
                     trackColor={{ false: colors.border, true: colors.primary }}
-                    thumbColor={permissionEnabled ? colors.secondary : colors.text}
+                    thumbColor={
+                      permissionEnabled ? colors.secondary : colors.text
+                    }
                   />
                 </View>
               </View>
@@ -531,15 +836,26 @@ export default function OnboardingScreen() {
               </Text>
             </>
           )}
-        </Animated.View>
+        </ReanimatedAnimated.View>
       </ScrollView>
 
       <View style={styles.buttonContainer}>
-        {step !== 'welcome' && <Button label="Back" onPress={handleBack} variant="secondary" />}
+        {step !== 'welcome-hero' &&
+          step !== 'program-preview' &&
+          step !== 'setup-choice' && (
+            <Button label="Back" onPress={handleBack} variant="secondary" />
+          )}
         <Button
-          label={step === 'done' ? 'Get Started' : 'Next'}
+          label={
+            step === 'done'
+              ? 'Get Started'
+              : step === 'setup-choice'
+                ? 'Continue'
+                : 'Next'
+          }
           onPress={handleNext}
           variant="primary"
+          disabled={step === 'setup-choice' && setupPath === null}
         />
       </View>
     </View>
