@@ -9,6 +9,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography, animation } from '@/src/theme/theme';
 import { insertEvent } from '@/src/services/storage/sqlite';
 import { useLoopAnimation } from '@/src/utils/animations';
+import { triggerSelectionFeedback, triggerSuccessNotification } from '@/src/utils/haptics';
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -54,11 +55,13 @@ export default function PauseScreen() {
   }, [phase, phaseOpacity]);
 
   const handleReasonSelect = async (reason: string) => {
+    await triggerSelectionFeedback();
     setSelectedReason(reason);
     // Don't auto-navigate; user must choose next action
   };
 
   const handleOpenAnyway = async () => {
+    await triggerSuccessNotification();
     await insertEvent({
       id: generateId(),
       ts: Date.now(),
@@ -73,6 +76,7 @@ export default function PauseScreen() {
   };
 
   const handleClose = async () => {
+    await triggerSuccessNotification();
     await insertEvent({
       id: generateId(),
       ts: Date.now(),

@@ -1,6 +1,7 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
+import { triggerSelectionFeedback } from '@/src/utils/haptics';
 
 interface CheckboxProps {
   label: string;
@@ -45,8 +46,13 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
     },
   });
 
+  const handlePress = async () => {
+    await triggerSelectionFeedback();
+    onPress();
+  };
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.7}>
       <View style={styles.checkbox}>{checked && <Text style={styles.checkmark}>✓</Text>}</View>
       <Text style={styles.label}>{label}</Text>
     </TouchableOpacity>

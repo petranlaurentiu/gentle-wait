@@ -1,6 +1,7 @@
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
+import { triggerLightImpact } from '@/src/utils/haptics';
 
 type ButtonVariant = 'primary' | 'secondary';
 
@@ -57,10 +58,17 @@ export function Button({
   const buttonStyle = variant === 'primary' ? styles.primaryButton : styles.secondaryButton;
   const textStyle_ = variant === 'primary' ? styles.primaryText : styles.secondaryText;
 
+  const handlePress = async () => {
+    if (!disabled) {
+      await triggerLightImpact();
+      onPress();
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[buttonStyle, style]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
     >
