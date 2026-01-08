@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
@@ -188,7 +189,8 @@ export default function ExerciseScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>{exercise.name}</Text>
         <Text style={styles.category}>{categoryLabels[exercise.category]}</Text>
@@ -254,6 +256,7 @@ export default function ExerciseScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

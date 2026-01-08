@@ -12,6 +12,7 @@ import {
   TextInput,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import ReanimatedAnimated from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -362,7 +363,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -858,6 +859,6 @@ export default function OnboardingScreen() {
           disabled={step === 'setup-choice' && setupPath === null}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

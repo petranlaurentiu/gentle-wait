@@ -4,6 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -312,7 +313,7 @@ export default function PauseScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {phase === 'breathing' && (
         <Animated.View style={[phaseAnimatedStyle, styles.breathingPhaseContainer]}>
           <Text style={styles.timerText}>{timer}s</Text>
@@ -407,6 +408,6 @@ export default function PauseScreen() {
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

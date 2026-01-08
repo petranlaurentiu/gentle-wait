@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography, animation } from '@/src/theme/theme';
@@ -139,7 +140,7 @@ export default function AlternativesScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {type === 'breathe' && (
         <>
           <Text style={styles.timer}>{timeLeft}s</Text>
@@ -198,6 +199,6 @@ export default function AlternativesScreen() {
           Back
         </Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }

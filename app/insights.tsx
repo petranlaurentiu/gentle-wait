@@ -3,6 +3,7 @@
  */
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
@@ -210,7 +211,7 @@ export default function InsightsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Insights</Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
@@ -279,6 +280,6 @@ export default function InsightsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

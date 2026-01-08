@@ -3,6 +3,7 @@
  */
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -129,7 +130,7 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, headerAnimation]}>
         <Text style={styles.title}>Pause</Text>
       </Animated.View>
@@ -191,6 +192,6 @@ export default function HomeScreen() {
         </Animated.View>
       </ScrollView>
       <DebugMenu />
-    </View>
+    </SafeAreaView>
   );
 }

@@ -2,6 +2,7 @@
  * Settings screen
  */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useAppStore } from '@/src/services/storage';
@@ -112,7 +113,7 @@ export default function SettingsScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, headerAnimation]}>
         <Text style={styles.title}>Settings</Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
@@ -224,6 +225,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
