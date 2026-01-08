@@ -106,8 +106,10 @@ export default function OnboardingScreen() {
       backgroundColor: colors.bg,
     },
     content: {
-      flex: 1,
       padding: spacing.lg,
+    },
+    contentContainer: {
+      flexGrow: 1,
       justifyContent: 'center',
     },
     title: {
@@ -197,7 +199,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} contentInsetAdjustmentBehavior="automatic">
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} contentInsetAdjustmentBehavior="automatic">
         {step === 'welcome' && (
           <>
             <Text style={styles.title}>GentleWait</Text>

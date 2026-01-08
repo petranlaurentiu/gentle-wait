@@ -13,14 +13,18 @@ export default function EntryPoint() {
   const { colors } = useTheme();
 
   useEffect(() => {
-    // Simple check: if user has added apps and completed onboarding, go to home
-    const hasCompletedOnboarding = settings.selectedApps.length > 0;
+    // Defer navigation until Stack has mounted
+    const timer = setTimeout(() => {
+      const hasCompletedOnboarding = settings.selectedApps.length > 0;
 
-    if (hasCompletedOnboarding) {
-      router.replace('/home');
-    } else {
-      router.replace('/onboarding');
-    }
+      if (hasCompletedOnboarding) {
+        router.replace('/home');
+      } else {
+        router.replace('/onboarding');
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [settings.selectedApps.length, router]);
 
   return (
