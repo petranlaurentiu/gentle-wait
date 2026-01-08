@@ -64,68 +64,92 @@ export default function HomeScreen() {
     },
     header: {
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
     },
     title: {
-      fontSize: typography.title.fontSize,
-      fontWeight: typography.title.fontWeight,
+      fontSize: 32,
+      fontWeight: '300',
       color: colors.text,
-      marginBottom: spacing.md,
+      letterSpacing: -0.5,
     },
-    content: {
-      padding: spacing.lg,
+    scrollContent: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl * 2,
+    },
+    cardsContainer: {
       gap: spacing.md,
     },
     card: {
-      backgroundColor: colors.secondary,
-      borderRadius: 16,
-      padding: spacing.lg,
-      gap: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: spacing.lg + spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     cardTitle: {
-      fontSize: typography.prompt.fontSize,
+      fontSize: 13,
       fontWeight: '600',
-      color: colors.bg,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: spacing.sm,
     },
     cardValue: {
-      fontSize: 32,
-      fontWeight: '700',
-      color: colors.bg,
+      fontSize: 48,
+      fontWeight: '200',
+      color: colors.primary,
+      letterSpacing: -2,
+      marginBottom: spacing.xs,
     },
     cardSubtitle: {
       fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.bg,
-      opacity: 0.8,
+      fontWeight: '400',
+      color: colors.textSecondary,
+    },
+    statsRow: {
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    statItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    statDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    statText: {
+      fontSize: typography.secondary.fontSize + 1,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    appsCard: {
+      backgroundColor: `${colors.primary}08`,
+      borderColor: `${colors.primary}20`,
+    },
+    appItem: {
+      fontSize: typography.secondary.fontSize + 1,
+      fontWeight: '500',
+      color: colors.text,
+      paddingVertical: spacing.xs,
     },
     buttonRow: {
       flexDirection: 'row',
       gap: spacing.md,
-    },
-    button: {
-      flex: 1,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    buttonText: {
-      fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      color: colors.bg,
+      marginTop: spacing.lg,
     },
     tip: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
+      marginTop: spacing.xl,
       fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.text,
-      opacity: 0.6,
+      fontWeight: '400',
+      color: colors.textSecondary,
       fontStyle: 'italic',
       textAlign: 'center',
+      opacity: 0.7,
     },
   });
 
@@ -135,61 +159,78 @@ export default function HomeScreen() {
         <Text style={styles.title}>Pause</Text>
       </Animated.View>
 
-      <ScrollView style={styles.content} contentInsetAdjustmentBehavior="automatic">
-        {/* Today card */}
-        <Animated.View style={[styles.card, cardOneAnimation]}>
-          <Text style={styles.cardTitle}>Today</Text>
-          <Text style={styles.cardValue}>{todayPauses}</Text>
-          <Text style={styles.cardSubtitle}>pauses so far</Text>
-        </Animated.View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.cardsContainer}>
+          {/* Today card */}
+          <Animated.View style={[styles.card, cardOneAnimation]}>
+            <Text style={styles.cardTitle}>Today</Text>
+            <Text style={styles.cardValue}>{todayPauses}</Text>
+            <Text style={styles.cardSubtitle}>pauses so far</Text>
+          </Animated.View>
 
-        {/* Stats cards */}
-        <Animated.View style={[styles.card, cardTwoAnimation]}>
-          <Text style={styles.cardTitle}>This Week</Text>
-          <View style={{ gap: spacing.sm }}>
-            <Text style={styles.cardSubtitle}>{weeklyStats.pausesTotal} pauses</Text>
-            <Text style={styles.cardSubtitle}>
-              {weeklyStats.choseCalmCount} chose calm
-            </Text>
-            <Text style={styles.cardSubtitle}>
-              {weeklyStats.mindfulMinutes} mindful minutes
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Protected apps list */}
-        {settings.selectedApps.length > 0 && (
-          <Animated.View style={[styles.card, cardThreeAnimation]}>
-            <Text style={styles.cardTitle}>Protected Apps</Text>
-            <View style={{ gap: spacing.xs }}>
-              {settings.selectedApps.map((app) => (
-                <Text key={app.packageName} style={styles.cardSubtitle}>
-                  • {app.label}
+          {/* Stats cards */}
+          <Animated.View style={[styles.card, cardTwoAnimation]}>
+            <Text style={styles.cardTitle}>This Week</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <View style={styles.statDot} />
+                <Text style={styles.statText}>
+                  {weeklyStats.pausesTotal} pauses
                 </Text>
-              ))}
+              </View>
+              <View style={styles.statItem}>
+                <View style={styles.statDot} />
+                <Text style={styles.statText}>
+                  {weeklyStats.choseCalmCount} chose calm
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <View style={styles.statDot} />
+                <Text style={styles.statText}>
+                  {weeklyStats.mindfulMinutes} mindful minutes
+                </Text>
+              </View>
             </View>
           </Animated.View>
-        )}
 
-        {/* Action buttons */}
-        <Animated.View style={[styles.buttonRow, buttonsAnimation]}>
-          <Button
-            label="Insights"
-            onPress={() => router.push('/insights')}
-            variant="primary"
-            style={{ flex: 1 }}
-          />
-          <Button
-            label="Settings"
-            onPress={() => router.push('/settings')}
-            variant="primary"
-            style={{ flex: 1 }}
-          />
-        </Animated.View>
+          {/* Protected apps list */}
+          {settings.selectedApps.length > 0 && (
+            <Animated.View style={[styles.card, styles.appsCard, cardThreeAnimation]}>
+              <Text style={styles.cardTitle}>Protected Apps</Text>
+              <View>
+                {settings.selectedApps.map((app) => (
+                  <Text key={app.packageName} style={styles.appItem}>
+                    {app.label}
+                  </Text>
+                ))}
+              </View>
+            </Animated.View>
+          )}
 
-        <Animated.View style={tipAnimation}>
-          <Text style={styles.tip}>Small pauses add up.</Text>
-        </Animated.View>
+          {/* Action buttons */}
+          <Animated.View style={[styles.buttonRow, buttonsAnimation]}>
+            <Button
+              label="Insights"
+              onPress={() => router.push('/insights')}
+              variant="secondary"
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Settings"
+              onPress={() => router.push('/settings')}
+              variant="secondary"
+              style={{ flex: 1 }}
+            />
+          </Animated.View>
+
+          <Animated.View style={tipAnimation}>
+            <Text style={styles.tip}>Small pauses add up.</Text>
+          </Animated.View>
+        </View>
       </ScrollView>
       <DebugMenu />
     </SafeAreaView>
