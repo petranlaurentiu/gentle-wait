@@ -26,8 +26,23 @@ export async function initializeDatabase() {
         sessionId TEXT
       );
 
-      CREATE INDEX IF NOT EXISTS idx_interception_ts ON interception_events(ts);
-      CREATE INDEX IF NOT EXISTS idx_interception_appPackage ON interception_events(appPackage);
+      -- Primary indexes for date-range queries (most common)
+      CREATE INDEX IF NOT EXISTS idx_ts_desc ON interception_events(ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_ts_asc ON interception_events(ts ASC);
+
+      -- App-specific queries
+      CREATE INDEX IF NOT EXISTS idx_appPackage ON interception_events(appPackage);
+
+      -- Action-based queries
+      CREATE INDEX IF NOT EXISTS idx_action ON interception_events(action);
+
+      -- Composite indexes for common query patterns
+      CREATE INDEX IF NOT EXISTS idx_ts_action ON interception_events(ts DESC, action);
+      CREATE INDEX IF NOT EXISTS idx_ts_reason ON interception_events(ts DESC, reason);
+      CREATE INDEX IF NOT EXISTS idx_ts_appPackage ON interception_events(ts DESC, appPackage);
+
+      -- Reason-based queries (for triggers/insights)
+      CREATE INDEX IF NOT EXISTS idx_reason ON interception_events(reason);
     `);
 
     console.log('Database initialized successfully');
