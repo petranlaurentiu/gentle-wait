@@ -23,7 +23,7 @@ import { Button } from '@/src/components/Button';
 import { SelectedApp } from '@/src/domain/models';
 import { useFadeInAnimation } from '@/src/utils/animations';
 
-type OnboardingStep = 'welcome' | 'select-apps' | 'permissions' | 'duration' | 'done';
+type OnboardingStep = 'welcome' | 'goals' | 'barriers' | 'emotional' | 'screen-time' | 'select-apps' | 'permissions' | 'duration' | 'done';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -37,6 +37,12 @@ export default function OnboardingScreen() {
   const [permissionEnabled, setPermissionEnabled] = useState(false);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const [stepKey, setStepKey] = useState(0);
+
+  // New onboarding state for expanded questionnaire
+  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
+  const [selectedBarriers, setSelectedBarriers] = useState<Set<string>>(new Set());
+  const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(new Set());
+  const [dailyScreenTime, setDailyScreenTime] = useState(3); // hours
 
   // Animation hook for step transitions
   const stepAnimation = useFadeInAnimation();
@@ -71,6 +77,10 @@ export default function OnboardingScreen() {
   const handleNext = async () => {
     const stepOrder: OnboardingStep[] = [
       'welcome',
+      'goals',
+      'barriers',
+      'emotional',
+      'screen-time',
       'select-apps',
       'permissions',
       'duration',
@@ -98,6 +108,10 @@ export default function OnboardingScreen() {
   const handleBack = () => {
     const stepOrder: OnboardingStep[] = [
       'welcome',
+      'goals',
+      'barriers',
+      'emotional',
+      'screen-time',
       'select-apps',
       'permissions',
       'duration',
@@ -219,6 +233,148 @@ export default function OnboardingScreen() {
               <Text style={styles.description}>
                 Pause before opening apps you want to be more mindful about.
               </Text>
+            </>
+          )}
+
+          {step === 'goals' && (
+            <>
+              <Text style={styles.title}>What are your goals?</Text>
+              <Text style={styles.description}>
+                Choose up to 3 goals you want to achieve with GentleWait.
+              </Text>
+
+              <View style={styles.appList}>
+                {['Reduce screen time', 'Better focus', 'Improve sleep', 'More quality time', 'Boost productivity', 'Build healthy habits'].map((goal) => (
+                  <Checkbox
+                    key={goal}
+                    label={goal}
+                    checked={selectedGoals.has(goal)}
+                    onPress={() => {
+                      const newSet = new Set(selectedGoals);
+                      if (newSet.has(goal)) {
+                        newSet.delete(goal);
+                      } else if (newSet.size < 3) {
+                        newSet.add(goal);
+                      }
+                      setSelectedGoals(newSet);
+                    }}
+                  />
+                ))}
+              </View>
+
+              <Text style={styles.selectedCount}>
+                {selectedGoals.size} goal{selectedGoals.size !== 1 ? 's' : ''} selected
+              </Text>
+            </>
+          )}
+
+          {step === 'barriers' && (
+            <>
+              <Text style={styles.title}>What makes it hard?</Text>
+              <Text style={styles.description}>
+                What usually makes it difficult to avoid these apps? Choose up to 2.
+              </Text>
+
+              <View style={styles.appList}>
+                {['FOMO (missing out)', 'Addictive design', 'Stress/boredom', 'Habit/automatic', 'Social pressure', 'Too easy to reach'].map((barrier) => (
+                  <Checkbox
+                    key={barrier}
+                    label={barrier}
+                    checked={selectedBarriers.has(barrier)}
+                    onPress={() => {
+                      const newSet = new Set(selectedBarriers);
+                      if (newSet.has(barrier)) {
+                        newSet.delete(barrier);
+                      } else if (newSet.size < 2) {
+                        newSet.add(barrier);
+                      }
+                      setSelectedBarriers(newSet);
+                    }}
+                  />
+                ))}
+              </View>
+
+              <Text style={styles.selectedCount}>
+                {selectedBarriers.size} barrier{selectedBarriers.size !== 1 ? 's' : ''} selected
+              </Text>
+            </>
+          )}
+
+          {step === 'emotional' && (
+            <>
+              <Text style={styles.title}>How do they make you feel?</Text>
+              <Text style={styles.description}>
+                How do these apps typically make you feel? Choose up to 2.
+              </Text>
+
+              <View style={styles.appList}>
+                {['Guilty', 'Anxious', 'Drained', 'Not present', 'Irritable', 'Regretful'].map((emotion) => (
+                  <Checkbox
+                    key={emotion}
+                    label={emotion}
+                    checked={selectedEmotions.has(emotion)}
+                    onPress={() => {
+                      const newSet = new Set(selectedEmotions);
+                      if (newSet.has(emotion)) {
+                        newSet.delete(emotion);
+                      } else if (newSet.size < 2) {
+                        newSet.add(emotion);
+                      }
+                      setSelectedEmotions(newSet);
+                    }}
+                  />
+                ))}
+              </View>
+
+              <Text style={styles.selectedCount}>
+                {selectedEmotions.size} emotion{selectedEmotions.size !== 1 ? 's' : ''} selected
+              </Text>
+            </>
+          )}
+
+          {step === 'screen-time' && (
+            <>
+              <Text style={styles.title}>Daily screen time?</Text>
+              <Text style={styles.description}>
+                How much time do you spend on your phone daily?
+              </Text>
+
+              <View style={{ alignItems: 'center', marginVertical: spacing.lg }}>
+                <Text style={{ fontSize: 48, fontWeight: 'bold', color: colors.primary, marginBottom: spacing.lg }}>
+                  {dailyScreenTime}h
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginBottom: spacing.lg }}
+                >
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg }}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
+                      <TouchableOpacity
+                        key={hour}
+                        style={[
+                          styles.durationOption,
+                          dailyScreenTime === hour && { backgroundColor: colors.primary },
+                        ]}
+                        onPress={() => setDailyScreenTime(hour)}
+                      >
+                        <Text
+                          style={[
+                            styles.durationLabel,
+                            dailyScreenTime === hour && { color: colors.bg },
+                          ]}
+                        >
+                          {hour}h
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Text style={styles.description}>
+                  You can adjust this in settings anytime.
+                </Text>
+              </View>
             </>
           )}
 
