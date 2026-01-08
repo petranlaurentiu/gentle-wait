@@ -13,6 +13,7 @@ import {
   Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
 import { useAppStore } from '@/src/services/storage';
@@ -20,6 +21,7 @@ import { getInstalledApps, filterApps } from '@/src/services/apps';
 import { Checkbox } from '@/src/components/Checkbox';
 import { Button } from '@/src/components/Button';
 import { SelectedApp } from '@/src/domain/models';
+import { useFadeInAnimation } from '@/src/utils/animations';
 
 type OnboardingStep = 'welcome' | 'select-apps' | 'permissions' | 'duration' | 'done';
 
@@ -34,6 +36,15 @@ export default function OnboardingScreen() {
   const [pauseDuration, setPauseDuration] = useState(15);
   const [permissionEnabled, setPermissionEnabled] = useState(false);
   const updateSettings = useAppStore((state) => state.updateSettings);
+  const [stepKey, setStepKey] = useState(0);
+
+  // Animation hook for step transitions
+  const stepAnimation = useFadeInAnimation();
+
+  // Reset animation key when step changes to trigger new animation
+  useEffect(() => {
+    setStepKey((prev) => prev + 1);
+  }, [step]);
 
   // Load available apps on mount
   useEffect(() => {
@@ -200,143 +211,145 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} contentInsetAdjustmentBehavior="automatic">
-        {step === 'welcome' && (
-          <>
-            <Text style={styles.title}>GentleWait</Text>
-            <Text style={styles.description}>A gentle moment before distraction.</Text>
-            <Text style={styles.description}>
-              Pause before opening apps you want to be more mindful about.
-            </Text>
-          </>
-        )}
-
-        {step === 'select-apps' && (
-          <>
-            <Text style={styles.title}>Select Apps to Pause Before</Text>
-            <Text style={styles.description}>
-              Choose apps you want a gentle reminder with.
-            </Text>
-
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search apps..."
-              placeholderTextColor={colors.text}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-
-            <View style={styles.appList}>
-              {filteredApps.length > 0 ? (
-                filteredApps.map((app) => (
-                  <Checkbox
-                    key={app.packageName}
-                    label={app.label}
-                    checked={selectedAppSet.has(app.packageName)}
-                    onPress={() => handleAppToggle(app.packageName)}
-                  />
-                ))
-              ) : (
-                <Text style={styles.description}>No apps found</Text>
-              )}
-            </View>
-
-            <Text style={styles.selectedCount}>
-              {selectedAppSet.size} app{selectedAppSet.size !== 1 ? 's' : ''} selected
-            </Text>
-          </>
-        )}
-
-        {step === 'permissions' && (
-          <>
-            <Text style={styles.title}>Enable Accessibility Permission</Text>
-            <Text style={styles.description}>
-              GentleWait uses Android Accessibility to detect when you open apps.
-            </Text>
-
-            <View style={styles.permissionContainer}>
-              <Text style={styles.permissionText}>
-                ✓ Your data stays on your phone
+        <Animated.View key={stepKey} style={stepAnimation}>
+          {step === 'welcome' && (
+            <>
+              <Text style={styles.title}>GentleWait</Text>
+              <Text style={styles.description}>A gentle moment before distraction.</Text>
+              <Text style={styles.description}>
+                Pause before opening apps you want to be more mindful about.
               </Text>
-              <Text style={styles.permissionText}>
-                ✓ No app content is recorded
-              </Text>
-              <Text style={styles.permissionText}>
-                ✓ You can disable anytime in Android Settings
-              </Text>
-            </View>
+            </>
+          )}
 
-            <View style={styles.permissionContainer}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={styles.durationLabel}>Permission enabled</Text>
-                <Switch
-                  value={permissionEnabled}
-                  onValueChange={setPermissionEnabled}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor={permissionEnabled ? colors.secondary : colors.text}
-                />
+          {step === 'select-apps' && (
+            <>
+              <Text style={styles.title}>Select Apps to Pause Before</Text>
+              <Text style={styles.description}>
+                Choose apps you want a gentle reminder with.
+              </Text>
+
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search apps..."
+                placeholderTextColor={colors.text}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+
+              <View style={styles.appList}>
+                {filteredApps.length > 0 ? (
+                  filteredApps.map((app) => (
+                    <Checkbox
+                      key={app.packageName}
+                      label={app.label}
+                      checked={selectedAppSet.has(app.packageName)}
+                      onPress={() => handleAppToggle(app.packageName)}
+                    />
+                  ))
+                ) : (
+                  <Text style={styles.description}>No apps found</Text>
+                )}
               </View>
-            </View>
-          </>
-        )}
 
-        {step === 'duration' && (
-          <>
-            <Text style={styles.title}>Pause Duration</Text>
-            <Text style={styles.description}>
-              How long should you pause for one breath?
-            </Text>
+              <Text style={styles.selectedCount}>
+                {selectedAppSet.size} app{selectedAppSet.size !== 1 ? 's' : ''} selected
+              </Text>
+            </>
+          )}
 
-            <View style={styles.durationContainer}>
-              {[10, 15, 20, 30].map((duration) => (
-                <TouchableOpacity
-                  key={duration}
-                  style={[
-                    styles.durationOption,
-                    pauseDuration === duration && {
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                  onPress={() => setPauseDuration(duration)}
+          {step === 'permissions' && (
+            <>
+              <Text style={styles.title}>Enable Accessibility Permission</Text>
+              <Text style={styles.description}>
+                GentleWait uses Android Accessibility to detect when you open apps.
+              </Text>
+
+              <View style={styles.permissionContainer}>
+                <Text style={styles.permissionText}>
+                  ✓ Your data stays on your phone
+                </Text>
+                <Text style={styles.permissionText}>
+                  ✓ No app content is recorded
+                </Text>
+                <Text style={styles.permissionText}>
+                  ✓ You can disable anytime in Android Settings
+                </Text>
+              </View>
+
+              <View style={styles.permissionContainer}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
-                  <Text
+                  <Text style={styles.durationLabel}>Permission enabled</Text>
+                  <Switch
+                    value={permissionEnabled}
+                    onValueChange={setPermissionEnabled}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={permissionEnabled ? colors.secondary : colors.text}
+                  />
+                </View>
+              </View>
+            </>
+          )}
+
+          {step === 'duration' && (
+            <>
+              <Text style={styles.title}>Pause Duration</Text>
+              <Text style={styles.description}>
+                How long should you pause for one breath?
+              </Text>
+
+              <View style={styles.durationContainer}>
+                {[10, 15, 20, 30].map((duration) => (
+                  <TouchableOpacity
+                    key={duration}
                     style={[
-                      styles.durationLabel,
-                      pauseDuration === duration && { color: colors.bg },
+                      styles.durationOption,
+                      pauseDuration === duration && {
+                        backgroundColor: colors.primary,
+                      },
                     ]}
+                    onPress={() => setPauseDuration(duration)}
                   >
-                    {duration} seconds
-                  </Text>
-                  {pauseDuration === duration && (
                     <Text
                       style={[
-                        styles.durationValue,
-                        { color: colors.bg },
+                        styles.durationLabel,
+                        pauseDuration === duration && { color: colors.bg },
                       ]}
                     >
-                      ✓
+                      {duration} seconds
                     </Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
+                    {pauseDuration === duration && (
+                      <Text
+                        style={[
+                          styles.durationValue,
+                          { color: colors.bg },
+                        ]}
+                      >
+                        ✓
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
-        {step === 'done' && (
-          <>
-            <Text style={styles.title}>You&apos;re All Set</Text>
-            <Text style={styles.description}>Your first pause is ready.</Text>
-            <Text style={styles.description}>
-              Open one of your selected apps to see it in action.
-            </Text>
-          </>
-        )}
+          {step === 'done' && (
+            <>
+              <Text style={styles.title}>You&apos;re All Set</Text>
+              <Text style={styles.description}>Your first pause is ready.</Text>
+              <Text style={styles.description}>
+                Open one of your selected apps to see it in action.
+              </Text>
+            </>
+          )}
+        </Animated.View>
       </ScrollView>
 
       <View style={styles.buttonContainer}>

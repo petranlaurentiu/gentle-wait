@@ -3,14 +3,25 @@
  */
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated from 'react-native-reanimated';
 import { useAppStore } from '@/src/services/storage';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
+import { useFadeInAnimation, useStaggeredFadeIn } from '@/src/utils/animations';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, themeMode } = useTheme();
   const settings = useAppStore((state) => state.settings);
+
+  // Animation hooks
+  const headerAnimation = useFadeInAnimation();
+  const protectedAppsAnimation = useStaggeredFadeIn(0, 6);
+  const pauseDurationAnimation = useStaggeredFadeIn(1, 6);
+  const promptsAnimation = useStaggeredFadeIn(2, 6);
+  const themeAnimation = useStaggeredFadeIn(3, 6);
+  const premiumAnimation = useStaggeredFadeIn(4, 6);
+  const privacyAnimation = useStaggeredFadeIn(5, 6);
 
   const styles = StyleSheet.create({
     container: {
@@ -102,16 +113,16 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <Animated.View style={[styles.header, headerAnimation]}>
         <Text style={styles.title}>Settings</Text>
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <ScrollView style={styles.content} contentInsetAdjustmentBehavior="automatic">
         {/* Protected Apps */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, protectedAppsAnimation]}>
           <Text style={styles.sectionTitle}>Protected Apps</Text>
           <View style={styles.appList}>
             {settings.selectedApps.map((app) => (
@@ -138,10 +149,10 @@ export default function SettingsScreen() {
               + Add app
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Pause Duration */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, pauseDurationAnimation]}>
           <Text style={styles.sectionTitle}>Pause Duration</Text>
           <View style={styles.settingItem}>
             <Text style={styles.settingLabel}>One breath</Text>
@@ -149,10 +160,10 @@ export default function SettingsScreen() {
               {settings.pauseDurationSec}s
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Prompt Frequency */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, promptsAnimation]}>
           <Text style={styles.sectionTitle}>Reflection Prompts</Text>
           <View style={styles.settingItem}>
             <Text style={styles.settingLabel}>Show prompts</Text>
@@ -164,10 +175,10 @@ export default function SettingsScreen() {
                 : 'Off'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Theme */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, themeAnimation]}>
           <Text style={styles.sectionTitle}>Appearance</Text>
           <View style={styles.settingItem}>
             <Text style={styles.settingLabel}>Theme</Text>
@@ -179,10 +190,10 @@ export default function SettingsScreen() {
                 : 'Dark'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Premium */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, premiumAnimation]}>
           <Text style={styles.sectionTitle}>Subscription</Text>
           <View style={styles.settingItem}>
             <Text style={styles.settingLabel}>Plan</Text>
@@ -190,10 +201,10 @@ export default function SettingsScreen() {
               {settings.premium ? 'Premium' : 'Free'}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Privacy & Permissions */}
-        <View style={styles.section}>
+        <Animated.View style={[styles.section, privacyAnimation]}>
           <Text style={styles.sectionTitle}>Privacy & Permissions</Text>
           <TouchableOpacity
             style={styles.settingItem}
@@ -211,7 +222,7 @@ export default function SettingsScreen() {
           >
             <Text style={styles.settingLabel}>Privacy policy</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

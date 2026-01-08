@@ -2,11 +2,13 @@
  * Pause screen - Interception UI shown when user tries to open a protected app
  */
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography, animation } from '@/src/theme/theme';
 import { insertEvent } from '@/src/services/storage/sqlite';
+import { useLoopAnimation } from '@/src/utils/animations';
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -17,47 +19,39 @@ export default function PauseScreen() {
   const { colors } = useTheme();
   const params = useLocalSearchParams();
   const [phase, setPhase] = useState<PausePhase>('breathing');
-  const [breathingScale] = useState(new Animated.Value(1));
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const sessionId = generateId();
 
   const appPackage = params.appPackage as string;
   const appLabel = (params.appLabel as string) || 'App';
 
-  // Breathing animation
+  // Animation hooks
+  const breathingAnimation = useLoopAnimation(1, 1.3, animation.breathingCycle);
+  const phaseOpacity = useSharedValue(1);
+  const phaseAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: phaseOpacity.value,
+  }));
+
+  // Breathing phase - auto-advance to question after one cycle
   useEffect(() => {
     if (phase !== 'breathing') return;
 
-    const timing = Animated.loop(
-      Animated.sequence([
-        // Inhale (4s)
-        Animated.timing(breathingScale, {
-          toValue: 1.3,
-          duration: animation.breathePhase,
-          useNativeDriver: true,
-        }),
-        // Exhale (4s)
-        Animated.timing(breathingScale, {
-          toValue: 1,
-          duration: animation.breathePhase,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    timing.start();
-
-    // Auto-advance after one cycle (8s)
     const timer = setTimeout(() => {
-      setPhase('question');
+      // Fade out breathing phase
+      phaseOpacity.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+      });
+
+      // Switch phase after fade
+      setTimeout(() => {
+        setPhase('question');
+        phaseOpacity.value = 1;
+      }, 300);
     }, animation.breathingCycle);
 
-    return () => {
-      timing.stop();
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+    return () => clearTimeout(timer);
+  }, [phase, phaseOpacity]);
 
   const handleReasonSelect = async (reason: string) => {
     setSelectedReason(reason);
@@ -197,11 +191,11 @@ export default function PauseScreen() {
   return (
     <View style={styles.container}>
       {phase === 'breathing' && (
-        <>
+        <Animated.View style={phaseAnimatedStyle}>
           <Animated.View
             style={[
               styles.breathingCircle,
-              { transform: [{ scale: breathingScale }] },
+              breathingAnimation,
             ]}
           >
             <Text style={styles.breathingText}>Breathe</Text>
@@ -209,38 +203,36 @@ export default function PauseScreen() {
           <Text style={[styles.promptTitle, { opacity: 0.8 }]}>
             Before you scroll, take one breath.
           </Text>
-        </>
+        </Animated.View>
       )}
 
       {phase === 'question' && (
-        <>
-          <View style={styles.promptContainer}>
-            <Text style={styles.promptTitle}>What are you looking for?</Text>
-            <View style={styles.chipContainer}>
-              {reasonChoices.map((choice) => (
-                <TouchableOpacity
-                  key={choice.value}
+        <Animated.View style={[phaseAnimatedStyle, styles.promptContainer]}>
+          <Text style={styles.promptTitle}>What are you looking for?</Text>
+          <View style={styles.chipContainer}>
+            {reasonChoices.map((choice) => (
+              <TouchableOpacity
+                key={choice.value}
+                style={[
+                  styles.chip,
+                  selectedReason === choice.value && {
+                    backgroundColor: colors.primary,
+                  },
+                ]}
+                onPress={() => handleReasonSelect(choice.value)}
+              >
+                <Text
                   style={[
-                    styles.chip,
-                    selectedReason === choice.value && {
-                      backgroundColor: colors.primary,
-                    },
+                    styles.chipText,
+                    selectedReason === choice.value && { color: colors.bg },
                   ]}
-                  onPress={() => handleReasonSelect(choice.value)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selectedReason === choice.value && { color: colors.bg },
-                    ]}
-                  >
-                    {choice.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {choice.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </>
+        </Animated.View>
       )}
 
       <View style={styles.actionContainer}>

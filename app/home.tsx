@@ -4,12 +4,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import Animated from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { spacing, typography } from '@/src/theme/theme';
 import { useAppStore } from '@/src/services/storage';
 import { getTodayStats, getWeeklyStats } from '@/src/services/stats';
 import { Button } from '@/src/components/Button';
 import { DebugMenu } from '@/src/components/DebugMenu';
+import { useFadeInAnimation, useStaggeredFadeIn } from '@/src/utils/animations';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,6 +23,14 @@ export default function HomeScreen() {
     choseCalmCount: 0,
     mindfulMinutes: 0,
   });
+
+  // Animation hooks for staggered card entrance
+  const headerAnimation = useFadeInAnimation();
+  const cardOneAnimation = useStaggeredFadeIn(0, 5);
+  const cardTwoAnimation = useStaggeredFadeIn(1, 5);
+  const cardThreeAnimation = useStaggeredFadeIn(2, 5);
+  const buttonsAnimation = useStaggeredFadeIn(3, 5);
+  const tipAnimation = useStaggeredFadeIn(4, 5);
 
   // Load stats when screen is focused
   useFocusEffect(
@@ -120,20 +130,20 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <Animated.View style={[styles.header, headerAnimation]}>
         <Text style={styles.title}>Pause</Text>
-      </View>
+      </Animated.View>
 
       <ScrollView style={styles.content} contentInsetAdjustmentBehavior="automatic">
         {/* Today card */}
-        <View style={styles.card}>
+        <Animated.View style={[styles.card, cardOneAnimation]}>
           <Text style={styles.cardTitle}>Today</Text>
           <Text style={styles.cardValue}>{todayPauses}</Text>
           <Text style={styles.cardSubtitle}>pauses so far</Text>
-        </View>
+        </Animated.View>
 
         {/* Stats cards */}
-        <View style={styles.card}>
+        <Animated.View style={[styles.card, cardTwoAnimation]}>
           <Text style={styles.cardTitle}>This Week</Text>
           <View style={{ gap: spacing.sm }}>
             <Text style={styles.cardSubtitle}>{weeklyStats.pausesTotal} pauses</Text>
@@ -144,11 +154,11 @@ export default function HomeScreen() {
               {weeklyStats.mindfulMinutes} mindful minutes
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Protected apps list */}
         {settings.selectedApps.length > 0 && (
-          <View style={styles.card}>
+          <Animated.View style={[styles.card, cardThreeAnimation]}>
             <Text style={styles.cardTitle}>Protected Apps</Text>
             <View style={{ gap: spacing.xs }}>
               {settings.selectedApps.map((app) => (
@@ -157,11 +167,11 @@ export default function HomeScreen() {
                 </Text>
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* Action buttons */}
-        <View style={styles.buttonRow}>
+        <Animated.View style={[styles.buttonRow, buttonsAnimation]}>
           <Button
             label="Insights"
             onPress={() => router.push('/insights')}
@@ -174,9 +184,11 @@ export default function HomeScreen() {
             variant="primary"
             style={{ flex: 1 }}
           />
-        </View>
+        </Animated.View>
 
-        <Text style={styles.tip}>Small pauses add up.</Text>
+        <Animated.View style={tipAnimation}>
+          <Text style={styles.tip}>Small pauses add up.</Text>
+        </Animated.View>
       </ScrollView>
       <DebugMenu />
     </View>
