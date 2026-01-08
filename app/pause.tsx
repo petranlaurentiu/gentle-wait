@@ -1,12 +1,18 @@
 /**
  * Pause screen - Interception UI shown when user tries to open a protected app
+ * Redesigned with calm & minimalist aesthetic
  */
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography, animation } from '@/src/theme/theme';
+import { spacing, typography, animation, radius } from '@/src/theme/theme';
 import { insertEvent } from '@/src/services/storage/sqlite';
 import { useLoopAnimation } from '@/src/utils/animations';
 import { triggerSelectionFeedback, triggerSuccessNotification } from '@/src/utils/haptics';
@@ -21,23 +27,52 @@ export default function PauseScreen() {
   const params = useLocalSearchParams();
   const [phase, setPhase] = useState<PausePhase>('breathing');
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [timer, setTimer] = useState(8);
   const sessionId = generateId();
 
   const appPackage = params.appPackage as string;
   const appLabel = (params.appLabel as string) || 'App';
 
   // Animation hooks
-  const breathingAnimation = useLoopAnimation(1, 1.3, animation.breathingCycle);
+  const breathingAnimation = useLoopAnimation(1, 1.25, animation.breathingCycle);
   const phaseOpacity = useSharedValue(1);
   const phaseAnimatedStyle = useAnimatedStyle(() => ({
     opacity: phaseOpacity.value,
   }));
 
+  // Button press animations
+  const primaryButtonScale = useSharedValue(1);
+  const primaryButtonAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: primaryButtonScale.value }],
+  }));
+
+  const secondaryButtonScales = {
+    breathe: useSharedValue(1),
+    exercise: useSharedValue(1),
+    close: useSharedValue(1),
+  };
+
+  const secondaryButtonAnimStyles = {
+    breathe: useAnimatedStyle(() => ({
+      transform: [{ scale: secondaryButtonScales.breathe.value }],
+    })),
+    exercise: useAnimatedStyle(() => ({
+      transform: [{ scale: secondaryButtonScales.exercise.value }],
+    })),
+    close: useAnimatedStyle(() => ({
+      transform: [{ scale: secondaryButtonScales.close.value }],
+    })),
+  };
+
   // Breathing phase - auto-advance to question after one cycle
   useEffect(() => {
     if (phase !== 'breathing') return;
 
-    const timer = setTimeout(() => {
+    const timer = setInterval(() => {
+      setTimer((prev) => Math.max(0, prev - 1));
+    }, 1000);
+
+    const advanceTimer = setTimeout(() => {
       // Fade out breathing phase
       phaseOpacity.value = withTiming(0, {
         duration: 300,
@@ -51,67 +86,89 @@ export default function PauseScreen() {
       }, 300);
     }, animation.breathingCycle);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(advanceTimer);
+    };
   }, [phase, phaseOpacity]);
 
   const handleReasonSelect = async (reason: string) => {
     await triggerSelectionFeedback();
     setSelectedReason(reason);
-    // Don't auto-navigate; user must choose next action
+  };
+
+  const handleButtonPress = (
+    scaleRef: Animated.Shared<number>,
+    callback: () => void
+  ) => {
+    scaleRef.value = withTiming(0.95, { duration: 100 });
+    setTimeout(() => {
+      scaleRef.value = withTiming(1, { duration: 100 });
+      callback();
+    }, 100);
   };
 
   const handleOpenAnyway = async () => {
-    await triggerSuccessNotification();
-    await insertEvent({
-      id: generateId(),
-      ts: Date.now(),
-      appPackage,
-      appLabel,
-      action: 'opened_anyway',
-      reason: selectedReason as any || undefined,
-      sessionId,
+    handleButtonPress(primaryButtonScale, async () => {
+      await triggerSuccessNotification();
+      await insertEvent({
+        id: generateId(),
+        ts: Date.now(),
+        appPackage,
+        appLabel,
+        action: 'opened_anyway',
+        reason: (selectedReason as any) || undefined,
+        sessionId,
+      });
+      router.back();
     });
-    // In real implementation, this would launch the actual app
-    router.back();
   };
 
   const handleClose = async () => {
-    await triggerSuccessNotification();
-    await insertEvent({
-      id: generateId(),
-      ts: Date.now(),
-      appPackage,
-      appLabel,
-      action: 'closed',
-      reason: selectedReason as any || undefined,
-      sessionId,
+    handleButtonPress(secondaryButtonScales.close, async () => {
+      await triggerSuccessNotification();
+      await insertEvent({
+        id: generateId(),
+        ts: Date.now(),
+        appPackage,
+        appLabel,
+        action: 'closed',
+        reason: (selectedReason as any) || undefined,
+        sessionId,
+      });
+      router.back();
     });
-    router.back();
   };
 
-  const handleAlternative = async (type: 'breathe' | 'reflect' | 'grounding' | 'exercise') => {
-    // Log the choice and navigate to alternatives or exercise
-    if (type === 'exercise') {
-      router.push({
-        pathname: '/exercise',
-        params: {
-          sessionId,
-          appPackage,
-          appLabel,
-        },
-      });
-    } else {
-      router.push({
-        pathname: '/alternatives',
-        params: {
-          type,
-          sessionId,
-          appPackage,
-          appLabel,
-          reason: selectedReason || undefined,
-        },
-      });
-    }
+  const handleAlternative = (type: 'breathe' | 'reflect' | 'grounding' | 'exercise') => {
+    const scaleRef =
+      type === 'breathe'
+        ? secondaryButtonScales.breathe
+        : secondaryButtonScales.exercise;
+
+    handleButtonPress(scaleRef, () => {
+      if (type === 'exercise') {
+        router.push({
+          pathname: '/exercise',
+          params: {
+            sessionId,
+            appPackage,
+            appLabel,
+          },
+        });
+      } else {
+        router.push({
+          pathname: '/alternatives',
+          params: {
+            type,
+            sessionId,
+            appPackage,
+            appLabel,
+            reason: selectedReason || undefined,
+          },
+        });
+      }
+    });
   };
 
   const styles = StyleSheet.create({
@@ -120,77 +177,128 @@ export default function PauseScreen() {
       backgroundColor: colors.bg,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+    },
+    breathingPhaseContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
     },
     breathingCircle: {
-      width: 150,
-      height: 150,
-      borderRadius: 75,
+      width: 180,
+      height: 180,
+      borderRadius: 90,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: spacing.xl,
+      marginBottom: spacing.lg,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
     },
     breathingText: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.bg,
-      opacity: 0.8,
+      fontSize: 20,
+      fontWeight: '600',
+      color: '#FFFFFF',
     },
-    promptContainer: {
-      marginBottom: spacing.xl,
+    timerText: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: spacing.md,
+    },
+    breathingMessage: {
+      fontSize: typography.secondary.fontSize,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    questionContainer: {
+      width: '100%',
       alignItems: 'center',
     },
-    promptTitle: {
-      fontSize: typography.prompt.fontSize,
-      fontWeight: typography.prompt.fontWeight,
+    questionTitle: {
+      fontSize: typography.title.fontSize + 2,
+      fontWeight: '700',
       color: colors.text,
       marginBottom: spacing.lg,
       textAlign: 'center',
+      letterSpacing: 0.3,
     },
-    chipContainer: {
+    chipGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.lg,
+      gap: spacing.md,
+      marginBottom: spacing.xl,
+      width: '100%',
     },
     chip: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderRadius: radius.pills,
-      backgroundColor: colors.secondary,
+      width: '30%',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.button,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 2,
+      borderColor: colors.primary,
       alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 60,
+    },
+    chipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primaryDark,
     },
     chipText: {
-      fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      color: colors.bg,
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primaryDark,
+      textAlign: 'center',
+    },
+    chipSelectedText: {
+      color: '#FFFFFF',
     },
     actionContainer: {
       width: '100%',
       gap: spacing.md,
     },
+    primaryButtonWrapper: {
+      width: '100%',
+    },
     button: {
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.lg,
       paddingHorizontal: spacing.lg,
-      borderRadius: 12,
+      borderRadius: radius.button,
       alignItems: 'center',
       justifyContent: 'center',
+      minHeight: 56,
     },
     primaryButton: {
       backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 6,
     },
     secondaryButton: {
-      backgroundColor: colors.border,
+      backgroundColor: colors.secondaryLight,
+      borderWidth: 1,
+      borderColor: colors.secondary,
     },
     buttonText: {
       fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
+      fontWeight: '600',
       color: colors.text,
     },
     primaryButtonText: {
-      color: colors.bg,
+      color: '#FFFFFF',
+      fontSize: 16,
+    },
+    secondaryButtonText: {
+      color: colors.primaryDark,
     },
   });
 
@@ -206,40 +314,38 @@ export default function PauseScreen() {
   return (
     <View style={styles.container}>
       {phase === 'breathing' && (
-        <Animated.View style={phaseAnimatedStyle}>
-          <Animated.View
-            style={[
-              styles.breathingCircle,
-              breathingAnimation,
-            ]}
-          >
+        <Animated.View style={[phaseAnimatedStyle, styles.breathingPhaseContainer]}>
+          <Text style={styles.timerText}>{timer}s</Text>
+          <Animated.View style={[styles.breathingCircle, breathingAnimation]}>
             <Text style={styles.breathingText}>Breathe</Text>
           </Animated.View>
-          <Text style={[styles.promptTitle, { opacity: 0.8 }]}>
-            Before you scroll, take one breath.
+          <Text style={styles.breathingMessage}>
+            Take one mindful breath
           </Text>
         </Animated.View>
       )}
 
       {phase === 'question' && (
-        <Animated.View style={[phaseAnimatedStyle, styles.promptContainer]}>
-          <Text style={styles.promptTitle}>What are you looking for?</Text>
-          <View style={styles.chipContainer}>
+        <Animated.View
+          style={[phaseAnimatedStyle, styles.questionContainer]}
+        >
+          <Text style={styles.questionTitle}>What are you looking for?</Text>
+          <View style={styles.chipGrid}>
             {reasonChoices.map((choice) => (
               <TouchableOpacity
                 key={choice.value}
                 style={[
                   styles.chip,
-                  selectedReason === choice.value && {
-                    backgroundColor: colors.primary,
-                  },
+                  selectedReason === choice.value && styles.chipSelected,
                 ]}
                 onPress={() => handleReasonSelect(choice.value)}
+                activeOpacity={0.7}
               >
                 <Text
                   style={[
                     styles.chipText,
-                    selectedReason === choice.value && { color: colors.bg },
+                    selectedReason === choice.value &&
+                      styles.chipSelectedText,
                   ]}
                 >
                   {choice.label}
@@ -251,40 +357,56 @@ export default function PauseScreen() {
       )}
 
       <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
-          onPress={handleOpenAnyway}
+        <Animated.View
+          style={[styles.primaryButtonWrapper, primaryButtonAnimStyle]}
         >
-          <Text style={[styles.buttonText, styles.primaryButtonText]}>
-            Open {appLabel} anyway
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleOpenAnyway}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>
+              Open {appLabel} anyway
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => handleAlternative('breathe')}
-        >
-          <Text style={styles.buttonText}>Take a short pause</Text>
-        </TouchableOpacity>
+        <Animated.View style={secondaryButtonAnimStyles.breathe}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => handleAlternative('breathe')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              Take a short pause
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => handleAlternative('exercise')}
-        >
-          <Text style={styles.buttonText}>Quick movement break</Text>
-        </TouchableOpacity>
+        <Animated.View style={secondaryButtonAnimStyles.exercise}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => handleAlternative('exercise')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              Quick movement break
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={handleClose}
-        >
-          <Text style={styles.buttonText}>Close</Text>
-        </TouchableOpacity>
+        <Animated.View style={secondaryButtonAnimStyles.close}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handleClose}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              Close
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
 }
-
-const radius = {
-  pills: 999,
-};

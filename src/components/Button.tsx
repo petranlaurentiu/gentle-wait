@@ -1,6 +1,6 @@
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography } from '@/src/theme/theme';
+import { spacing, typography, radius } from '@/src/theme/theme';
 import { triggerLightImpact } from '@/src/utils/haptics';
 
 type ButtonVariant = 'primary' | 'secondary';
@@ -27,31 +27,40 @@ export function Button({
   const styles = StyleSheet.create({
     primaryButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.lg,
       paddingHorizontal: spacing.lg,
-      borderRadius: 12,
+      borderRadius: radius.button,
       alignItems: 'center',
       justifyContent: 'center',
-      opacity: disabled ? 0.5 : 1,
+      minHeight: 56,
+      opacity: disabled ? 0.6 : 1,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 6,
     },
     secondaryButton: {
-      backgroundColor: colors.border,
-      paddingVertical: spacing.md,
+      backgroundColor: colors.secondaryLight,
+      borderWidth: 1,
+      borderColor: colors.secondary,
+      paddingVertical: spacing.lg,
       paddingHorizontal: spacing.lg,
-      borderRadius: 12,
+      borderRadius: radius.button,
       alignItems: 'center',
       justifyContent: 'center',
-      opacity: disabled ? 0.5 : 1,
+      minHeight: 56,
+      opacity: disabled ? 0.6 : 1,
     },
     primaryText: {
-      fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      color: colors.bg,
+      fontSize: typography.button.fontSize + 1,
+      fontWeight: '600',
+      color: '#FFFFFF',
     },
     secondaryText: {
       fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      color: colors.text,
+      fontWeight: '600',
+      color: colors.primaryDark,
     },
   });
 
