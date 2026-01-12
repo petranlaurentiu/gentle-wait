@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState } from 'react';
-import { useColorScheme } from 'react-native';
-import { colors } from './theme';
+/**
+ * Theme Provider - Liquid Glass Design System
+ * Dark-first design for immersive glass effects
+ */
+import React, { createContext, useContext, useState } from "react";
+import { useColorScheme } from "react-native";
+import { colors } from "./theme";
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = "light" | "dark" | "system";
 
 interface ThemeContextType {
   isDark: boolean;
@@ -19,14 +23,13 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  // Default to dark mode for Liquid Glass design
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
 
-  const isDark =
-    themeMode === 'system'
-      ? systemColorScheme === 'dark'
-      : themeMode === 'dark';
+  // For Liquid Glass, we always use dark mode to maintain the glass aesthetic
+  const isDark = true;
 
-  const themeColors = isDark ? colors.dark : colors.light;
+  const themeColors = colors.dark;
 
   const value: ThemeContextType = {
     isDark,
@@ -36,16 +39,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    throw new Error("useTheme must be used within ThemeProvider");
   }
   return context;
 }

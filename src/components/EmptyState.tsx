@@ -1,10 +1,11 @@
 /**
- * Empty State Component
+ * Empty State Component - Liquid Glass Design
  * Displayed when there's no data to show
  */
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography } from '@/src/theme/theme';
+import { View, Text, StyleSheet } from "react-native";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { spacing, typography, radius } from "@/src/theme/theme";
+import { Button } from "./Button";
 
 interface EmptyStateProps {
   icon?: string;
@@ -14,46 +15,44 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
-export function EmptyState({ icon = '📭', title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({
+  icon = "📭",
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: EmptyStateProps) {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: spacing.lg,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: spacing.xl,
     },
     icon: {
-      fontSize: 64,
-      marginBottom: spacing.lg,
+      fontSize: 56,
+      marginBottom: spacing.xl,
     },
     title: {
-      fontSize: typography.title.fontSize,
-      fontWeight: typography.title.fontWeight,
+      fontSize: 24,
+      fontWeight: "200",
       color: colors.text,
       marginBottom: spacing.md,
-      textAlign: 'center',
+      textAlign: "center",
+      letterSpacing: 0.5,
     },
     description: {
-      fontSize: typography.secondary.fontSize,
-      color: colors.text,
-      marginBottom: spacing.lg,
-      textAlign: 'center',
-      opacity: 0.7,
-      lineHeight: 20,
+      fontSize: typography.secondary.fontSize + 1,
+      color: colors.textSecondary,
+      marginBottom: spacing.xl,
+      textAlign: "center",
+      lineHeight: 22,
     },
-    button: {
-      backgroundColor: colors.primary,
-      borderRadius: 12,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-    },
-    buttonText: {
-      color: colors.bg,
-      fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      textAlign: 'center',
+    buttonContainer: {
+      width: "100%",
+      maxWidth: 200,
     },
   });
 
@@ -63,9 +62,9 @@ export function EmptyState({ icon = '📭', title, description, actionLabel, onA
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {actionLabel && onAction && (
-        <TouchableOpacity style={styles.button} onPress={onAction}>
-          <Text style={styles.buttonText}>{actionLabel}</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <Button label={actionLabel} onPress={onAction} variant="secondary" />
+        </View>
       )}
     </View>
   );

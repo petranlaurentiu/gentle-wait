@@ -2,23 +2,69 @@
  * MMKV storage service for fast key-value storage
  * Falls back to in-memory storage if MMKV is not available (Expo Go compatibility)
  */
+import { Platform } from "react-native";
+
 let storage: any = null;
 let inMemoryStore: Record<string, any> = {};
 
 // Try to import MMKV, but fall back to in-memory if not available
 try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { MMKV } = require('react-native-mmkv');
-  storage = new MMKV();
-  console.log('[Storage] MMKV initialized');
-} catch {
-  console.log('[Storage] MMKV not available, using in-memory storage for Expo Go');
+  // Check if we're on a platform that supports native modules
+  if (Platform.OS === "web") {
+    console.log("[Storage] Web platform detected - using in-memory storage");
+  } else {
+    // Try to require MMKV
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mmkvModule = require("react-native-mmkv");
+
+    // Prefer the v4+ API (createMMKV), fall back to older MMKV class if needed
+    if (mmkvModule && typeof mmkvModule.createMMKV === "function") {
+      storage = mmkvModule.createMMKV();
+      console.log("[Storage] ✅ MMKV initialized - settings will persist");
+    } else if (
+      mmkvModule &&
+      mmkvModule.MMKV &&
+      typeof mmkvModule.MMKV === "function"
+    ) {
+      storage = new mmkvModule.MMKV();
+      console.log("[Storage] ✅ MMKV initialized - settings will persist");
+    } else {
+      throw new Error("MMKV class not found in module");
+    }
+  }
+} catch (error: any) {
+  console.warn("[Storage] ⚠️ MMKV not available, using in-memory storage");
+  console.warn("[Storage] ⚠️ Settings will NOT persist between app restarts!");
+
+  if (Platform.OS !== "web") {
+    console.warn(
+      "[Storage] ⚠️ Make sure you are running a native build (npx expo run:android), not Expo Go"
+    );
+    console.warn(
+      "[Storage] ⚠️ Try: npx expo prebuild --clean && npx expo run:android"
+    );
+  }
+
+  if (__DEV__ && error) {
+    console.warn("[Storage] Error details:", error.message || error);
+  }
 }
+
+/**
+ * Check if MMKV is available (native storage) or using fallback (in-memory)
+ */
+export const isMMKVAvailable = (): boolean => {
+  return storage !== null;
+};
 
 export const mmkvStorage = {
   setString: (key: string, value: string) => {
     if (storage) {
-      storage.setString(key, value);
+      if (typeof storage.setString === 'function') {
+        storage.setString(key, value);
+      } else {
+        storage.set(key, value);
+      }
     } else {
       inMemoryStore[key] = value;
     }
@@ -33,7 +79,11 @@ export const mmkvStorage = {
 
   setNumber: (key: string, value: number) => {
     if (storage) {
-      storage.setNumber(key, value);
+      if (typeof storage.setNumber === 'function') {
+        storage.setNumber(key, value);
+      } else {
+        storage.set(key, value);
+      }
     } else {
       inMemoryStore[key] = value;
     }
@@ -48,7 +98,11 @@ export const mmkvStorage = {
 
   setBoolean: (key: string, value: boolean) => {
     if (storage) {
-      storage.setBoolean(key, value);
+      if (typeof storage.setBoolean === 'function') {
+        storage.setBoolean(key, value);
+      } else {
+        storage.set(key, value);
+      }
     } else {
       inMemoryStore[key] = value;
     }
@@ -63,7 +117,11 @@ export const mmkvStorage = {
 
   delete: (key: string) => {
     if (storage) {
-      storage.delete(key);
+      if (typeof storage.delete === 'function') {
+        storage.delete(key);
+      } else if (typeof storage.remove === 'function') {
+        storage.remove(key);
+      }
     } else {
       delete inMemoryStore[key];
     }
@@ -79,7 +137,12 @@ export const mmkvStorage = {
   // Helper methods for JSON
   setJSON: (key: string, value: any) => {
     if (storage) {
-      storage.setString(key, JSON.stringify(value));
+      const payload = JSON.stringify(value);
+      if (typeof storage.setString === 'function') {
+        storage.setString(key, payload);
+      } else {
+        storage.set(key, payload);
+      }
     } else {
       inMemoryStore[key] = value;
     }

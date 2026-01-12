@@ -1,7 +1,10 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography } from '@/src/theme/theme';
-import { triggerSelectionFeedback } from '@/src/utils/haptics';
+/**
+ * Checkbox Component - Liquid Glass Design
+ */
+import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { spacing, typography, radius } from "@/src/theme/theme";
+import { triggerSelectionFeedback } from "@/src/utils/haptics";
 
 interface CheckboxProps {
   label: string;
@@ -14,34 +17,38 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
 
   const styles = StyleSheet.create({
     container: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.md,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.border,
-      borderRadius: 12,
+      paddingVertical: spacing.md + 2,
+      paddingHorizontal: spacing.lg,
+      backgroundColor: checked
+        ? "rgba(0, 212, 255, 0.15)"
+        : "rgba(255, 255, 255, 0.08)",
+      borderRadius: radius.button,
       marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: checked ? colors.primary : "rgba(255, 255, 255, 0.1)",
     },
     checkbox: {
-      width: 24,
-      height: 24,
+      width: 22,
+      height: 22,
       borderRadius: 6,
       borderWidth: 2,
-      borderColor: colors.primary,
-      backgroundColor: checked ? colors.primary : 'transparent',
-      justifyContent: 'center',
-      alignItems: 'center',
+      borderColor: checked ? colors.primary : "rgba(255, 255, 255, 0.3)",
+      backgroundColor: checked ? colors.primary : "transparent",
+      justifyContent: "center",
+      alignItems: "center",
     },
     checkmark: {
-      color: colors.bg,
-      fontSize: 14,
-      fontWeight: 'bold',
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "bold",
     },
     label: {
       flex: 1,
-      fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
+      fontSize: typography.secondary.fontSize + 1,
+      fontWeight: "400",
       color: colors.text,
     },
   });
@@ -52,8 +59,14 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.7}>
-      <View style={styles.checkbox}>{checked && <Text style={styles.checkmark}>✓</Text>}</View>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.checkbox}>
+        {checked && <Text style={styles.checkmark}>✓</Text>}
+      </View>
       <Text style={styles.label}>{label}</Text>
     </TouchableOpacity>
   );

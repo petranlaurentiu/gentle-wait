@@ -11,22 +11,25 @@
  * <DebugMenu />
  * ```
  */
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography } from '@/src/theme/theme';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { spacing, typography, fonts } from "@/src/theme/theme";
 import {
   generateTestEvents,
   generateDailyEvents,
   printDataSummary,
-} from '@/src/utils/testDataGenerator';
-import { deleteAllEvents, getRecentEvents } from '@/src/services/storage/sqlite';
+} from "@/src/utils/testDataGenerator";
+import {
+  deleteAllEvents,
+  getRecentEvents,
+} from "@/src/services/storage/sqlite";
 
 export function DebugMenu() {
   const { colors } = useTheme();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState("");
 
   if (!__DEV__) {
     return null; // Only show in development
@@ -34,7 +37,7 @@ export function DebugMenu() {
 
   const handleGenerateData = async () => {
     setLoading(true);
-    setStatus('Generating test data...');
+    setStatus("Generating test data...");
     try {
       const events = await generateTestEvents(30, 7);
       printDataSummary(events);
@@ -47,7 +50,7 @@ export function DebugMenu() {
 
   const handleGenerateDailyData = async () => {
     setLoading(true);
-    setStatus('Generating daily data...');
+    setStatus("Generating daily data...");
     try {
       await generateDailyEvents(7, 3);
       const events = await getRecentEvents(7);
@@ -61,10 +64,10 @@ export function DebugMenu() {
 
   const handleClearData = async () => {
     setLoading(true);
-    setStatus('Clearing all events...');
+    setStatus("Clearing all events...");
     try {
       await deleteAllEvents();
-      setStatus('✓ Cleared all events');
+      setStatus("✓ Cleared all events");
     } catch (error) {
       setStatus(`✗ Error: ${error}`);
     }
@@ -73,26 +76,26 @@ export function DebugMenu() {
 
   const styles = StyleSheet.create({
     fab: {
-      position: 'absolute',
+      position: "absolute",
       bottom: spacing.lg,
       right: spacing.lg,
       width: 56,
       height: 56,
       borderRadius: 28,
       backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       zIndex: 100,
     },
     fabText: {
       fontSize: 24,
       color: colors.bg,
-      fontWeight: '700',
+      fontWeight: "700",
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'flex-end',
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
     },
     modalContent: {
       backgroundColor: colors.bg,
@@ -103,8 +106,8 @@ export function DebugMenu() {
       paddingBottom: spacing.xl,
     },
     title: {
+      fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
-      fontWeight: typography.title.fontWeight,
       color: colors.text,
       marginBottom: spacing.lg,
     },
@@ -114,11 +117,11 @@ export function DebugMenu() {
       backgroundColor: colors.primary,
       borderRadius: 12,
       marginBottom: spacing.md,
-      alignItems: 'center',
+      alignItems: "center",
     },
     buttonText: {
+      fontFamily: fonts.medium,
       fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
       color: colors.bg,
     },
     dangerButton: {
@@ -135,18 +138,18 @@ export function DebugMenu() {
       backgroundColor: colors.border,
       borderRadius: 8,
       minHeight: 40,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     closeButton: {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
       backgroundColor: colors.border,
       borderRadius: 12,
-      alignItems: 'center',
+      alignItems: "center",
     },
     closeButtonText: {
+      fontFamily: fonts.medium,
       fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
       color: colors.text,
     },
   });
@@ -182,7 +185,7 @@ export function DebugMenu() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? '⏳ Generating...' : '📊 Generate 30 Events'}
+                {loading ? "⏳ Generating..." : "📊 Generate 30 Events"}
               </Text>
             </TouchableOpacity>
 
@@ -192,17 +195,23 @@ export function DebugMenu() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? '⏳ Generating...' : '📈 Generate Daily Data (7 days)'}
+                {loading
+                  ? "⏳ Generating..."
+                  : "📈 Generate Daily Data (7 days)"}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.dangerButton, loading && styles.disabledButton]}
+              style={[
+                styles.button,
+                styles.dangerButton,
+                loading && styles.disabledButton,
+              ]}
               onPress={handleClearData}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? '⏳ Clearing...' : '🗑️  Clear All Events'}
+                {loading ? "⏳ Clearing..." : "🗑️  Clear All Events"}
               </Text>
             </TouchableOpacity>
 

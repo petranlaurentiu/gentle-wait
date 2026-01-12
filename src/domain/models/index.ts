@@ -12,23 +12,34 @@ export interface UserSettings {
   id: string; // singleton
   userName?: string;
   pauseDurationSec: number; // 10-30
-  promptFrequency: 'off' | 'sometimes' | 'always';
+  promptFrequency: "off" | "sometimes" | "always";
   selectedApps: SelectedApp[];
-  theme: 'system' | 'light' | 'dark';
+  theme: "system" | "light" | "dark";
   premium: boolean;
   createdAt: number;
   updatedAt: number;
+  // Onboarding personalization data
+  goals?: string[]; // e.g., "Sharpen my focus", "Sleep better"
+  emotions?: string[]; // e.g., "Guilty", "Anxious"
+  dailyScreenTimeHours?: number; // Current daily screen time
+  targetScreenTimeHours?: number; // Target daily screen time
+  ageRange?: string; // e.g., "18-24", "25-34"
+  onboardingCompleted?: boolean;
 }
 
 export type InterceptionAction =
-  | 'opened_anyway'
-  | 'closed'
-  | 'alternative_breathe'
-  | 'alternative_reflect'
-  | 'alternative_grounding'
-  | 'alternative_exercise';
+  | "opened_anyway"
+  | "closed"
+  | "alternative_breathe"
+  | "alternative_reflect"
+  | "alternative_grounding"
+  | "alternative_exercise";
 
-export type ExerciseCategory = 'desk-stretch' | 'standing' | 'energy' | 'eye-posture';
+export type ExerciseCategory =
+  | "desk-stretch"
+  | "standing"
+  | "energy"
+  | "eye-posture";
 
 export interface Exercise {
   id: string;
@@ -45,12 +56,12 @@ export interface ExerciseProgram {
 }
 
 export type ReflectionReason =
-  | 'relax'
-  | 'connect'
-  | 'distraction'
-  | 'info'
-  | 'habit'
-  | 'unsure';
+  | "relax"
+  | "connect"
+  | "distraction"
+  | "info"
+  | "habit"
+  | "unsure";
 
 export interface InterceptionEvent {
   id: string;

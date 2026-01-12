@@ -1,45 +1,87 @@
-import { Stack, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import { useEffect } from 'react';
-import { NativeModules, AppState } from 'react-native';
+import { Stack, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+import { useEffect, useCallback } from "react";
+import { NativeModules, AppState, View, ActivityIndicator } from "react-native";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import {
+  Outfit_100Thin,
+  Outfit_200ExtraLight,
+  Outfit_300Light,
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
 
-import { ThemeProvider } from '@/src/theme/ThemeProvider';
-import { ErrorBoundary } from '@/src/components/ErrorBoundary';
-import { useAppStore } from '@/src/services/storage';
-import { initializeDatabase } from '@/src/services/storage/sqlite';
+import { ThemeProvider } from "@/src/theme/ThemeProvider";
+import { ErrorBoundary } from "@/src/components/ErrorBoundary";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
+import { useAppStore } from "@/src/services/storage";
+import { initializeDatabase } from "@/src/services/storage/sqlite";
+
+// Keep splash screen visible while loading fonts
+SplashScreen.preventAutoHideAsync();
 
 const { GentleWaitModule } = NativeModules;
 
 export const unstable_settings = {
-  initialRouteName: 'index',
+  initialRouteName: "index",
 };
 
 export default function RootLayout() {
   const loadSettings = useAppStore((state) => state.loadSettings);
-  const setCurrentInterceptionEvent = useAppStore((state) => state.setCurrentInterceptionEvent);
+  const setCurrentInterceptionEvent = useAppStore(
+    (state) => state.setCurrentInterceptionEvent
+  );
   const router = useRouter();
+
+  // Load custom fonts
+  const [fontsLoaded] = useFonts({
+    "Outfit-Thin": Outfit_100Thin,
+    "Outfit-ExtraLight": Outfit_200ExtraLight,
+    "Outfit-Light": Outfit_300Light,
+    "Outfit-Regular": Outfit_400Regular,
+    "Outfit-Medium": Outfit_500Medium,
+    "Outfit-SemiBold": Outfit_600SemiBold,
+    "Outfit-Bold": Outfit_700Bold,
+  });
+
+  // Hide splash screen when fonts are loaded
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
   // Handle pending interception from accessibility service
   useEffect(() => {
     const checkPendingInterception = async () => {
       try {
         if (!GentleWaitModule?.getPendingInterception) {
-          console.log('[DeepLink] GentleWaitModule not available, skipping interception check');
+          console.log(
+            "[DeepLink] GentleWaitModule not available, skipping interception check"
+          );
           return;
         }
 
         const pending = await GentleWaitModule.getPendingInterception();
         if (pending && pending.appPackage) {
-          console.log('[DeepLink] Pending interception found:', pending.appPackage);
+          console.log(
+            "[DeepLink] Pending interception found:",
+            pending.appPackage
+          );
           setCurrentInterceptionEvent({
+            id: `pending-${Date.now()}`,
+            ts: pending.ts || Date.now(),
             appPackage: pending.appPackage,
             appLabel: pending.appLabel || pending.appPackage,
-            timestamp: pending.timestamp,
+            action: "opened_anyway",
           });
           // Navigate to pause screen with the intercepted app info
           router.push({
-            pathname: '/pause',
+            pathname: "/pause",
             params: {
               appPackage: pending.appPackage,
               appLabel: pending.appLabel || pending.appPackage,
@@ -47,13 +89,13 @@ export default function RootLayout() {
           });
         }
       } catch (error) {
-        console.log('[DeepLink] Error checking pending interception:', error);
+        console.log("[DeepLink] Error checking pending interception:", error);
       }
     };
 
     // Check on app foreground
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
         checkPendingInterception();
       }
     });
@@ -73,66 +115,96 @@ export default function RootLayout() {
     loadSettings();
   }, [loadSettings]);
 
+  // Show loading until fonts are ready
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#0A0E1A",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color="#00D4FF" />
+      </View>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <Stack>
-        <Stack.Screen
-          name="index"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="onboarding"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="home"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="pause"
-          options={{
-            headerShown: false,
-            presentation: 'fullScreenModal',
-            animationEnabled: true,
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="settings"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="insights"
-          options={{
-            headerShown: false,
-            animationEnabled: true,
-          }}
-        />
-        <Stack.Screen
-          name="alternatives"
-          options={{
-            headerShown: false,
-            presentation: 'fullScreenModal',
-            animationEnabled: true,
-            gestureEnabled: false,
-          }}
-        />
-        </Stack>
-        <StatusBar style="auto" />
+        <BackgroundWrapper>
+          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: "transparent" },
+              }}
+            >
+              <Stack.Screen
+                name="index"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="onboarding"
+                options={{
+                  headerShown: false,
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="home"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="pause"
+                options={{
+                  headerShown: false,
+                  presentation: "fullScreenModal",
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="insights"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="alternatives"
+                options={{
+                  headerShown: false,
+                  presentation: "fullScreenModal",
+                  gestureEnabled: false,
+                }}
+              />
+              <Stack.Screen
+                name="assistant"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="exercise"
+                options={{
+                  headerShown: false,
+                  presentation: "fullScreenModal",
+                }}
+              />
+            </Stack>
+            <StatusBar style="light" />
+          </View>
+        </BackgroundWrapper>
       </ThemeProvider>
     </ErrorBoundary>
   );

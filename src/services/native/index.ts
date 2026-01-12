@@ -1,7 +1,7 @@
 /**
  * Native module bridge for GentleWait Android functionality
  */
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform } from "react-native";
 
 const GentleWaitModule = NativeModules.GentleWaitModule || null;
 
@@ -9,14 +9,14 @@ const GentleWaitModule = NativeModules.GentleWaitModule || null;
  * Check if Accessibility Service is enabled
  */
 export async function isAccessibilityServiceEnabled(): Promise<boolean> {
-  if (Platform.OS !== 'android' || !GentleWaitModule) {
+  if (Platform.OS !== "android" || !GentleWaitModule) {
     return false;
   }
 
   try {
     return await GentleWaitModule.isAccessibilityServiceEnabled();
   } catch (error) {
-    console.error('Error checking accessibility service:', error);
+    console.error("Error checking accessibility service:", error);
     return false;
   }
 }
@@ -27,18 +27,24 @@ export async function isAccessibilityServiceEnabled(): Promise<boolean> {
 export async function setSelectedApps(
   apps: { packageName: string; label: string }[]
 ): Promise<void> {
-  if (Platform.OS !== 'android' || !GentleWaitModule) {
-    console.log('[NativeService] Not on Android or GentleWaitModule not available');
+  if (Platform.OS !== "android" || !GentleWaitModule) {
+    console.log(
+      "[NativeService] Not on Android or GentleWaitModule not available"
+    );
     return;
   }
 
   try {
-    console.log('[NativeService] Syncing selected apps to native:', apps);
-    // Pass the array directly - React Native will convert it to WritableArray
-    await GentleWaitModule.setSelectedApps(apps);
-    console.log('[NativeService] Successfully synced selected apps');
+    // Extract just package names for native module
+    const packageNames = apps.map((app) => app.packageName);
+    console.log(
+      "[NativeService] Syncing selected apps to native:",
+      packageNames
+    );
+    await GentleWaitModule.setSelectedApps(packageNames);
+    console.log("[NativeService] Successfully synced selected apps");
   } catch (error) {
-    console.error('[NativeService] Error saving selected apps:', error);
+    console.error("[NativeService] Error saving selected apps:", error);
   }
 }
 
@@ -48,7 +54,7 @@ export async function setSelectedApps(
 export async function getSelectedApps(): Promise<
   { packageName: string; label: string }[]
 > {
-  if (Platform.OS !== 'android' || !GentleWaitModule) {
+  if (Platform.OS !== "android" || !GentleWaitModule) {
     return [];
   }
 
@@ -56,7 +62,7 @@ export async function getSelectedApps(): Promise<
     const json = await GentleWaitModule.getSelectedApps();
     return JSON.parse(json);
   } catch (error) {
-    console.error('Error getting selected apps:', error);
+    console.error("Error getting selected apps:", error);
     return [];
   }
 }
@@ -69,14 +75,14 @@ export async function getPendingInterception(): Promise<{
   appLabel: string;
   ts: number;
 } | null> {
-  if (Platform.OS !== 'android' || !GentleWaitModule) {
+  if (Platform.OS !== "android" || !GentleWaitModule) {
     return null;
   }
 
   try {
     return await GentleWaitModule.getPendingInterception();
   } catch (error) {
-    console.error('Error getting pending interception:', error);
+    console.error("Error getting pending interception:", error);
     return null;
   }
 }
@@ -85,13 +91,13 @@ export async function getPendingInterception(): Promise<{
  * Open Accessibility Settings for user to enable the service
  */
 export async function openAccessibilitySettings(): Promise<void> {
-  if (Platform.OS !== 'android' || !GentleWaitModule) {
+  if (Platform.OS !== "android" || !GentleWaitModule) {
     return;
   }
 
   try {
     await GentleWaitModule.openAccessibilitySettings();
   } catch (error) {
-    console.error('Error opening accessibility settings:', error);
+    console.error("Error opening accessibility settings:", error);
   }
 }

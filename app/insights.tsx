@@ -1,16 +1,41 @@
 /**
  * Insights screen - Weekly stats and trends
+ * Liquid Glass Design System
  */
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { spacing, typography } from '@/src/theme/theme';
-import { EmptyState } from '@/src/components/EmptyState';
-import { LoadingState } from '@/src/components/LoadingState';
-import { getWeeklyStats, getSevenDayTrend } from '@/src/services/stats';
-import { getTopTriggers } from '@/src/services/storage/sqlite';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { spacing, typography, fonts, radius } from "@/src/theme/theme";
+import { EmptyState } from "@/src/components/EmptyState";
+import { LoadingState } from "@/src/components/LoadingState";
+import { GlassCard } from "@/src/components/GlassCard";
+import { getWeeklyStats, getSevenDayTrend } from "@/src/services/stats";
+import { getTopTriggers } from "@/src/services/storage/sqlite";
+
+// Helper to get start and end of current week (Monday - Sunday)
+function getWeekBounds() {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6); // Add 6 days to get Sunday
+  endOfWeek.setHours(23, 59, 59, 999);
+  return {
+    start: startOfWeek.getTime(),
+    end: endOfWeek.getTime(),
+  };
+}
 
 export default function InsightsScreen() {
   const router = useRouter();
@@ -23,8 +48,12 @@ export default function InsightsScreen() {
     choseCalmCount: 0,
     mindfulMinutes: 0,
   });
-  const [trendData, setTrendData] = useState<{ date: string; count: number }[]>([]);
-  const [topTriggers, setTopTriggers] = useState<{ reason: string; count: number }[]>([]);
+  const [trendData, setTrendData] = useState<{ date: string; count: number }[]>(
+    []
+  );
+  const [topTriggers, setTopTriggers] = useState<
+    { reason: string; count: number }[]
+  >([]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -46,14 +75,15 @@ export default function InsightsScreen() {
           const trend = await getSevenDayTrend();
           setTrendData(trend);
 
+          const weekBounds = getWeekBounds();
           const triggers = await getTopTriggers(
-            Date.now() - 7 * 24 * 60 * 60 * 1000,
-            Date.now(),
+            weekBounds.start,
+            weekBounds.end,
             5
           );
           setTopTriggers(triggers);
         } catch (error) {
-          console.error('Failed to load insights:', error);
+          console.error("Failed to load insights:", error);
         } finally {
           setIsLoading(false);
         }
@@ -64,125 +94,154 @@ export default function InsightsScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.bg,
     },
     header: {
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
+      paddingTop: spacing.xl,
       paddingBottom: spacing.md,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     title: {
+      fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
-      fontWeight: typography.title.fontWeight,
       color: colors.text,
+      letterSpacing: 0.5,
     },
     closeButton: {
       padding: spacing.sm,
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      borderRadius: radius.button,
     },
     closeButtonText: {
-      fontSize: 24,
+      fontSize: 20,
       color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
     },
     content: {
       padding: spacing.lg,
-      gap: spacing.lg,
+      paddingBottom: spacing.xl * 3,
+      gap: spacing.md,
     },
     section: {
       gap: spacing.sm,
     },
     sectionTitle: {
-      fontSize: typography.button.fontSize,
-      fontWeight: typography.button.fontWeight,
-      color: colors.text,
+      fontFamily: fonts.semiBold,
+      fontSize: typography.label.fontSize,
+      color: colors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
       marginBottom: spacing.sm,
     },
-    card: {
-      backgroundColor: colors.secondary,
-      borderRadius: 16,
-      padding: spacing.lg,
-      gap: spacing.sm,
-    },
     cardLabel: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.bg,
-      opacity: 0.8,
+      fontFamily: fonts.semiBold,
+      fontSize: typography.label.fontSize,
+      color: colors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
     },
     cardValue: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: colors.bg,
+      fontFamily: fonts.thin,
+      fontSize: typography.display.fontSize,
+      color: colors.primary,
+      letterSpacing: -3,
+      marginVertical: spacing.xs,
     },
     cardSubtitle: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.bg,
-      opacity: 0.6,
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
     },
     statsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: "row",
       gap: spacing.md,
     },
     smallCard: {
       flex: 1,
-      minWidth: '48%',
-      backgroundColor: colors.secondary,
-      borderRadius: 12,
-      padding: spacing.md,
-      gap: spacing.xs,
     },
     smallCardValue: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.bg,
+      fontFamily: fonts.light,
+      fontSize: typography.title.fontSize,
+      color: colors.text,
+      marginTop: spacing.xs,
     },
-    chartPlaceholder: {
-      height: 200,
-      backgroundColor: colors.secondary,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-      opacity: 0.5,
+    // Chart styles
+    chartContent: {
+      alignItems: "center",
     },
-    chartPlaceholderText: {
-      color: colors.bg,
-      fontSize: typography.secondary.fontSize,
+    chartValue: {
+      fontFamily: fonts.thin,
+      fontSize: typography.hero.fontSize,
+      color: colors.secondary,
+      letterSpacing: -2,
     },
-    triggerList: {
+    chartLabel: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    trendBars: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "space-around",
+      width: "100%",
+      height: 80,
       gap: spacing.sm,
     },
-    triggerItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
+    trendBarContainer: {
+      alignItems: "center",
+      flex: 1,
+    },
+    trendBar: {
+      width: "80%",
       backgroundColor: colors.secondary,
-      borderRadius: 12,
-      opacity: 0.7,
+      borderRadius: 4,
+      minHeight: 4,
+    },
+    trendDayLabel: {
+      fontFamily: fonts.medium,
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: spacing.xs,
+    },
+    // Trigger list styles
+    triggerList: {
+      paddingVertical: spacing.sm,
+    },
+    triggerItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    triggerItemBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: "rgba(255, 255, 255, 0.1)",
     },
     triggerLabel: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: typography.secondary.fontWeight,
-      color: colors.bg,
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      color: colors.text,
     },
     triggerCount: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: '700',
-      color: colors.bg,
+      fontFamily: fonts.semiBold,
+      fontSize: typography.body.fontSize,
+      color: colors.accent,
     },
   });
 
   const reasonLabels: Record<string, string> = {
-    relax: 'Relaxation',
-    connect: 'Connection',
-    distraction: 'Distraction',
-    info: 'Information',
-    habit: 'Habit',
+    relax: "Relaxation",
+    connect: "Connection",
+    distraction: "Distraction",
+    info: "Information",
+    habit: "Habit",
     unsure: "I'm not sure",
   };
 
@@ -195,7 +254,10 @@ export default function InsightsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Insights</Text>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+          >
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -214,69 +276,126 @@ export default function InsightsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Insights</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => router.back()}
+        >
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} contentInsetAdjustmentBehavior="automatic">
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+      >
         {/* This Week */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>This Week</Text>
-          <View style={styles.card}>
+          <GlassCard glowColor="primary">
             <Text style={styles.cardLabel}>Total pauses</Text>
             <Text style={styles.cardValue}>{weeklyStats.pausesTotal}</Text>
-          </View>
+            <Text style={styles.cardSubtitle}>
+              {weeklyStats.pausesTotal === 0
+                ? "Start your mindful journey"
+                : `${weeklyStats.pausesTotal} moments of awareness`}
+            </Text>
+          </GlassCard>
 
           <View style={styles.statsGrid}>
-            <View style={styles.smallCard}>
+            <GlassCard style={styles.smallCard} intensity="light">
               <Text style={styles.cardLabel}>Chose calm</Text>
-              <Text style={styles.smallCardValue}>{weeklyStats.choseCalmCount}</Text>
-            </View>
-            <View style={styles.smallCard}>
+              <Text style={styles.smallCardValue}>
+                {weeklyStats.choseCalmCount}
+              </Text>
+            </GlassCard>
+            <GlassCard style={styles.smallCard} intensity="light">
               <Text style={styles.cardLabel}>Mindful min</Text>
-              <Text style={styles.smallCardValue}>{weeklyStats.mindfulMinutes}</Text>
-            </View>
+              <Text style={styles.smallCardValue}>
+                {weeklyStats.mindfulMinutes}
+              </Text>
+            </GlassCard>
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={styles.smallCard}>
+            <GlassCard style={styles.smallCard} intensity="light">
               <Text style={styles.cardLabel}>Opened anyway</Text>
-              <Text style={styles.smallCardValue}>{weeklyStats.openedAnyway}</Text>
-            </View>
-            <View style={styles.smallCard}>
-              <Text style={styles.cardLabel}>Closed pauses</Text>
-              <Text style={styles.smallCardValue}>{weeklyStats.closedCount}</Text>
-            </View>
+              <Text style={styles.smallCardValue}>
+                {weeklyStats.openedAnyway}
+              </Text>
+            </GlassCard>
+            <GlassCard style={styles.smallCard} intensity="light">
+              <Text style={styles.cardLabel}>Closed</Text>
+              <Text style={styles.smallCardValue}>
+                {weeklyStats.closedCount}
+              </Text>
+            </GlassCard>
           </View>
         </View>
 
         {/* Chart */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>7-Day Trend</Text>
-          <View style={styles.chartPlaceholder}>
-            <Text style={styles.chartPlaceholderText}>
-              {trendData.length > 0
-                ? `${trendData.reduce((sum, d) => sum + d.count, 0)} pauses this week`
-                : 'No data yet'}
-            </Text>
-          </View>
+          <GlassCard glowColor="secondary">
+            <View style={styles.chartContent}>
+              <Text style={styles.chartValue}>
+                {trendData.reduce((sum, d) => sum + d.count, 0)}
+              </Text>
+              <Text style={styles.chartLabel}>pauses this week</Text>
+              {trendData.length > 0 && (
+                <View style={styles.trendBars}>
+                  {trendData.map((day, index) => (
+                    <View key={index} style={styles.trendBarContainer}>
+                      <View
+                        style={[
+                          styles.trendBar,
+                          {
+                            height: Math.max(
+                              4,
+                              (day.count /
+                                Math.max(...trendData.map((d) => d.count), 1)) *
+                                60
+                            ),
+                          },
+                        ]}
+                      />
+                      <Text style={styles.trendDayLabel}>
+                        {new Date(day.date).toLocaleDateString("en", {
+                          weekday: "narrow",
+                        })}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </GlassCard>
         </View>
 
         {/* Top Triggers */}
         {topTriggers.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>What you were looking for</Text>
-            <View style={styles.triggerList}>
-              {topTriggers.map((trigger) => (
-                <View key={trigger.reason} style={styles.triggerItem}>
-                  <Text style={styles.triggerLabel}>
-                    {reasonLabels[trigger.reason] || trigger.reason}
-                  </Text>
-                  <Text style={styles.triggerCount}>{trigger.count}</Text>
-                </View>
-              ))}
-            </View>
+            <GlassCard glowColor="accent" noPadding>
+              <View style={styles.triggerList}>
+                {topTriggers.map((trigger, index) => (
+                  <View
+                    key={trigger.reason}
+                    style={[
+                      styles.triggerItem,
+                      index < topTriggers.length - 1 &&
+                        styles.triggerItemBorder,
+                    ]}
+                  >
+                    <Text style={styles.triggerLabel}>
+                      {reasonLabels[trigger.reason] || trigger.reason}
+                    </Text>
+                    <Text style={styles.triggerCount}>{trigger.count}</Text>
+                  </View>
+                ))}
+              </View>
+            </GlassCard>
           </View>
         )}
       </ScrollView>
