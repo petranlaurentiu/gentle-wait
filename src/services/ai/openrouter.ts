@@ -7,9 +7,15 @@
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// API Key for OpenRouter
-const API_KEY =
-  "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";
+// API Key for OpenRouter - should be set via environment variable
+// Set EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file
+const API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
+
+if (!API_KEY) {
+  console.warn(
+    "[OpenRouter] API key not found. Set EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file."
+  );
+}
 
 // Free models with fallbacks - ordered by preference
 const FREE_MODELS = [
