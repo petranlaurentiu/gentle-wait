@@ -5,15 +5,21 @@
  * Using: https://openrouter.ai/
  */
 
+import Constants from "expo-constants";
+
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// API Key for OpenRouter - should be set via environment variable
-// Set EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file
-const API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "";
+// API Key for OpenRouter
+// In development: Uses .env file (EXPO_PUBLIC_OPENROUTER_API_KEY)
+// In production: Uses EAS Secrets (injected during build)
+const API_KEY =
+  Constants.expoConfig?.extra?.openRouterApiKey ||
+  process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ||
+  "";
 
 if (!API_KEY) {
   console.warn(
-    "[OpenRouter] API key not found. Set EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file."
+    "[OpenRouter] API key not found. Set EXPO_PUBLIC_OPENROUTER_API_KEY in your .env file for development, or configure EAS Secrets for production builds."
   );
 }
 

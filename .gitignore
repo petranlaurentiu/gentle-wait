@@ -40,6 +40,10 @@ yarn-error.*
 
 app-example
 
-# generated native folders
-/ios
-/android
+# generated native folders (but keep source code)
+# /ios - Keep iOS source code for EAS builds
+/android/build
+/android/app/build
+/android/.gradle
+/android/app/.cxx
+# Keep android source files (MainActivity.kt, GentleWaitModule.kt, etc.)
