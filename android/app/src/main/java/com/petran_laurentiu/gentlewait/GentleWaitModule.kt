@@ -100,6 +100,7 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
       prefs.edit()
         .remove(KEY_PENDING_APP_PACKAGE)
         .remove(KEY_PENDING_APP_LABEL)
+        .remove(KEY_PENDING_APP_TS)
         .remove(KEY_PENDING_TS)
         .putLong("handled_$appPackage", System.currentTimeMillis())
         .apply()
@@ -109,6 +110,22 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
         .apply()
     }
     promise.resolve(true)
+  }
+
+  @ReactMethod
+  fun launchApp(packageName: String, promise: Promise) {
+    try {
+      val intent = reactApplicationContext.packageManager.getLaunchIntentForPackage(packageName)
+      if (intent != null) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        reactApplicationContext.startActivity(intent)
+        promise.resolve(true)
+      } else {
+        promise.reject("LAUNCH_FAILED", "Could not find launch intent for package: $packageName")
+      }
+    } catch (e: Exception) {
+      promise.reject("LAUNCH_FAILED", e.message, e)
+    }
   }
 
   companion object {

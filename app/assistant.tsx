@@ -80,6 +80,7 @@ export default function AssistantScreen() {
             weeklyStats.alternativeBreathed +
             weeklyStats.alternativeReflected +
             weeklyStats.alternativeGrounded +
+            weeklyStats.alternativePrayed +
             weeklyStats.closedCount,
         };
 

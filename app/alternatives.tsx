@@ -218,48 +218,29 @@ export default function AlternativesScreen() {
         sessionId,
       });
       
-      // Mark app as handled so it won't be intercepted again for cooldown period
-      if (
-        Platform.OS === "android" &&
-        NativeModules.GentleWaitModule?.markAppHandled &&
-        appPackage
-      ) {
-        try {
-          await NativeModules.GentleWaitModule.markAppHandled(appPackage);
-          console.log("[Alternatives] Marked app as handled:", appPackage);
-        } catch (error) {
-          console.error("[Alternatives] Failed to mark app as handled:", error);
-        }
+      // Navigate directly to home using replace to avoid navigation stack issues
+      router.replace("/home");
+
+      // Launch the app after a brief delay (pending interception already cleared)
+      if (Platform.OS === "android" && NativeModules.GentleWaitModule?.launchApp && appPackage) {
+        setTimeout(async () => {
+          try {
+            await NativeModules.GentleWaitModule.launchApp(appPackage);
+            console.log("[Alternatives] Launched app:", appPackage);
+          } catch (error) {
+            console.error("[Alternatives] Failed to launch app:", error);
+          }
+        }, 800);
       }
-      
-      router.back();
-      setTimeout(() => {
-        router.back(); // Go back to home, not pause
-      }, 100);
     } catch (error) {
       console.error("[Alternatives] Error completing exercise:", error);
-      router.back();
-      setTimeout(() => {
-        router.back();
-      }, 100);
+      router.replace("/home");
     }
   };
 
   const handleSkip = async () => {
     try {
-      // Also mark as handled when skipping to prevent immediate re-intercept
-      if (
-        Platform.OS === "android" &&
-        NativeModules.GentleWaitModule?.markAppHandled &&
-        appPackage
-      ) {
-        try {
-          await NativeModules.GentleWaitModule.markAppHandled(appPackage);
-          console.log("[Alternatives] Marked app as handled (skip):", appPackage);
-        } catch (error) {
-          console.error("[Alternatives] Failed to mark app as handled:", error);
-        }
-      }
+      // Pending interception already cleared by deep link handler
       router.back();
     } catch (error) {
       console.error("[Alternatives] Error skipping exercise:", error);

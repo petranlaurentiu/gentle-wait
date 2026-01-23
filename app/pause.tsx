@@ -155,13 +155,7 @@ export default function PauseScreen() {
       reason: (selectedReason as any) || undefined,
       sessionId,
     });
-    // Mark app as handled so it won't be intercepted again for cooldown period
-    if (
-      Platform.OS === "android" &&
-      NativeModules.GentleWaitModule?.markAppHandled
-    ) {
-      await NativeModules.GentleWaitModule.markAppHandled(appPackage);
-    }
+    // Pending interception already cleared by deep link handler
     router.back();
   };
 
@@ -176,22 +170,21 @@ export default function PauseScreen() {
       reason: (selectedReason as any) || undefined,
       sessionId,
     });
-    // Mark app as handled so it won't be intercepted again for cooldown period
-    if (
-      Platform.OS === "android" &&
-      NativeModules.GentleWaitModule?.markAppHandled
-    ) {
-      await NativeModules.GentleWaitModule.markAppHandled(appPackage);
-    }
+    // Pending interception already cleared by deep link handler
     router.back();
   };
 
   const handleAlternative = (
-    type: "breathe" | "reflect" | "grounding" | "exercise"
+    type: "breathe" | "reflect" | "grounding" | "exercise" | "prayer"
   ) => {
     if (type === "exercise") {
       router.push({
         pathname: "/exercise",
+        params: { sessionId, appPackage, appLabel },
+      });
+    } else if (type === "prayer") {
+      router.push({
+        pathname: "/prayer",
         params: { sessionId, appPackage, appLabel },
       });
     } else {
@@ -474,9 +467,14 @@ export default function PauseScreen() {
         <View style={styles.actionContainer}>
           <Text style={styles.actionTitle}>What would you like to do?</Text>
           <Button
+            label="🙏  Take a Moment to Pray"
+            onPress={() => handleAlternative("prayer")}
+            variant="primary"
+          />
+          <Button
             label="🧘  Breathe & Ground"
             onPress={() => handleAlternative("breathe")}
-            variant="primary"
+            variant="secondary"
           />
           <Button
             label="💪  Quick Movement Break"

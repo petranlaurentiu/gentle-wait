@@ -33,7 +33,8 @@ export type InterceptionAction =
   | "alternative_breathe"
   | "alternative_reflect"
   | "alternative_grounding"
-  | "alternative_exercise";
+  | "alternative_exercise"
+  | "alternative_prayer";
 
 export type ExerciseCategory =
   | "desk-stretch"
@@ -82,5 +83,6 @@ export interface WeeklyStats {
   alternativeBreathed: number;
   alternativeReflected: number;
   alternativeGrounded: number;
+  alternativePrayed: number;
   totalMindfulMinutes: number;
 }

@@ -83,6 +83,7 @@ export async function getWeeklyStats(): Promise<WeeklyStats> {
     alternativeBreathed: counts["alternative_breathe"] || 0,
     alternativeReflected: counts["alternative_reflect"] || 0,
     alternativeGrounded: counts["alternative_grounding"] || 0,
+    alternativePrayed: counts["alternative_prayer"] || 0,
     totalMindfulMinutes: Math.round(mindfulMs / 60000),
   };
 }

@@ -68,7 +68,8 @@ export default function InsightsScreen() {
             choseCalmCount:
               weekly.alternativeBreathed +
               weekly.alternativeReflected +
-              weekly.alternativeGrounded,
+              weekly.alternativeGrounded +
+              weekly.alternativePrayed,
             mindfulMinutes: weekly.totalMindfulMinutes,
           });
 

@@ -57,9 +57,17 @@ export default function RootLayout() {
 
   // Handle pending interception from accessibility service
   useEffect(() => {
+    let isProcessing = false;
+
     const checkPendingInterception = async () => {
       try {
-        if (!GentleWaitModule?.getPendingInterception) {
+        // Prevent concurrent processing
+        if (isProcessing) {
+          console.log("[DeepLink] Already processing interception, skipping");
+          return;
+        }
+
+        if (!GentleWaitModule?.getPendingInterception || !GentleWaitModule?.markAppHandled) {
           console.log(
             "[DeepLink] GentleWaitModule not available, skipping interception check"
           );
@@ -72,6 +80,14 @@ export default function RootLayout() {
             "[DeepLink] Pending interception found:",
             pending.appPackage
           );
+          
+          // Set processing flag to prevent duplicates
+          isProcessing = true;
+          
+          // Clear the pending interception IMMEDIATELY to prevent loops
+          await GentleWaitModule.markAppHandled(pending.appPackage);
+          console.log("[DeepLink] Cleared pending interception:", pending.appPackage);
+          
           setCurrentInterceptionEvent({
             id: `pending-${Date.now()}`,
             ts: pending.ts || Date.now(),
@@ -79,6 +95,7 @@ export default function RootLayout() {
             appLabel: pending.appLabel || pending.appPackage,
             action: "opened_anyway",
           });
+          
           // Navigate to pause screen with the intercepted app info
           router.push({
             pathname: "/pause",
@@ -87,9 +104,15 @@ export default function RootLayout() {
               appLabel: pending.appLabel || pending.appPackage,
             },
           });
+          
+          // Reset processing flag after navigation
+          setTimeout(() => {
+            isProcessing = false;
+          }, 1000);
         }
       } catch (error) {
         console.log("[DeepLink] Error checking pending interception:", error);
+        isProcessing = false;
       }
     };
 
