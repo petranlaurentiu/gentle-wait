@@ -1,8 +1,8 @@
 /**
  * SQLite storage service for events and analytics
  */
-import * as SQLite from 'expo-sqlite';
 import { InterceptionEvent, ReflectionReason } from '@/src/domain/models';
+import * as SQLite from 'expo-sqlite';
 
 let db: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<void> | null = null;

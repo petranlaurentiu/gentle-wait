@@ -34,14 +34,16 @@ import {
   getGroundingExerciseForDuration,
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
+import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
 
 const { width } = Dimensions.get("window");
 const CIRCLE_SIZE = width * 0.5;
+const GLOW_SIZE = width * 0.4;
 
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-type AlternativeType = "breathe" | "reflect" | "grounding";
+type AlternativeType = "breathe" | "reflect" | "grounding" | "prayer";
 type BreathPhase = "inhale" | "hold1" | "exhale" | "hold2";
 
 export default function AlternativesScreen() {
@@ -80,6 +82,10 @@ export default function AlternativesScreen() {
   // Journaling state
   const [journalPrompt] = useState(() => getRandomJournalingPrompt());
   const [journalEntry, setJournalEntry] = useState("");
+
+  // Prayer state
+  const [prayer] = useState<Prayer>(() => getPrayerForDuration(pauseDuration));
+  const [prayerTimeLeft, setPrayerTimeLeft] = useState(pauseDuration);
 
   // Animations
   const breathScale = useSharedValue(1);
@@ -191,6 +197,45 @@ export default function AlternativesScreen() {
     return () => clearInterval(timer);
   }, [type, isComplete]);
 
+  // Prayer timer
+  useEffect(() => {
+    if (type !== "prayer" || isComplete) return;
+
+    const timer = setInterval(() => {
+      setPrayerTimeLeft((prev) => {
+        if (prev <= 1) {
+          setIsComplete(true);
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [type, isComplete]);
+
+  // Prayer glow animation
+  useEffect(() => {
+    if (type !== "prayer" || isComplete) return;
+
+    glowOpacity.value = withRepeat(
+      Animated.sequence([
+        withTiming(0.5, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.3, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      ]),
+      -1
+    );
+
+    breathScale.value = withRepeat(
+      Animated.sequence([
+        withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      ]),
+      -1
+    );
+  }, [type, isComplete, glowOpacity, breathScale]);
+
   // Animated styles
   const circleAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: breathScale.value }],
@@ -206,6 +251,7 @@ export default function AlternativesScreen() {
         breathe: "alternative_breathe",
         reflect: "alternative_reflect",
         grounding: "alternative_grounding",
+        prayer: "alternative_prayer",
       };
 
       await insertEvent({
@@ -436,6 +482,63 @@ export default function AlternativesScreen() {
       textAlign: "center",
       fontStyle: "italic",
     },
+    // Prayer styles
+    prayerContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    prayerName: {
+      fontFamily: fonts.light,
+      fontSize: typography.title.fontSize,
+      color: colors.text,
+      textAlign: "center",
+      marginBottom: spacing.xs,
+    },
+    prayerAttribution: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      textAlign: "center",
+      fontStyle: "italic",
+    },
+    prayerGlowContainer: {
+      width: GLOW_SIZE + 40,
+      height: GLOW_SIZE + 40,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+      marginVertical: spacing.xl,
+    },
+    prayerIcon: {
+      fontSize: 64,
+      textAlign: "center",
+    },
+    prayerTimer: {
+      fontFamily: fonts.thin,
+      fontSize: 48,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: spacing.lg,
+    },
+    prayerTextCard: {
+      padding: spacing.lg,
+    },
+    prayerText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.bodyLarge.fontSize,
+      color: colors.text,
+      textAlign: "center",
+      lineHeight: 28,
+      marginBottom: spacing.md,
+    },
+    categoryText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.primary,
+      textAlign: "center",
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+    },
     // Buttons
     buttonContainer: {
       gap: spacing.sm,
@@ -455,8 +558,8 @@ export default function AlternativesScreen() {
     },
   });
 
-  // Completed state
-  if (isComplete && type !== "reflect") {
+  // Completed state (except for reflect and prayer which handle completion inline)
+  if (isComplete && type !== "reflect" && type !== "prayer") {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.scrollContent}>
@@ -649,6 +752,65 @@ export default function AlternativesScreen() {
               />
               <Button label="Skip" onPress={handleSkip} variant="ghost" />
             </View>
+          </View>
+        )}
+
+        {/* PRAYER */}
+        {type === "prayer" && (
+          <View style={styles.prayerContainer}>
+            <View style={styles.header}>
+              <Text style={styles.prayerName}>
+                {prayer.icon} {prayer.name}
+              </Text>
+              {prayer.attribution && (
+                <Text style={styles.prayerAttribution}>
+                  {prayer.attribution}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.prayerGlowContainer}>
+              <Animated.View
+                style={[styles.glowOuter, glowAnimatedStyle]}
+              >
+                <LinearGradient
+                  colors={[
+                    colors.primaryDim + "00",
+                    colors.primaryDim + "40",
+                    colors.primaryDim + "00",
+                  ]}
+                  style={styles.glowOuter}
+                />
+              </Animated.View>
+
+              <Text style={styles.prayerIcon}>✝️</Text>
+            </View>
+
+            <Text style={styles.prayerTimer}>{prayerTimeLeft}s</Text>
+
+            <GlassCard glowColor="secondary" style={styles.prayerTextCard}>
+              <Text style={styles.prayerText}>{prayer.text}</Text>
+
+              {prayer.category && (
+                <Text style={styles.categoryText}>{prayer.category}</Text>
+              )}
+            </GlassCard>
+
+            {!isComplete && (
+              <View style={styles.buttonContainer}>
+                <Button label="Skip" onPress={handleSkip} variant="ghost" />
+              </View>
+            )}
+
+            {isComplete && (
+              <View style={styles.buttonContainer}>
+                <Button
+                  label="Complete Prayer"
+                  onPress={handleComplete}
+                  variant="primary"
+                />
+              </View>
+            )}
           </View>
         )}
       </ScrollView>

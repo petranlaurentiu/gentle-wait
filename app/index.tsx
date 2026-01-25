@@ -18,10 +18,10 @@ export default function EntryPoint() {
   const { colors } = useTheme();
 
   useEffect(() => {
-    // Check for pending interception first (from accessibility service)
+    // Check for pending interception first (from accessibility service or DeviceActivity)
     const checkAndNavigate = async () => {
-      // Check for pending interception
-      if (Platform.OS === "android" && GentleWaitModule?.getPendingInterception) {
+      // Check for pending interception on both iOS and Android
+      if ((Platform.OS === "android" || Platform.OS === "ios") && GentleWaitModule?.getPendingInterception) {
         try {
           const pending = await GentleWaitModule.getPendingInterception();
           if (pending && pending.appPackage) {

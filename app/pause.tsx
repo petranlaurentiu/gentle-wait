@@ -2,44 +2,42 @@
  * Pause screen - Interception UI shown when user tries to open a protected app
  * Liquid Glass Design System
  */
-import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  ScrollView,
-  NativeModules,
-  Platform,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-  interpolate,
-} from "react-native-reanimated";
+import { Button } from "@/src/components/Button";
+import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import {
+  animation,
+  fonts,
+  radius,
   spacing,
   typography,
-  fonts,
-  animation,
-  radius,
 } from "@/src/theme/theme";
-import { insertEvent } from "@/src/services/storage/sqlite";
 import {
   triggerSelectionFeedback,
   triggerSuccessNotification,
 } from "@/src/utils/haptics";
-import { Button } from "@/src/components/Button";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const CIRCLE_SIZE = width * 0.55;
@@ -182,12 +180,8 @@ export default function PauseScreen() {
         pathname: "/exercise",
         params: { sessionId, appPackage, appLabel },
       });
-    } else if (type === "prayer") {
-      router.push({
-        pathname: "/prayer",
-        params: { sessionId, appPackage, appLabel },
-      });
     } else {
+      // All other alternatives (breathe, reflect, grounding, prayer) go to /alternatives
       router.push({
         pathname: "/alternatives",
         params: {

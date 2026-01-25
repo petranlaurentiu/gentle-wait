@@ -2,7 +2,7 @@
  * Exercise screen - Physical movement breaks with category selection
  * Liquid Glass Design System
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -121,7 +121,7 @@ export default function ExerciseScreen() {
   }, [phase, exercise, isPaused]);
 
   // Adjust exercise duration to match user's pause duration setting
-  const adjustExerciseForDuration = (ex: Exercise): Exercise => {
+  const adjustExerciseForDuration = useCallback((ex: Exercise): Exercise => {
     if (ex.durationSec <= pauseDuration) {
       // Exercise fits within pause duration, use as-is
       return ex;
@@ -132,7 +132,7 @@ export default function ExerciseScreen() {
       ...ex,
       durationSec: pauseDuration,
     };
-  };
+  }, [pauseDuration]);
 
   // Auto-select category and start exercise if category param is provided
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function ExerciseScreen() {
       setStartTime(Date.now());
       setPhase("exercise");
     }
-  }, [categoryParam, phase, selectedCategory, pauseDuration]);
+  }, [categoryParam, phase, selectedCategory, pauseDuration, adjustExerciseForDuration]);
 
   // Progress animation
   useEffect(() => {

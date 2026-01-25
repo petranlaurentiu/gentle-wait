@@ -8,7 +8,15 @@
     "android": "NODE_OPTIONS='--no-warnings' expo run:android",
     "ios": "NODE_OPTIONS='--no-warnings' expo run:ios",
     "web": "NODE_OPTIONS='--no-warnings' expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "setup-ios": "PATH=\"/opt/homebrew/lib/ruby/gems/3.4.0/bin:$PATH\" ./scripts/setup-ios-native.sh",
+    "prebuild:ios": "PATH=\"/opt/homebrew/lib/ruby/gems/3.4.0/bin:$PATH\" npx expo prebuild --platform ios --clean",
+    "prebuild:android": "npx expo prebuild --platform android --clean",
+    "build:preview:ios": "eas build --profile preview --platform ios",
+    "build:preview:android": "eas build --profile preview --platform android",
+    "build:prod:ios": "eas build --profile production --platform ios",
+    "build:prod:android": "eas build --profile production --platform android",
+    "build:prod:all": "eas build --profile production --platform all"
   },
   "dependencies": {
     "@expo-google-fonts/outfit": "^0.4.3",
@@ -34,6 +42,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-device-activity": "^0.5.1",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-mmkv": "^4.1.1",
     "react-native-reanimated": "~4.1.1",

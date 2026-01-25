@@ -2,34 +2,34 @@
  * AI Assistant Screen
  * Powered by OpenRouter - Your mindful companion
  */
-import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { useAppStore } from "@/src/services/storage";
-import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
-import {
-  sendMessage,
-  setUserContext,
-  ChatMessage,
-  UserContext,
-} from "@/src/services/ai/openrouter";
 import {
   getRandomAffirmation,
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
+import {
+  ChatMessage,
+  sendMessage,
+  setUserContext,
+  UserContext,
+} from "@/src/services/ai/openrouter";
+import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
+import { useAppStore } from "@/src/services/storage";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface Message {
   id: string;

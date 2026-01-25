@@ -11,6 +11,13 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.petran-laurentiu.gentlewait",
+      infoPlist: {
+        NSFamilyControlsUsageDescription: "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",
+      },
+      entitlements: {
+        "com.apple.developer.family-controls": true,
+      },
+      buildNumber: "1",
     },
     android: {
       adaptiveIcon: {
@@ -22,6 +29,12 @@ export default {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: "com.petran_laurentiu.gentlewait",
+      versionCode: 1,
+      permissions: [
+        "android.permission.BIND_ACCESSIBILITY_SERVICE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.PACKAGE_USAGE_STATS",
+      ],
     },
     web: {
       output: "static",

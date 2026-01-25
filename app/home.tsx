@@ -299,14 +299,14 @@ export default function HomeScreen() {
           {/* Daily affirmation */}
           <Animated.View style={cardOneAnimation}>
             <GlassCard intensity="light">
-              <Text style={styles.affirmationText}>"{dailyAffirmation}"</Text>
+              <Text style={styles.affirmationText}>&ldquo;{dailyAffirmation}&rdquo;</Text>
             </GlassCard>
           </Animated.View>
 
           {/* Today card */}
           <Animated.View style={cardTwoAnimation}>
             <GlassCard glowColor="primary">
-              <Text style={styles.cardTitle}>Today's Mindful Moments</Text>
+              <Text style={styles.cardTitle}>Today&apos;s Mindful Moments</Text>
               <Text style={styles.cardValue}>{todayPauses}</Text>
               <Text style={styles.cardSubtitle}>
                 {todayPauses === 0
@@ -482,7 +482,7 @@ export default function HomeScreen() {
           {/* Daily wisdom */}
           <Animated.View style={quoteAnimation}>
             <View style={styles.quoteContainer}>
-              <Text style={styles.quoteText}>"{dailyQuote.quote}"</Text>
+              <Text style={styles.quoteText}>&ldquo;{dailyQuote.quote}&rdquo;</Text>
               <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
             </View>
           </Animated.View>

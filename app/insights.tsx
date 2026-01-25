@@ -2,23 +2,23 @@
  * Insights screen - Weekly stats and trends
  * Liquid Glass Design System
  */
+import { EmptyState } from "@/src/components/EmptyState";
+import { GlassCard } from "@/src/components/GlassCard";
+import { LoadingState } from "@/src/components/LoadingState";
+import { getSevenDayTrend, getWeeklyStats } from "@/src/services/stats";
+import { getTopTriggers } from "@/src/services/storage/sqlite";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useFocusEffect } from "expo-router";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { EmptyState } from "@/src/components/EmptyState";
-import { LoadingState } from "@/src/components/LoadingState";
-import { GlassCard } from "@/src/components/GlassCard";
-import { getWeeklyStats, getSevenDayTrend } from "@/src/services/stats";
-import { getTopTriggers } from "@/src/services/storage/sqlite";
 
 // Helper to get start and end of current week (Monday - Sunday)
 function getWeekBounds() {

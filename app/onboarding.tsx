@@ -212,14 +212,16 @@ export default function OnboardingScreen() {
     })();
   }, [skipToStep, currentSettings.selectedApps]);
 
-  // Check accessibility permission status
+  // Check accessibility/Family Controls permission status
   const checkPermissionStatus = async () => {
-    if (Platform.OS !== "android") return;
+    if (Platform.OS !== "android" && Platform.OS !== "ios") return;
     try {
       const { GentleWaitModule } = NativeModules;
-      if (GentleWaitModule?.isAccessibilityServiceEnabled) {
-        const isEnabled =
-          await GentleWaitModule.isAccessibilityServiceEnabled();
+      if (Platform.OS === "android" && GentleWaitModule?.isAccessibilityServiceEnabled) {
+        const isEnabled = await GentleWaitModule.isAccessibilityServiceEnabled();
+        setPermissionEnabled(isEnabled);
+      } else if (Platform.OS === "ios" && GentleWaitModule?.isFamilyControlsAuthorized) {
+        const isEnabled = await GentleWaitModule.isFamilyControlsAuthorized();
         setPermissionEnabled(isEnabled);
       }
     } catch (error) {
@@ -384,8 +386,8 @@ export default function OnboardingScreen() {
         onboardingCompleted: currentSettings.onboardingCompleted ?? true,
       });
 
-      // Sync selected apps to native Android SharedPreferences
-      if (Platform.OS === "android") {
+      // Sync selected apps to native storage (Android SharedPreferences / iOS UserDefaults)
+      if (Platform.OS === "android" || Platform.OS === "ios") {
         try {
           const { GentleWaitModule } = NativeModules;
           if (GentleWaitModule?.setSelectedApps) {
@@ -427,8 +429,8 @@ export default function OnboardingScreen() {
         onboardingCompleted: true,
       });
 
-      // Sync selected apps to native Android SharedPreferences for accessibility service
-      if (Platform.OS === "android") {
+      // Sync selected apps to native storage for app interception service
+      if (Platform.OS === "android" || Platform.OS === "ios") {
         try {
           const { GentleWaitModule } = NativeModules;
           if (GentleWaitModule?.setSelectedApps) {
@@ -2043,7 +2045,7 @@ export default function OnboardingScreen() {
                 </View>
               ) : (
                 <Button
-                  label="Enable Accessibility Permission"
+                  label={Platform.OS === "ios" ? "Enable Family Controls" : "Enable Accessibility Permission"}
                   onPress={async () => {
                     if (Platform.OS === "android") {
                       try {
@@ -2071,10 +2073,44 @@ export default function OnboardingScreen() {
                           "Could not open accessibility settings. Please go to Settings > Accessibility manually."
                         );
                       }
+                    } else if (Platform.OS === "ios") {
+                      try {
+                        const { GentleWaitModule } = NativeModules;
+                        if (GentleWaitModule?.requestFamilyControlsAuthorization) {
+                          const granted = await GentleWaitModule.requestFamilyControlsAuthorization();
+                          if (granted) {
+                            setPermissionEnabled(true);
+                            Alert.alert(
+                              "Success",
+                              "Family Controls authorized! GentleWait can now monitor your app usage.",
+                              [{ text: "OK" }]
+                            );
+                          } else {
+                            Alert.alert(
+                              "Permission Denied",
+                              "Family Controls permission is required for GentleWait to work. You can enable it later in Settings.",
+                              [{ text: "OK" }]
+                            );
+                          }
+                        } else {
+                          Alert.alert(
+                            "Not Available",
+                            "Family Controls is not available. Make sure you're running iOS 15+ and the native module is properly configured.",
+                            [{ text: "OK" }]
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Error requesting Family Controls:", error);
+                        Alert.alert(
+                          "Error",
+                          "Could not request Family Controls permission. Please try again.",
+                          [{ text: "OK" }]
+                        );
+                      }
                     } else {
                       Alert.alert(
-                        "Android Only",
-                        "App interception is only available on Android devices."
+                        "Not Supported",
+                        "App interception is only available on iOS and Android devices."
                       );
                     }
                   }}

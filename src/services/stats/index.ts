@@ -1,12 +1,12 @@
 /**
  * Statistics calculation service
  */
+import { WeeklyStats } from "@/src/domain/models";
 import {
-  getRecentEvents,
   getEventCountsByAction,
+  getRecentEvents,
   getTotalMindfulTime,
 } from "@/src/services/storage/sqlite";
-import { WeeklyStats } from "@/src/domain/models";
 
 /**
  * Get the start of the current week (Monday at 00:00:00)

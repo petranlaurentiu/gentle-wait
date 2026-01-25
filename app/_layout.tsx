@@ -1,10 +1,3 @@
-import { Stack, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
-import { useEffect, useCallback } from "react";
-import { NativeModules, AppState, View, ActivityIndicator } from "react-native";
-import { useFonts } from "expo-font";
-import * as SplashScreen from "expo-splash-screen";
 import {
   Outfit_100Thin,
   Outfit_200ExtraLight,
@@ -14,12 +7,19 @@ import {
   Outfit_600SemiBold,
   Outfit_700Bold,
 } from "@expo-google-fonts/outfit";
+import { useFonts } from "expo-font";
+import { Stack, useRouter } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect } from "react";
+import { ActivityIndicator, AppState, NativeModules, View } from "react-native";
+import "react-native-reanimated";
 
-import { ThemeProvider } from "@/src/theme/ThemeProvider";
-import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
+import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import { useAppStore } from "@/src/services/storage";
 import { initializeDatabase } from "@/src/services/storage/sqlite";
+import { ThemeProvider } from "@/src/theme/ThemeProvider";
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();

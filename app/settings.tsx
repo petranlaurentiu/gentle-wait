@@ -67,8 +67,8 @@ export default function SettingsScreen() {
             );
             updateSettings({ selectedApps: updatedApps });
 
-            // Sync to native Android SharedPreferences
-            if (Platform.OS === "android") {
+            // Sync to native storage (Android SharedPreferences / iOS UserDefaults)
+            if (Platform.OS === "android" || Platform.OS === "ios") {
               try {
                 const { GentleWaitModule } = NativeModules;
                 if (GentleWaitModule?.setSelectedApps) {
@@ -154,8 +154,8 @@ export default function SettingsScreen() {
               await deleteAllEvents();
               console.log("[Settings] Cleared all events from database");
 
-              // Clear native Android SharedPreferences (selected apps)
-              if (Platform.OS === "android") {
+              // Clear native storage (selected apps)
+              if (Platform.OS === "android" || Platform.OS === "ios") {
                 try {
                   const { GentleWaitModule } = NativeModules;
                   if (GentleWaitModule?.setSelectedApps) {
