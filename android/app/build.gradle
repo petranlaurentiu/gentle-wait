@@ -67,11 +67,6 @@ react {
  * Set this to true in release builds to optimize the app using [R8](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization).
  */
 def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: false).toBoolean()
-def releaseStoreFile = findProperty("GENTLEWAIT_UPLOAD_STORE_FILE") ?: System.getenv("GENTLEWAIT_UPLOAD_STORE_FILE")
-def releaseStorePassword = findProperty("GENTLEWAIT_UPLOAD_STORE_PASSWORD") ?: System.getenv("GENTLEWAIT_UPLOAD_STORE_PASSWORD")
-def releaseKeyAlias = findProperty("GENTLEWAIT_UPLOAD_KEY_ALIAS") ?: System.getenv("GENTLEWAIT_UPLOAD_KEY_ALIAS")
-def releaseKeyPassword = findProperty("GENTLEWAIT_UPLOAD_KEY_PASSWORD") ?: System.getenv("GENTLEWAIT_UPLOAD_KEY_PASSWORD")
-def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -109,21 +104,15 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            if (hasReleaseSigning) {
-                storeFile file(releaseStoreFile)
-                storePassword releaseStorePassword
-                keyAlias releaseKeyAlias
-                keyPassword releaseKeyPassword
-            }
-        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

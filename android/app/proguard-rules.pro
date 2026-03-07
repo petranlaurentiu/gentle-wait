@@ -12,6 +12,3 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
--keep class com.petran_laurentiu.gentlewait.GentleWaitModule { *; }
--keep class com.petran_laurentiu.gentlewait.GentleWaitPackage { *; }
--keep class com.petran_laurentiu.gentlewait.accessibility.PauseAccessibilityService { *; }
