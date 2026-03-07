@@ -5,6 +5,7 @@
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
+import { launchApp } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
@@ -16,7 +17,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Dimensions,
-  NativeModules,
   Platform,
   ScrollView,
   StyleSheet,
@@ -123,11 +123,15 @@ export default function PrayerScreen() {
       router.replace("/home");
 
       // Launch the app after a brief delay (pending interception already cleared)
-      if (Platform.OS === "android" && NativeModules.GentleWaitModule?.launchApp && appPackage) {
+      if (Platform.OS === "android" && appPackage) {
         setTimeout(async () => {
           try {
-            await NativeModules.GentleWaitModule.launchApp(appPackage);
-            console.log("[Prayer] Launched app:", appPackage);
+            const launched = await launchApp(appPackage);
+            if (launched) {
+              console.log("[Prayer] Launched app:", appPackage);
+            } else {
+              console.warn("[Prayer] Could not relaunch app:", appPackage);
+            }
           } catch (error) {
             console.error("[Prayer] Failed to launch app:", error);
           }

@@ -26,9 +26,11 @@ export default {
       buildNumber: "1",
     },
     android: {
+      icon: "./assets/images/main_logo-app.png",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/main_logo-app.png",
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png",
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,

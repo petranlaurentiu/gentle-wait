@@ -2616,7 +2616,7 @@ export default function OnboardingScreen() {
                       <Text style={styles.descriptionAccent}>
                         accessibility access
                       </Text>{" "}
-                      to know when you open an app.
+                      to notice when one of your chosen apps opens and bring up the pause screen.
                     </>
                   )}
                 </Text>
@@ -2629,11 +2629,19 @@ export default function OnboardingScreen() {
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                   <Ionicons name="eye-off-outline" size={18} color={colors.textSecondary} />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>We never see what&apos;s inside your apps</Text>
+                  <Text style={[styles.permissionText, { flex: 1 }]}>
+                    {isIOSFamilyControlsFlow
+                      ? "We never see what happens inside your apps."
+                      : "We do not read what you type, message, or watch inside apps."}
+                  </Text>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                   <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>You&apos;re always in control</Text>
+                  <Text style={[styles.permissionText, { flex: 1 }]}>
+                    {isIOSFamilyControlsFlow
+                      ? "You&apos;re always in control"
+                      : "You can turn this off anytime in Android Accessibility settings."}
+                  </Text>
                 </View>
               </View>
 
@@ -2680,7 +2688,7 @@ export default function OnboardingScreen() {
                   label={
                     Platform.OS === "ios"
                       ? "Enable Family Controls"
-                      : "Enable Accessibility Permission"
+                      : "Review Accessibility Access"
                   }
                   onPress={async () => {
                     if (Platform.OS === "android") {

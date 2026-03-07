@@ -1,9 +1,10 @@
 /**
  * Settings screen.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
+  AppState,
   Modal,
   Platform,
   ScrollView,
@@ -32,7 +33,9 @@ import {
 import { deleteAllEvents } from "@/src/services/storage/sqlite";
 import {
   clearProtectedApps,
+  getAndroidProtectionStatus,
   getIOSSelectionSummary,
+  openAndroidAccessibilitySettings,
   setSelectedApps as syncSelectedAppsToNative,
 } from "@/src/services/native";
 import { mmkvStorage } from "@/src/services/storage/mmkv";
@@ -54,6 +57,7 @@ export default function SettingsScreen() {
   const billingAvailable = useAppStore((state) => state.billingAvailable);
   const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
   const [pendingCooldown, setPendingCooldown] = useState(settings.cooldownMinutes || 15);
+  const [androidProtectionEnabled, setAndroidProtectionEnabled] = useState(false);
 
   const headerAnimation = useFadeInAnimation();
   const protectedAppsAnimation = useStaggeredFadeIn(0, 5);
@@ -70,6 +74,33 @@ export default function SettingsScreen() {
   const hasReachedFreeAppLimit =
     !settings.premium &&
     settings.selectedApps.length >= FREE_PROTECTED_APPS_LIMIT;
+
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    const refreshAndroidStatus = async () => {
+      const status = await getAndroidProtectionStatus();
+      setAndroidProtectionEnabled(status.accessibilityEnabled);
+    };
+
+    refreshAndroidStatus().catch((error) => {
+      console.error("[Settings] Failed to refresh Android protection status:", error);
+    });
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshAndroidStatus().catch((error) => {
+          console.error("[Settings] Failed to refresh Android protection status:", error);
+        });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const handleRemoveApp = async (packageName: string) => {
     const appToRemove = settings.selectedApps.find((app) => app.packageName === packageName);
@@ -148,6 +179,17 @@ export default function SettingsScreen() {
 
     if (!result.success) {
       Alert.alert("Customer Center unavailable", result.error || "Please try again later.");
+    }
+  };
+
+  const handleOpenAndroidAccessibilitySettings = async () => {
+    const opened = await openAndroidAccessibilitySettings();
+
+    if (!opened) {
+      Alert.alert(
+        "Unable to open settings",
+        "Please open Android Accessibility settings manually and enable GentleWait.",
+      );
     }
   };
 
@@ -468,6 +510,44 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </Animated.View>
+
+        {Platform.OS === "android" && (
+          <Animated.View style={[styles.section, promptsAnimation]}>
+            <AppText variant="eyebrow" color="secondary">Android protection</AppText>
+            <View style={styles.list}>
+              <View style={styles.settingItem}>
+                <View style={styles.settingMain}>
+                  <AppText variant="heading">Accessibility service</AppText>
+                  <AppText variant="caption" color="secondary">
+                    Needed to detect when one of your chosen apps comes to the foreground.
+                  </AppText>
+                </View>
+                <AppText variant="heading" color={androidProtectionEnabled ? "primary" : "accent"}>
+                  {androidProtectionEnabled ? "Enabled" : "Off"}
+                </AppText>
+              </View>
+              <TouchableOpacity
+                style={[styles.settingItem, styles.settingItemAccent]}
+                onPress={handleOpenAndroidAccessibilitySettings}
+                activeOpacity={0.82}
+              >
+                <View style={styles.settingMain}>
+                  <AppText variant="heading">
+                    {androidProtectionEnabled ? "Review accessibility access" : "Enable accessibility access"}
+                  </AppText>
+                  <AppText variant="caption" color="secondary">
+                    GentleWait only uses this to notice the apps you selected and open a pause screen. It does not read what you type.
+                  </AppText>
+                </View>
+                <Ionicons
+                  name={androidProtectionEnabled ? "checkmark-circle-outline" : "settings-outline"}
+                  size={20}
+                  color={androidProtectionEnabled ? colors.primary : colors.accent}
+                />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
 
         <Animated.View style={[styles.section, promptsAnimation]}>
           <AppText variant="eyebrow" color="secondary">Prompts</AppText>

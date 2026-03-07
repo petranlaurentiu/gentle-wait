@@ -43,6 +43,11 @@ type PendingInterception = {
   ts: number;
 };
 
+export type AndroidProtectionStatus = {
+  available: boolean;
+  accessibilityEnabled: boolean;
+};
+
 const isAndroidNativeModuleAvailable = () => Boolean(GentleWaitModule);
 
 export function isIOSFamilyControlsAvailable(): boolean {
@@ -303,6 +308,53 @@ export async function requestServiceAuthorization(): Promise<boolean> {
     return false;
   } catch (error) {
     console.error("[NativeService] Error requesting authorization:", error);
+    return false;
+  }
+}
+
+export async function getAndroidProtectionStatus(): Promise<AndroidProtectionStatus> {
+  if (Platform.OS !== "android") {
+    return {
+      available: false,
+      accessibilityEnabled: false,
+    };
+  }
+
+  const available = isAndroidNativeModuleAvailable();
+  if (!available) {
+    return {
+      available: false,
+      accessibilityEnabled: false,
+    };
+  }
+
+  try {
+    const accessibilityEnabled =
+      await GentleWaitModule.isAccessibilityServiceEnabled();
+
+    return {
+      available,
+      accessibilityEnabled: Boolean(accessibilityEnabled),
+    };
+  } catch (error) {
+    console.error("[NativeService] Error getting Android protection status:", error);
+    return {
+      available,
+      accessibilityEnabled: false,
+    };
+  }
+}
+
+export async function openAndroidAccessibilitySettings(): Promise<boolean> {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
+    return false;
+  }
+
+  try {
+    await GentleWaitModule.openAccessibilitySettings();
+    return true;
+  } catch (error) {
+    console.error("[NativeService] Error opening accessibility settings:", error);
     return false;
   }
 }

@@ -1,23 +1,60 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
-import { BillingPackage, getBillingPackages, initializeBilling, presentBillingPaywall, restoreBillingPurchases } from "@/src/services/billing";
+import {
+  BillingPackage,
+  getBillingPackages,
+  initializeBilling,
+  presentBillingPaywall,
+  restoreBillingPurchases,
+} from "@/src/services/billing";
 import { useAppStore } from "@/src/services/storage";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { radius, spacing } from "@/src/theme/theme";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function getPackagePriority(pkg: BillingPackage) {
-  const key = `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
+  const key =
+    `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
 
-  if (key.includes("year")) return 0;
-  if (key.includes("month")) return 1;
+  if (key.includes("annual") || key.includes("year")) return 0;
+  if (key.includes("monthly") || key.includes("month")) return 1;
   if (key.includes("lifetime")) return 2;
   return 3;
+}
+
+function getPackageKind(pkg: BillingPackage) {
+  const key =
+    `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
+
+  if (key.includes("annual") || key.includes("year")) return "annual";
+  if (key.includes("monthly") || key.includes("month")) return "monthly";
+  if (key.includes("lifetime")) return "lifetime";
+  return "other";
+}
+
+function getPackageDisplayTitle(pkg: BillingPackage) {
+  switch (getPackageKind(pkg)) {
+    case "annual":
+      return "Annual";
+    case "monthly":
+      return "Monthly";
+    case "lifetime":
+      return "Lifetime";
+    default:
+      return pkg.title;
+  }
 }
 
 export default function PaywallScreen() {
@@ -75,7 +112,10 @@ export default function PaywallScreen() {
 
     if (!result.success) {
       if (result.cancelled) return;
-      Alert.alert("Paywall unavailable", result.error || "Please try again in a moment.");
+      Alert.alert(
+        "Paywall unavailable",
+        result.error || "Please try again in a moment.",
+      );
       return;
     }
 
@@ -98,7 +138,10 @@ export default function PaywallScreen() {
     }
 
     if (!result.restored) {
-      Alert.alert("No purchases found", "We couldn't find an active GentleWait Pro subscription.");
+      Alert.alert(
+        "No purchases found",
+        "We couldn't find an active GentleWait Pro subscription.",
+      );
       return;
     }
 
@@ -199,7 +242,9 @@ export default function PaywallScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
-          <AppText variant="eyebrow" color="secondary">Premium</AppText>
+          <AppText variant="eyebrow" color="secondary">
+            Premium
+          </AppText>
           <AppText variant="screenTitle">GentleWait Pro</AppText>
         </View>
         <TouchableOpacity
@@ -219,7 +264,11 @@ export default function PaywallScreen() {
         <GlassCard glowColor="primary">
           <View style={styles.heroCard}>
             <View style={styles.heroIconWrap}>
-              <Ionicons name="sparkles-outline" size={30} color={colors.primary} />
+              <Ionicons
+                name="sparkles-outline"
+                size={30}
+                color={colors.primary}
+              />
             </View>
             <AppText variant="title" align="center">
               Unlock GentleWait Pro
@@ -234,19 +283,31 @@ export default function PaywallScreen() {
         <GlassCard intensity="light">
           <View style={styles.packageList}>
             <View style={styles.benefitRow}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={18}
+                color={colors.secondary}
+              />
               <AppText variant="body" color="secondary">
                 Unlimited protected apps
               </AppText>
             </View>
             <View style={styles.benefitRow}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={18}
+                color={colors.secondary}
+              />
               <AppText variant="body" color="secondary">
                 AI Companion and guided reflection
               </AppText>
             </View>
             <View style={styles.benefitRow}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={18}
+                color={colors.secondary}
+              />
               <AppText variant="body" color="secondary">
                 Future premium insights and advanced personalization
               </AppText>
@@ -263,16 +324,20 @@ export default function PaywallScreen() {
           </View>
         ) : packages.length > 0 ? (
           <View style={styles.packageList}>
-            {packages.map((pkg, index) => (
+            {packages.map((pkg) => (
               <View key={pkg.identifier} style={styles.packageCard}>
                 <View style={styles.packageHeader}>
                   <View style={{ flex: 1 }}>
-                    {index === 0 && (
+                    {getPackageKind(pkg) === "annual" && (
                       <View style={styles.badge}>
-                        <AppText variant="eyebrow" color="primary">Recommended</AppText>
+                        <AppText variant="eyebrow" color="primary">
+                          Recommended
+                        </AppText>
                       </View>
                     )}
-                    <AppText variant="heading">{pkg.title}</AppText>
+                    <AppText variant="heading">
+                      {getPackageDisplayTitle(pkg)}
+                    </AppText>
                     <AppText variant="body" color="secondary">
                       {pkg.description}
                     </AppText>
@@ -292,7 +357,11 @@ export default function PaywallScreen() {
         ) : (
           <GlassCard intensity="light">
             <View style={styles.loadingWrap}>
-              <Ionicons name="alert-circle-outline" size={24} color={colors.accent} />
+              <Ionicons
+                name="alert-circle-outline"
+                size={24}
+                color={colors.accent}
+              />
               <AppText variant="body" color="secondary" align="center">
                 No current offering is available yet. Finish configuring your
                 RevenueCat offering and dashboard paywall first.

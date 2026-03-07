@@ -10,7 +10,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  NativeModules,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,6 +21,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { launchApp } from "@/src/services/native";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
 import { insertEvent } from "@/src/services/storage/sqlite";
@@ -234,11 +234,15 @@ export default function ExerciseScreen() {
       router.replace("/home");
 
       // Launch the app after a brief delay (pending interception already cleared)
-      if (Platform.OS === "android" && NativeModules.GentleWaitModule?.launchApp && appPackage) {
+      if (Platform.OS === "android" && appPackage) {
         setTimeout(async () => {
           try {
-            await NativeModules.GentleWaitModule.launchApp(appPackage);
-            console.log("[Exercise] Launched app:", appPackage);
+            const launched = await launchApp(appPackage);
+            if (launched) {
+              console.log("[Exercise] Launched app:", appPackage);
+            } else {
+              console.warn("[Exercise] Could not relaunch app:", appPackage);
+            }
           } catch (error) {
             console.error("[Exercise] Failed to launch app:", error);
           }

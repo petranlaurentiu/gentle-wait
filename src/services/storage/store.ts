@@ -50,6 +50,14 @@ export const useAppStore = create<AppStore>((set) => ({
   loadSettings: () => {
     const stored = mmkvStorage.getJSON<UserSettings>(SETTINGS_KEY);
     const settings = stored || DEFAULT_SETTINGS;
+
+    nativeService.setSelectedApps(settings.selectedApps).catch((e) => {
+      console.error('Error syncing selected apps on load:', e);
+    });
+    nativeService.setCooldownDuration(settings.cooldownMinutes).catch((e) => {
+      console.error('Error syncing cooldown on load:', e);
+    });
+
     set({ settings });
   },
 
