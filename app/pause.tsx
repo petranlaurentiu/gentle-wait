@@ -154,8 +154,12 @@ export default function PauseScreen() {
       reason: (selectedReason as any) || undefined,
       sessionId,
     });
-    // Pending interception already cleared by deep link handler
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/home");
   };
 
   const handleAlternative = (

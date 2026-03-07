@@ -7,16 +7,22 @@
 import { NativeModules, Platform } from "react-native";
 import {
   AuthorizationStatus,
+  blockSelection,
+  cleanUpAfterActivity,
+  configureActions,
   getAuthorizationStatus,
   isAvailable as isDeviceActivityAvailable,
   pollAuthorizationStatus,
   requestAuthorization,
+  resetBlocks,
+  startMonitoring,
   setFamilyActivitySelectionId,
   stopMonitoring,
-  resetBlocks,
   userDefaultsGet,
   userDefaultsRemove,
   userDefaultsSet,
+  updateShieldWithId,
+  type Action,
 } from "react-native-device-activity";
 import type { IOSFamilyActivitySelection, SelectedApp } from "@/src/domain/models";
 
@@ -25,6 +31,11 @@ const GentleWaitModule = NativeModules.GentleWaitModule ?? null;
 const IOS_SELECTION_ID = "gentlewait.protected-selection";
 const IOS_SELECTION_METADATA_KEY = "gentlewait.protected-selection.metadata";
 const FAMILY_ACTIVITY_SELECTION_IDS_KEY = "familyActivitySelectionIds";
+const IOS_SHIELD_ID = "gentlewait-default";
+const IOS_MAIN_ACTIVITY = `gentlewait-monitor-${IOS_SELECTION_ID}`;
+const IOS_COOLDOWN_ACTIVITY = `gentlewait-cooldown-${IOS_SELECTION_ID}`;
+const IOS_DEEP_LINK_URL =
+  "gentlewait://pause?appPackage=ios.familycontrols&appLabel=Protected%20app&source=shield";
 
 type PendingInterception = {
   appPackage: string;
@@ -88,8 +99,10 @@ export async function clearIOSFamilyControlsSelection(): Promise<void> {
 
   userDefaultsRemove(IOS_SELECTION_METADATA_KEY);
 
-  stopMonitoring();
+  stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
   resetBlocks("clearIOSFamilyControlsSelection");
+  cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
+  cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
 }
 
 export function getIOSSelectionSummary(
@@ -112,6 +125,120 @@ export function getIOSSelectionSummary(
   ].filter(Boolean);
 
   return parts.length > 0 ? parts.join(" • ") : "Selection saved in Family Controls.";
+}
+
+function buildIOSShieldConfig() {
+  return {
+    backgroundBlurStyle: 8,
+    backgroundColor: { red: 245, green: 248, blue: 252, alpha: 0.96 },
+    title: "Take a breath before you continue",
+    titleColor: { red: 24, green: 31, blue: 42, alpha: 1 },
+    subtitle:
+      "GentleWait added a short layer of friction here. Open the app for a few minutes, or step back into your pause ritual.",
+    subtitleColor: { red: 84, green: 94, blue: 111, alpha: 1 },
+    iconSystemName: "leaf.circle",
+    iconTint: { red: 53, green: 114, blue: 91, alpha: 1 },
+    primaryButtonLabel: "Open for a few minutes",
+    primaryButtonLabelColor: { red: 255, green: 255, blue: 255, alpha: 1 },
+    primaryButtonBackgroundColor: { red: 53, green: 114, blue: 91, alpha: 1 },
+    secondaryButtonLabel: "Open GentleWait",
+    secondaryButtonLabelColor: { red: 53, green: 114, blue: 91, alpha: 1 },
+  } as const;
+}
+
+function buildIOSShieldActions(cooldownMinutes: number) {
+  const cooldownMs = Math.max(cooldownMinutes, 1) * 60 * 1000;
+
+  return {
+    primary: {
+      behavior: "defer" as const,
+      actions: [
+        { type: "addCurrentToWhitelist" as const },
+        {
+          type: "startMonitoring" as const,
+          activityName: IOS_COOLDOWN_ACTIVITY,
+          intervalStartDelayMs: 0,
+          intervalEndDelayMs: cooldownMs,
+          deviceActivityEvents: [],
+        },
+      ],
+    },
+    secondary: {
+      behavior: "close" as const,
+      actions: [
+        {
+          type: "openUrlWithDispatch",
+          url: IOS_DEEP_LINK_URL,
+        } as Action & { type: "openUrlWithDispatch"; url: string },
+      ],
+    },
+  };
+}
+
+async function startIOSMainMonitoring(): Promise<void> {
+  await startMonitoring(
+    IOS_MAIN_ACTIVITY,
+    {
+      intervalStart: { hour: 0, minute: 0, second: 0 },
+      intervalEnd: { hour: 23, minute: 59, second: 59 },
+      repeats: true,
+    },
+    [],
+  );
+}
+
+export async function configureIOSProtection(
+  selection: IOSFamilyActivitySelection,
+  cooldownMinutes: number,
+): Promise<void> {
+  if (!isIOSFamilyControlsAvailable()) {
+    return;
+  }
+
+  stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
+  cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
+  cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
+
+  const shieldConfiguration = buildIOSShieldConfig();
+  const shieldActions = buildIOSShieldActions(cooldownMinutes);
+
+  setFamilyActivitySelectionId({
+    id: IOS_SELECTION_ID,
+    familyActivitySelection: selection.familyActivitySelection,
+  });
+  userDefaultsSet(IOS_SELECTION_METADATA_KEY, selection);
+
+  updateShieldWithId(shieldConfiguration, shieldActions, IOS_SHIELD_ID);
+
+  configureActions({
+    activityName: IOS_MAIN_ACTIVITY,
+    callbackName: "intervalDidStart",
+    actions: [
+      {
+        type: "blockSelection",
+        familyActivitySelectionId: IOS_SELECTION_ID,
+        shieldId: IOS_SHIELD_ID,
+      },
+    ],
+  });
+
+  configureActions({
+    activityName: IOS_COOLDOWN_ACTIVITY,
+    callbackName: "intervalDidEnd",
+    actions: [
+      { type: "clearWhitelistAndUpdateBlock" },
+      {
+        type: "stopMonitoring",
+        activityNames: [IOS_COOLDOWN_ACTIVITY],
+      },
+    ],
+  });
+
+  blockSelection(
+    { familyActivitySelectionId: IOS_SELECTION_ID },
+    "configureIOSProtection",
+  );
+  await startIOSMainMonitoring();
 }
 
 export function exceedsFreeIOSSelectionLimit(

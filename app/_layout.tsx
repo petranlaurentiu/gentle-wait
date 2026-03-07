@@ -25,7 +25,11 @@ import {
   initializeBilling,
 } from "@/src/services/billing";
 import {
+  clearIOSFamilyControlsSelection,
+  configureIOSProtection,
   getPendingInterception,
+  isIOSFamilyControlsAvailable,
+  isServiceEnabled,
   markAppHandled,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
@@ -41,6 +45,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const settings = useAppStore((state) => state.settings);
   const setBillingAvailable = useAppStore((state) => state.setBillingAvailable);
   const setBillingPackages = useAppStore((state) => state.setBillingPackages);
   const setCurrentInterceptionEvent = useAppStore(
@@ -142,6 +147,33 @@ export default function RootLayout() {
     // Load settings from storage
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    const syncIOSProtection = async () => {
+      if (!isIOSFamilyControlsAvailable()) {
+        return;
+      }
+
+      const authorized = await isServiceEnabled();
+
+      if (!authorized) {
+        return;
+      }
+
+      if (settings.iosFamilyActivitySelection?.familyActivitySelection) {
+        await configureIOSProtection(
+          settings.iosFamilyActivitySelection,
+          settings.cooldownMinutes || 15,
+        );
+      } else {
+        await clearIOSFamilyControlsSelection();
+      }
+    };
+
+    syncIOSProtection().catch((error) => {
+      console.warn("[FamilyControls] Failed to sync iOS protection:", error);
+    });
+  }, [settings.cooldownMinutes, settings.iosFamilyActivitySelection]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;

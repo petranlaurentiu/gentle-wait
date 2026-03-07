@@ -15,6 +15,7 @@ export default {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
+      appleTeamId,
       bundleIdentifier: "com.petran-laurentiu.gentlewait",
       infoPlist: {
         NSFamilyControlsUsageDescription: "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",

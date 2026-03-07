@@ -28,12 +28,12 @@ import {
 } from "react-native-device-activity";
 import {
   clearIOSFamilyControlsSelection,
+  configureIOSProtection,
   exceedsFreeIOSSelectionLimit,
   getIOSSelectionSummary,
   isIOSFamilyControlsAvailable,
   isServiceEnabled,
   requestServiceAuthorization,
-  saveIOSFamilyControlsSelection,
   setSelectedApps as syncSelectedAppsToNative,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
@@ -578,7 +578,10 @@ export default function OnboardingScreen() {
 
       try {
         if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
-          await saveIOSFamilyControlsSelection(iosFamilyActivitySelection);
+          await configureIOSProtection(
+            iosFamilyActivitySelection,
+            currentSettings.cooldownMinutes || cooldownMinutes,
+          );
         } else {
           await syncSelectedAppsToNative(selectedApps);
         }
@@ -633,7 +636,10 @@ export default function OnboardingScreen() {
 
       try {
         if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
-          await saveIOSFamilyControlsSelection(iosFamilyActivitySelection);
+          await configureIOSProtection(
+            iosFamilyActivitySelection,
+            cooldownMinutes,
+          );
         } else {
           await syncSelectedAppsToNative(selectedApps);
         }
