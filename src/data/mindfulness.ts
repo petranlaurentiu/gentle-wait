@@ -54,7 +54,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 60,
     instructions:
       "Notice 5 things you can see, 4 things you can touch, 3 things you can hear, 2 things you can smell, and 1 thing you can taste. Take your time with each sense.",
-    icon: "🌿",
+    icon: "leaf-outline",
   },
   {
     id: "body-scan-quick",
@@ -62,7 +62,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 45,
     instructions:
       "Close your eyes. Starting from your head, slowly scan down to your toes. Notice any tension without trying to change it. Just observe.",
-    icon: "🧘",
+    icon: "body-outline",
   },
   {
     id: "feet-grounding",
@@ -70,7 +70,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 30,
     instructions:
       "Feel your feet firmly on the ground. Press down gently. Notice the weight of your body. You are here, now, supported by the earth.",
-    icon: "👣",
+    icon: "footsteps-outline",
   },
   {
     id: "hand-awareness",
@@ -78,7 +78,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 30,
     instructions:
       "Look at your hands. Really look. Notice the lines, the texture, the way they move. Feel them from the inside. They are yours.",
-    icon: "✋",
+    icon: "hand-left-outline",
   },
   {
     id: "cold-water",
@@ -86,7 +86,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 20,
     instructions:
       "If possible, run cold water over your wrists for 20 seconds. Notice the sensation. This resets your nervous system and brings you to the present.",
-    icon: "💧",
+    icon: "water-outline",
   },
   {
     id: "squeeze-release",
@@ -94,7 +94,7 @@ export const GROUNDING_EXERCISES = [
     durationSec: 30,
     instructions:
       "Make tight fists with both hands. Squeeze for 5 seconds. Then release completely. Notice the difference. Repeat 3 times.",
-    icon: "✊",
+    icon: "fitness-outline",
   },
 ];
 
@@ -109,7 +109,7 @@ export const BREATHING_EXERCISES = [
     exhale: 4,
     hold2: 4,
     description: "Used by Navy SEALs to stay calm under pressure",
-    icon: "📦",
+    icon: "cube-outline",
   },
   {
     id: "4-7-8",
@@ -120,7 +120,7 @@ export const BREATHING_EXERCISES = [
     exhale: 8,
     hold2: 0,
     description: "Promotes deep relaxation and sleep",
-    icon: "😴",
+    icon: "moon-outline",
   },
   {
     id: "coherent",
@@ -131,7 +131,7 @@ export const BREATHING_EXERCISES = [
     exhale: 5,
     hold2: 0,
     description: "Balances the nervous system",
-    icon: "⚖️",
+    icon: "swap-horizontal-outline",
   },
   {
     id: "energizing",
@@ -142,7 +142,7 @@ export const BREATHING_EXERCISES = [
     exhale: 2,
     hold2: 0,
     description: "Quick energy boost when feeling sluggish",
-    icon: "⚡",
+    icon: "flash-outline",
   },
 ];
 

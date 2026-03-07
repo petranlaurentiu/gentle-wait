@@ -21,11 +21,15 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
+  withSequence,
   Easing,
 } from "react-native-reanimated";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { insertEvent } from "@/src/services/storage/sqlite";
+import { insertEvent, insertJournalEntry } from "@/src/services/storage/sqlite";
 import { useAppStore } from "@/src/services/storage";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
@@ -220,19 +224,19 @@ export default function AlternativesScreen() {
     if (type !== "prayer" || isComplete) return;
 
     glowOpacity.value = withRepeat(
-      Animated.sequence([
+      withSequence(
         withTiming(0.5, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
         withTiming(0.3, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      ]),
-      -1
+      ),
+      -1,
     );
 
     breathScale.value = withRepeat(
-      Animated.sequence([
+      withSequence(
         withTiming(1.1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
         withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
-      ]),
-      -1
+      ),
+      -1,
     );
   }, [type, isComplete, glowOpacity, breathScale]);
 
@@ -263,6 +267,19 @@ export default function AlternativesScreen() {
         durationMs: Date.now() - startTime,
         sessionId,
       });
+
+      // Save journal entry if this was a reflection exercise
+      if (type === "reflect" && journalEntry.trim().length > 0) {
+        await insertJournalEntry({
+          id: generateId(),
+          ts: Date.now(),
+          content: journalEntry.trim(),
+          prompt: journalPrompt,
+          appPackage,
+          appLabel,
+        });
+        console.log("[Alternatives] Saved journal entry");
+      }
       
       // Navigate directly to home using replace to avoid navigation stack issues
       router.replace("/home");
@@ -563,7 +580,7 @@ export default function AlternativesScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.scrollContent}>
-          <Text style={styles.completeEmoji}>✨</Text>
+          <Ionicons name="sparkles-outline" size={48} color={colors.primary} style={{ marginBottom: spacing.lg }} />
           <Text style={styles.exerciseName}>Well Done!</Text>
           <Text style={styles.completeMessage}>
             You just gave yourself a moment of calm.{"\n"}That&apos;s something
@@ -591,7 +608,7 @@ export default function AlternativesScreen() {
           <>
             <View style={styles.header}>
               <Text style={styles.exerciseName}>
-                {breathingExercise.icon} {breathingExercise.name}
+                {breathingExercise.name}
               </Text>
               <Text style={styles.exerciseDescription}>
                 {breathingExercise.description}
@@ -699,7 +716,7 @@ export default function AlternativesScreen() {
 
             <GlassCard glowColor="secondary">
               <Text style={styles.exerciseName}>
-                {groundingExercise.icon} {groundingExercise.name}
+                {groundingExercise.name}
               </Text>
               <Text
                 style={[
@@ -760,7 +777,7 @@ export default function AlternativesScreen() {
           <View style={styles.prayerContainer}>
             <View style={styles.header}>
               <Text style={styles.prayerName}>
-                {prayer.icon} {prayer.name}
+                {prayer.name}
               </Text>
               {prayer.attribution && (
                 <Text style={styles.prayerAttribution}>
@@ -775,15 +792,15 @@ export default function AlternativesScreen() {
               >
                 <LinearGradient
                   colors={[
-                    colors.primaryDim + "00",
-                    colors.primaryDim + "40",
-                    colors.primaryDim + "00",
+                    colors.primary + "00",
+                    colors.primary + "40",
+                    colors.primary + "00",
                   ]}
                   style={styles.glowOuter}
                 />
               </Animated.View>
 
-              <Text style={styles.prayerIcon}>✝️</Text>
+              <MaterialCommunityIcons name={"cross-bolnisi" as any} size={64} color={colors.primary} />
             </View>
 
             <Text style={styles.prayerTimer}>{prayerTimeLeft}s</Text>

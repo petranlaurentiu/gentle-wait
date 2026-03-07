@@ -148,16 +148,6 @@ class GentleWaitModule: NSObject {
     resolve(true)
   }
   
-  // MARK: - Cooldown Configuration
-  
-  @objc
-  func setCooldownDuration(_ durationMs: Double, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    userDefaults.set(Int64(durationMs), forKey: "cooldown_duration")
-    userDefaults.synchronize()
-    NSLog("[GentleWait] Set cooldown duration: \(durationMs)ms")
-    resolve(true)
-  }
-  
   // MARK: - App Launch
   
   @objc

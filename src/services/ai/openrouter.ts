@@ -23,14 +23,15 @@ if (!API_KEY) {
   );
 }
 
-// Free models with fallbacks - ordered by preference
-const FREE_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct:free", // Primary - fast and reliable
-  "google/gemma-3-27b-it:free", // Fallback 1 - good quality
-  "mistralai/mistral-7b-instruct:free", // Fallback 2 - excellent for coaching
-  "huggingfaceh4/zephyr-7b-beta:free", // Fallback 3
-  "openchat/openchat-7b:free", // Fallback 4
-];
+const PREFERRED_MODEL =
+  process.env.EXPO_PUBLIC_OPENROUTER_MODEL || "openrouter/auto";
+
+// Paid/default routing with fallbacks - no free router/models.
+const MODEL_CANDIDATES = [
+  PREFERRED_MODEL,
+  "openrouter/auto",
+  "openai/gpt-4o-mini",
+].filter((value, index, arr) => value && arr.indexOf(value) === index);
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -46,6 +47,7 @@ export interface ChatResponse {
 // User context for personalized responses
 export interface UserContext {
   userName?: string;
+  ageRange?: string;
   goals?: string[];
   emotions?: string[];
   dailyScreenTimeHours?: number;
@@ -58,6 +60,8 @@ export interface UserContext {
   weeklyMindfulMinutes?: number;
   weeklyOpenedAnyway?: number;
   weeklyChoseCalm?: number;
+  // Journal entries (recent)
+  recentJournalEntries?: string[];
 }
 
 // Base system prompt for the AI assistant
@@ -96,6 +100,10 @@ function buildSystemPrompt(context?: UserContext): string {
   // Personal info
   if (context.userName) {
     contextParts.push(`The user's name is ${context.userName}.`);
+  }
+
+  if (context.ageRange) {
+    contextParts.push(`They are in the ${context.ageRange} age range.`);
   }
 
   // Goals
@@ -182,6 +190,19 @@ function buildSystemPrompt(context?: UserContext): string {
     }
   }
 
+  // Recent journal entries
+  if (
+    context.recentJournalEntries &&
+    context.recentJournalEntries.length > 0
+  ) {
+    contextParts.push(
+      `\nRecent journal reflections from the user:\n${context.recentJournalEntries
+        .slice(0, 3)
+        .map((entry, i) => `${i + 1}. "${entry}"`)
+        .join("\n")}`
+    );
+  }
+
   contextParts.push("--- END USER CONTEXT ---");
 
   return contextParts.join("\n");
@@ -232,7 +253,9 @@ async function tryModel(
       const errorData = await response.json().catch(() => ({}));
       return {
         success: false,
-        error: errorData.error?.message || `API error: ${response.status}`,
+        error:
+          errorData.error?.message ||
+          `API error (${response.status}) while using ${model}`,
       };
     }
 
@@ -260,6 +283,15 @@ export async function sendMessage(
   conversationHistory: ChatMessage[] = [],
   context?: UserContext
 ): Promise<ChatResponse> {
+  if (!API_KEY) {
+    return {
+      success: false,
+      message: "",
+      error:
+        "AI is not configured yet. Add EXPO_PUBLIC_OPENROUTER_API_KEY and restart the app.",
+    };
+  }
+
   // Use provided context, stored context, or no context
   const userContext = context || currentUserContext || undefined;
   const systemPrompt = buildSystemPrompt(userContext);
@@ -271,7 +303,7 @@ export async function sendMessage(
   ];
 
   // Try each model in order until one succeeds
-  for (const model of FREE_MODELS) {
+  for (const model of MODEL_CANDIDATES) {
     console.log(`[AI] Trying model: ${model}`);
     const result = await tryModel(model, messages);
 

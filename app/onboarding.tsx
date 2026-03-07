@@ -2,53 +2,57 @@
  * Onboarding flow screen with hero welcome, program preview, and optional personalization
  * Liquid Glass Design System
  */
-import { useState, useEffect } from "react";
+import { Button } from "@/src/components/Button";
+import { Checkbox } from "@/src/components/Checkbox";
+import { GlassCard } from "@/src/components/GlassCard";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  TextInput,
-  Switch,
-  Image,
-  Dimensions,
-  NativeModules,
-  Platform,
-  Alert,
-  AppState,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import ReanimatedAnimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from "react-native-reanimated";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { useAppStore } from "@/src/services/storage";
+  COOLDOWN_OPTIONS,
+  WheelPicker,
+} from "@/src/components/WheelPicker";
 import {
-  getInstalledApps,
+  APP_CATEGORIES,
+  AppCategory,
+  CategorizedApp,
   filterApps,
   getAppsByCategory,
+  getInstalledApps,
   getSuggestedApps,
-  APP_CATEGORIES,
-  CategorizedApp,
-  AppCategory,
 } from "@/src/services/apps";
-import { Checkbox } from "@/src/components/Checkbox";
-import { Button } from "@/src/components/Button";
-import { GlassCard } from "@/src/components/GlassCard";
+import { useAppStore } from "@/src/services/storage";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { fonts, radius, spacing, typography } from "@/src/theme/theme";
 import { useFadeInAnimation } from "@/src/utils/animations";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  AppState,
+  Dimensions,
+  Image,
+  NativeModules,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import ReanimatedAnimated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const logoImage = require("@/assets/logo.png");
-const { width } = Dimensions.get("window");
+const mainLogo = require("@/assets/images/main_logo.png");
+const { width, height: screenHeight } = Dimensions.get("window");
 
 type SetupPath = "quick" | "personalized" | null;
 
@@ -69,6 +73,7 @@ type OnboardingStep =
   | "select-apps"
   | "permissions"
   | "duration"
+  | "cooldown"
   | "done";
 
 // Testimonials data
@@ -106,18 +111,33 @@ const AGE_RANGES = [
 // Research quotes
 const RESEARCH_QUOTES = [
   {
-    title: "The Research",
-    text: "A 2024 survey of 42,000 US adults found heavy social media users felt more irritable.",
-    source: "JAMA Network Open",
+    title: "Did You Know?",
+    text: "Breaking the habit of mindless scrolling can improve focus, sleep quality, and overall well-being.",
+    source: "",
   },
   {
-    title: "The Science",
-    text: "Excessive phone use is linked to reduced attention span and increased anxiety levels.",
-    source: "Nature Human Behaviour",
+    title: "The Goal",
+    text: "Small pauses before opening apps help build awareness and give you back control of your time.",
+    source: "",
   },
 ];
 
-const getStepOrder = (setupPath: SetupPath): OnboardingStep[] => {
+const getStepOrder = (setupPath: SetupPath, isCompleteProfileMode: boolean = false): OnboardingStep[] => {
+  // Complete profile mode - only personalization questions, no app selection
+  if (isCompleteProfileMode) {
+    return [
+      "goals",
+      "time-current",
+      "time-goal",
+      "age",
+      "emotional",
+      "current-state",
+      "analysis",
+      "projection",
+      "done",
+    ];
+  }
+
   const baseSteps: OnboardingStep[] = [
     "welcome-hero",
     "program-preview",
@@ -140,12 +160,13 @@ const getStepOrder = (setupPath: SetupPath): OnboardingStep[] => {
       "select-apps",
       "permissions",
       "duration",
+      "cooldown",
       "done",
     ];
   }
 
   // Quick setup path - skip all personalized questions
-  return [...baseSteps, "select-apps", "permissions", "duration", "done"];
+  return [...baseSteps, "select-apps", "permissions", "duration", "cooldown", "done"];
 };
 
 export default function OnboardingScreen() {
@@ -155,11 +176,15 @@ export default function OnboardingScreen() {
 
   // Check if we should skip to a specific step (e.g., from settings)
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
-  const initialStep = skipToStep || "welcome-hero";
+  const mode = params.mode as string | undefined; // "complete-profile" for adding personalization later
+  const isCompleteProfileMode = mode === "complete-profile";
+  
+  // For complete-profile mode, start at goals step
+  const initialStep = isCompleteProfileMode ? "goals" : (skipToStep || "welcome-hero");
 
   const [step, setStep] = useState<OnboardingStep>(initialStep);
   const [setupPath, setSetupPath] = useState<SetupPath>(
-    skipToStep === "select-apps" ? "quick" : null
+    skipToStep === "select-apps" || isCompleteProfileMode ? "quick" : null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [availableApps, setAvailableApps] = useState<CategorizedApp[]>([]);
@@ -169,19 +194,34 @@ export default function OnboardingScreen() {
     AppCategory | "all" | "suggested"
   >("suggested");
   const [pauseDuration, setPauseDuration] = useState(15);
+  const [cooldownMinutes, setCooldownMinutes] = useState(15);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const currentSettings = useAppStore((state) => state.settings);
   const [stepKey, setStepKey] = useState(0);
 
-  // Onboarding state
-  const [userName, setUserName] = useState("");
-  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
-  const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(
-    new Set()
+  // Onboarding state - initialize from current settings if in complete-profile mode
+  const [userName, setUserName] = useState(
+    isCompleteProfileMode ? (currentSettings.userName || "") : ""
   );
-  const [dailyScreenTime, setDailyScreenTime] = useState(4);
-  const [targetScreenTime, setTargetScreenTime] = useState(2);
-  const [selectedAge, setSelectedAge] = useState<string | null>(null);
+  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(
+    isCompleteProfileMode && currentSettings.goals?.length
+      ? new Set(currentSettings.goals)
+      : new Set()
+  );
+  const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(
+    isCompleteProfileMode && currentSettings.emotions?.length
+      ? new Set(currentSettings.emotions)
+      : new Set()
+  );
+  const [dailyScreenTime, setDailyScreenTime] = useState(
+    isCompleteProfileMode ? (currentSettings.dailyScreenTimeHours || 4) : 4
+  );
+  const [targetScreenTime, setTargetScreenTime] = useState(
+    isCompleteProfileMode ? (currentSettings.targetScreenTimeHours || 2) : 2
+  );
+  const [selectedAge, setSelectedAge] = useState<string | null>(
+    isCompleteProfileMode ? (currentSettings.ageRange || null) : null
+  );
   const [permissionEnabled, setPermissionEnabled] = useState(false);
 
   // Animation hooks
@@ -202,7 +242,7 @@ export default function OnboardingScreen() {
         // If coming from settings, pre-select already protected apps
         if (skipToStep === "select-apps") {
           const currentAppPackages = new Set(
-            currentSettings.selectedApps.map((app) => app.packageName)
+            currentSettings.selectedApps.map((app) => app.packageName),
           );
           setSelectedAppSet(currentAppPackages);
         }
@@ -217,10 +257,17 @@ export default function OnboardingScreen() {
     if (Platform.OS !== "android" && Platform.OS !== "ios") return;
     try {
       const { GentleWaitModule } = NativeModules;
-      if (Platform.OS === "android" && GentleWaitModule?.isAccessibilityServiceEnabled) {
-        const isEnabled = await GentleWaitModule.isAccessibilityServiceEnabled();
+      if (
+        Platform.OS === "android" &&
+        GentleWaitModule?.isAccessibilityServiceEnabled
+      ) {
+        const isEnabled =
+          await GentleWaitModule.isAccessibilityServiceEnabled();
         setPermissionEnabled(isEnabled);
-      } else if (Platform.OS === "ios" && GentleWaitModule?.isFamilyControlsAuthorized) {
+      } else if (
+        Platform.OS === "ios" &&
+        GentleWaitModule?.isFamilyControlsAuthorized
+      ) {
         const isEnabled = await GentleWaitModule.isFamilyControlsAuthorized();
         setPermissionEnabled(isEnabled);
       }
@@ -241,7 +288,7 @@ export default function OnboardingScreen() {
           if (nextAppState === "active") {
             checkPermissionStatus();
           }
-        }
+        },
       );
 
       // Also check periodically while on this screen
@@ -304,7 +351,7 @@ export default function OnboardingScreen() {
   };
 
   const handleNext = async () => {
-    const stepOrder = getStepOrder(setupPath);
+    const stepOrder = getStepOrder(setupPath, isCompleteProfileMode);
     const currentIndex = stepOrder.indexOf(step);
 
     if (step === "setup-choice" && setupPath === null) {
@@ -321,7 +368,7 @@ export default function OnboardingScreen() {
     if (step === "goals" && selectedGoals.size === 0) {
       Alert.alert(
         "Select Goals",
-        "Please select at least one goal to continue."
+        "Please select at least one goal to continue.",
       );
       return;
     }
@@ -329,7 +376,7 @@ export default function OnboardingScreen() {
     if (step === "emotional" && selectedEmotions.size === 0) {
       Alert.alert(
         "Select Emotions",
-        "Please select at least one emotion to continue."
+        "Please select at least one emotion to continue.",
       );
       return;
     }
@@ -337,7 +384,7 @@ export default function OnboardingScreen() {
     if (step === "time-current" && dailyScreenTime === 0) {
       Alert.alert(
         "Select Screen Time",
-        "Please select your current daily screen time."
+        "Please select your current daily screen time.",
       );
       return;
     }
@@ -345,7 +392,7 @@ export default function OnboardingScreen() {
     if (step === "time-goal" && targetScreenTime === 0) {
       Alert.alert(
         "Select Target Time",
-        "Please select your target screen time goal."
+        "Please select your target screen time goal.",
       );
       return;
     }
@@ -353,7 +400,7 @@ export default function OnboardingScreen() {
     if (step === "select-apps" && selectedAppSet.size === 0) {
       Alert.alert(
         "Select Apps",
-        "Please select at least one app to monitor. This is required for GentleWait to work."
+        "Please select at least one app to monitor. This is required for GentleWait to work.",
       );
       return;
     }
@@ -368,7 +415,7 @@ export default function OnboardingScreen() {
     if (isAddingApps && step === "select-apps") {
       setIsLoading(true);
       const selectedApps = availableApps.filter((app) =>
-        selectedAppSet.has(app.packageName)
+        selectedAppSet.has(app.packageName),
       );
 
       updateSettings({
@@ -397,7 +444,7 @@ export default function OnboardingScreen() {
               "[Settings] Synced",
               appPackageNames.length,
               "apps to native:",
-              appPackageNames
+              appPackageNames,
             );
           }
         } catch (error) {
@@ -413,13 +460,31 @@ export default function OnboardingScreen() {
     if (currentIndex === stepOrder.length - 1) {
       // Onboarding complete - save settings
       setIsLoading(true);
+
+      if (isCompleteProfileMode) {
+        // Complete profile mode - only update personalization data, preserve existing apps
+        updateSettings({
+          goals: Array.from(selectedGoals),
+          emotions: Array.from(selectedEmotions),
+          dailyScreenTimeHours: dailyScreenTime,
+          targetScreenTimeHours: targetScreenTime,
+          ageRange: selectedAge || undefined,
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        router.back();
+        return;
+      }
+
+      // Regular onboarding - save everything including apps
       const selectedApps = availableApps.filter((app) =>
-        selectedAppSet.has(app.packageName)
+        selectedAppSet.has(app.packageName),
       );
 
       updateSettings({
         selectedApps,
         pauseDurationSec: pauseDuration,
+        cooldownMinutes,
         userName,
         goals: Array.from(selectedGoals),
         emotions: Array.from(selectedEmotions),
@@ -440,7 +505,7 @@ export default function OnboardingScreen() {
               "[Onboarding] Synced",
               appPackageNames.length,
               "apps to native:",
-              appPackageNames
+              appPackageNames,
             );
           }
         } catch (error) {
@@ -457,12 +522,12 @@ export default function OnboardingScreen() {
 
   const handleBack = () => {
     // If coming from settings, go back to settings
-    if (skipToStep === "select-apps") {
+    if (skipToStep === "select-apps" || isCompleteProfileMode) {
       router.back();
       return;
     }
 
-    const stepOrder = getStepOrder(setupPath);
+    const stepOrder = getStepOrder(setupPath, isCompleteProfileMode);
     const currentIndex = stepOrder.indexOf(step);
 
     if (currentIndex > 0) {
@@ -477,8 +542,9 @@ export default function OnboardingScreen() {
     glowProgress.value = withRepeat(
       withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
       -1,
-      true
+      true,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -491,48 +557,37 @@ export default function OnboardingScreen() {
       flex: 1,
     },
     content: {
+      flex: 1,
       padding: spacing.lg,
     },
     contentContainer: {
       flexGrow: 1,
       justifyContent: "center",
+      paddingBottom: spacing.lg,
     },
     // Hero styles
     heroContainer: {
       alignItems: "center",
-      marginBottom: spacing.xl,
+      marginBottom: spacing.xxl,
     },
     heroGlowContainer: {
       position: "relative",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: spacing.xl,
+      marginBottom: spacing.lg,
     },
     heroGlow: {
       position: "absolute",
-      width: width * 0.6,
-      height: width * 0.6,
-      borderRadius: width * 0.3,
-    },
-    heroLogoContainer: {
-      width: 100,
-      height: 100,
-      borderRadius: 28,
-      overflow: "hidden",
-      borderWidth: 2,
-      borderColor: "rgba(255, 255, 255, 0.2)",
-    },
-    heroLogo: {
-      width: "100%",
-      height: "100%",
+      width: width * 0.7,
+      height: width * 0.7,
+      borderRadius: width * 0.35,
     },
     appNameLarge: {
       fontFamily: fonts.light,
-      fontSize: typography.hero.fontSize,
+      fontSize: 42,
       color: colors.text,
-      letterSpacing: 1,
-      marginTop: spacing.lg,
-      fontWeight: "700",
+      letterSpacing: 0.5,
+      marginTop: spacing.xl,
     },
     appNameAccent: {
       fontFamily: fonts.medium,
@@ -540,39 +595,41 @@ export default function OnboardingScreen() {
     },
     // Typography
     title: {
-      fontFamily: fonts.light,
-      fontSize: 30,
-      color: colors.text,
-      marginBottom: spacing.md,
-      textAlign: "center",
-      letterSpacing: 0.2,
-    },
-    subtitle: {
-      fontFamily: fonts.regular,
-      fontSize: 20,
+      fontFamily: fonts.medium,
+      fontSize: 32,
       color: colors.text,
       marginBottom: spacing.lg,
       textAlign: "center",
-      lineHeight: 28,
+      letterSpacing: -0.3,
+      lineHeight: 40,
+    },
+    subtitle: {
+      fontFamily: fonts.medium,
+      fontSize: 26,
+      color: colors.text,
+      marginBottom: spacing.xl,
+      textAlign: "center",
+      lineHeight: 34,
+      letterSpacing: -0.2,
     },
     titleAccent: {
       color: colors.primary,
     },
     subtitleAccent: {
-      fontFamily: fonts.medium,
+      fontFamily: fonts.semiBold,
       color: colors.primary,
     },
     description: {
       fontFamily: fonts.regular,
-      fontSize: 16,
+      fontSize: 18,
       color: colors.textSecondary,
       marginBottom: spacing.lg,
       textAlign: "center",
-      lineHeight: 26,
+      lineHeight: 28,
     },
     descriptionAccent: {
       fontFamily: fonts.medium,
-      color: colors.primary,
+      color: colors.text,
     },
     descriptionSecondary: {
       fontFamily: fonts.medium,
@@ -1031,7 +1088,7 @@ export default function OnboardingScreen() {
       fontSize: typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
     analysisSubtitle: {
       fontFamily: fonts.regular,
@@ -1039,7 +1096,7 @@ export default function OnboardingScreen() {
       color: colors.textSecondary,
       textAlign: "center",
       lineHeight: 26,
-      marginBottom: spacing.xl,
+      marginBottom: spacing.md,
     },
     analysisHighlight: {
       fontFamily: fonts.semiBold,
@@ -1049,27 +1106,22 @@ export default function OnboardingScreen() {
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "flex-end",
-      height: 200,
       gap: spacing.xl * 2,
-      marginBottom: spacing.xl,
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
     },
     chartBar: {
       alignItems: "center",
-      width: 80,
+      width: 96,
     },
     chartBarFill: {
-      width: 70,
+      width: 86,
       borderRadius: 12,
       justifyContent: "flex-start",
       alignItems: "center",
       paddingTop: spacing.md,
-      marginBottom: spacing.sm,
-    },
-    chartBarUser: {
-      backgroundColor: "#FF6B6B",
-    },
-    chartBarAverage: {
-      backgroundColor: "rgba(0, 212, 255, 0.3)",
+      overflow: "hidden",
+      minHeight: 60,
     },
     chartBarValue: {
       fontFamily: fonts.bold,
@@ -1080,19 +1132,23 @@ export default function OnboardingScreen() {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
       color: colors.text,
+      marginTop: spacing.sm,
     },
     analysisComparison: {
       fontFamily: fonts.light,
       fontSize: typography.bodyLarge.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.xl * 2,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
     },
     analysisDisclaimer: {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
       color: colors.textMuted,
       textAlign: "center",
+      marginTop: spacing.sm,
+      paddingBottom: spacing.lg,
     },
     // Projection styles
     projectionTitle: {
@@ -1141,28 +1197,30 @@ export default function OnboardingScreen() {
       flexDirection: "row",
       justifyContent: "space-around",
       alignItems: "center",
-      marginVertical: spacing.lg,
+      marginVertical: spacing.md,
       width: "100%",
     },
     programDay: {
       alignItems: "center",
       gap: spacing.sm,
-      padding: spacing.md,
+      padding: spacing.lg,
       backgroundColor: "rgba(255, 255, 255, 0.05)",
-      borderRadius: radius.button,
-      minWidth: 80,
+      borderRadius: radius.glass,
+      minWidth: 85,
     },
     programDayIcon: {
-      fontSize: 28,
+      fontSize: 36,
     },
     programDayLabel: {
-      fontSize: typography.secondary.fontSize,
-      fontWeight: "500",
-      color: colors.textSecondary,
+      fontFamily: fonts.medium,
+      fontSize: 14,
+      color: colors.text,
+      letterSpacing: 0.3,
     },
     programDayArrow: {
-      fontSize: 20,
+      fontSize: 24,
       color: colors.primary,
+      opacity: 0.7,
     },
     textInput: {
       marginVertical: spacing.lg,
@@ -1206,24 +1264,26 @@ export default function OnboardingScreen() {
                   <ReanimatedAnimated.View style={[styles.heroGlow, glowStyle]}>
                     <LinearGradient
                       colors={[
-                        "rgba(0, 212, 255, 0.4)",
-                        "rgba(168, 85, 247, 0.2)",
+                        "rgba(0, 212, 255, 0.35)",
+                        "rgba(168, 85, 247, 0.15)",
                         "transparent",
                       ]}
                       style={{
                         width: "100%",
                         height: "100%",
-                        borderRadius: width * 0.3,
+                        borderRadius: width * 0.35,
                       }}
                       start={{ x: 0.5, y: 0.5 }}
                       end={{ x: 1, y: 1 }}
                     />
                   </ReanimatedAnimated.View>
 
-                  {/* Logo with glass effect */}
-                  <View style={styles.heroLogoContainer}>
-                    <Image source={logoImage} style={styles.heroLogo} />
-                  </View>
+                  {/* Logo */}
+                  <Image
+                    source={mainLogo}
+                    style={{ width: 120, height: 120 }}
+                    resizeMode="contain"
+                  />
                 </View>
 
                 {/* App name */}
@@ -1233,67 +1293,56 @@ export default function OnboardingScreen() {
               </View>
 
               <Text style={styles.subtitle}>
-                Reclaim Your{" "}
-                <Text style={styles.subtitleAccent}>Attention</Text>
+                Take a moment.{"\n"}
+                <Text style={styles.subtitleAccent}>Breathe.</Text>
               </Text>
               <Text style={styles.description}>
-                That split second before you scroll?{"\n"}
-                <Text style={styles.descriptionAccent}>
-                  That&apos;s where change happens.
-                </Text>
-                {"\n\n"}
-                GentleWait creates a mindful pause—giving you the power to{" "}
-                <Text style={styles.descriptionSecondary}>
-                  choose intentionally
-                </Text>
-                .
+                Before you scroll, we&apos;ll help you pause.{"\n"}
+                A gentle moment to{" "}
+                <Text style={styles.descriptionAccent}>choose mindfully</Text>
+                {"\n"}instead of reaching out of habit.
               </Text>
             </>
           )}
 
           {step === "program-preview" && (
             <>
-              <Text style={styles.title}>Your Journey Begins</Text>
+              <Text style={styles.title}>Build Better Habits</Text>
               <Text style={styles.description}>
-                We&apos;ll create a{" "}
-                <Text style={styles.descriptionAccent}>
-                  personalized program
-                </Text>{" "}
-                just for you—building new habits one mindful moment at a time.
+                Small pauses lead to{" "}
+                <Text style={styles.descriptionAccent}>big changes</Text>.
+                {"\n"}We&apos;ll guide you one step at a time.
               </Text>
 
               <GlassCard
                 glowColor="primary"
-                style={{ marginVertical: spacing.lg }}
+                style={{ marginVertical: spacing.xl }}
               >
                 <View style={styles.programDays}>
                   <View style={styles.programDay}>
-                    <Text style={styles.programDayIcon}>🧘</Text>
-                    <Text style={styles.programDayLabel}>Day 1</Text>
+                    <Ionicons name="flower-outline" size={36} color={colors.primary} />
+                    <Text style={styles.programDayLabel}>Breathe</Text>
                   </View>
-                  <Text style={styles.programDayArrow}>→</Text>
+                  <Ionicons name="arrow-forward" size={24} color={colors.primary} style={{ opacity: 0.7 }} />
                   <View style={styles.programDay}>
-                    <Text style={styles.programDayIcon}>🏃</Text>
-                    <Text style={styles.programDayLabel}>Day 7</Text>
+                    <Ionicons name="pencil-outline" size={36} color={colors.primary} />
+                    <Text style={styles.programDayLabel}>Reflect</Text>
                   </View>
-                  <Text style={styles.programDayArrow}>→</Text>
+                  <Ionicons name="arrow-forward" size={24} color={colors.primary} style={{ opacity: 0.7 }} />
                   <View style={styles.programDay}>
-                    <Text style={styles.programDayIcon}>🌱</Text>
-                    <Text style={styles.programDayLabel}>Day 21</Text>
+                    <Ionicons name="leaf-outline" size={36} color={colors.primary} />
+                    <Text style={styles.programDayLabel}>Grow</Text>
                   </View>
                 </View>
               </GlassCard>
 
               <Text style={styles.description}>
+                Breathing exercises, journaling prompts, and gentle nudges—
+                {"\n"}
                 <Text style={styles.descriptionAccent}>
-                  Breathing exercises
+                  no judgment, just presence
                 </Text>
-                ,{" "}
-                <Text style={styles.descriptionSecondary}>movement breaks</Text>
-                , journaling prompts, and an{" "}
-                <Text style={styles.descriptionAccent}>AI companion</Text> to
-                guide you.{"\n\n"}
-                No judgment. Just gentle nudges toward presence.
+                .
               </Text>
             </>
           )}
@@ -1319,7 +1368,7 @@ export default function OnboardingScreen() {
                       setupPath === "quick" && styles.setupOptionTitleSelected,
                     ]}
                   >
-                    ⚡ Quick Setup
+                    Quick Setup
                   </Text>
                   <Text
                     style={[
@@ -1336,7 +1385,7 @@ export default function OnboardingScreen() {
                       setupPath === "quick" && styles.setupOptionTimeSelected,
                     ]}
                   >
-                    3 min
+                    1 min
                   </Text>
                 </TouchableOpacity>
 
@@ -1354,7 +1403,7 @@ export default function OnboardingScreen() {
                         styles.setupOptionTitleSelected,
                     ]}
                   >
-                    🎯 Personalized Setup
+                    Personalized Setup
                   </Text>
                   <Text
                     style={[
@@ -1381,7 +1430,7 @@ export default function OnboardingScreen() {
 
           {step === "name" && (
             <>
-              <Text style={styles.title}>Hey, who&apos;s there? 👋</Text>
+              <Text style={styles.title}>Hey, who&apos;s there?</Text>
               <Text style={styles.description}>What should we call you?</Text>
 
               <TextInput
@@ -1412,13 +1461,13 @@ export default function OnboardingScreen() {
 
               <View style={styles.appList}>
                 {[
-                  "📱 Reduce my screen time",
-                  "🎯 Sharpen my focus",
-                  "😴 Sleep better at night",
-                  "👨‍👩‍👧 More presence with loved ones",
-                  "🧘 Find calm in the chaos",
-                  "⚡ Boost my energy",
-                  "🌱 Build lasting habits",
+                  "Reduce my screen time",
+                  "Sharpen my focus",
+                  "Sleep better at night",
+                  "More presence with loved ones",
+                  "Find calm in the chaos",
+                  "Boost my energy",
+                  "Build lasting habits",
                 ].map((goal) => (
                   <Checkbox
                     key={goal}
@@ -1488,12 +1537,12 @@ export default function OnboardingScreen() {
 
               <View style={styles.appList}>
                 {[
-                  "😔 Guilty about wasted time",
-                  "😰 More anxious than before",
-                  "🔋 Mentally drained",
-                  "🌫️ Disconnected from the moment",
-                  "😤 Irritable and restless",
-                  "😞 Wishing I hadn't",
+                  "Guilty about wasted time",
+                  "More anxious than before",
+                  "Mentally drained",
+                  "Disconnected from the moment",
+                  "Irritable and restless",
+                  "Wishing I hadn't",
                 ].map((emotion) => (
                   <Checkbox
                     key={emotion}
@@ -1526,12 +1575,12 @@ export default function OnboardingScreen() {
 
               {/* Show first selected goal as app icon placeholder */}
               <View style={styles.stateAppIcon}>
-                <Text style={styles.stateAppIconText}>📱</Text>
+                <Ionicons name="phone-portrait-outline" size={32} color={colors.accent} />
               </View>
 
               {/* Current emotion pill */}
               <View style={styles.stateEmotionPill}>
-                <Text style={styles.stateEmotionIcon}>😤</Text>
+                <Ionicons name="alert-circle-outline" size={20} color="#FF9800" />
                 <Text style={styles.stateEmotionText}>
                   {selectedEmotions.size > 0
                     ? Array.from(selectedEmotions)[0]
@@ -1549,7 +1598,11 @@ export default function OnboardingScreen() {
               <View style={styles.stateWithApp}>
                 <Text style={styles.stateWithText}>With </Text>
                 <View style={styles.stateLogoContainer}>
-                  <Image source={logoImage} style={styles.stateLogoIcon} />
+                  <Image
+                    source={mainLogo}
+                    style={{ width: 24, height: 24 }}
+                    resizeMode="contain"
+                  />
                   <Text style={styles.stateLogoText}>GentleWait</Text>
                 </View>
               </View>
@@ -1561,7 +1614,7 @@ export default function OnboardingScreen() {
                   styles.stateEmotionPillPositive,
                 ]}
               >
-                <Text style={styles.stateEmotionIcon}>😌</Text>
+                <Ionicons name="happy-outline" size={20} color={colors.primary} />
                 <Text
                   style={[
                     styles.stateEmotionText,
@@ -1575,16 +1628,13 @@ export default function OnboardingScreen() {
               {/* Research quote */}
               <GlassCard style={styles.researchCard}>
                 <View style={styles.researchHeader}>
-                  <Text style={styles.researchIcon}>🔬</Text>
+                  <Ionicons name="flask-outline" size={20} color={colors.primary} />
                   <Text style={styles.researchTitle}>
                     {RESEARCH_QUOTES[0].title}
                   </Text>
                 </View>
                 <Text style={styles.researchText}>
-                  {RESEARCH_QUOTES[0].text} From{" "}
-                  <Text style={styles.researchSource}>
-                    {RESEARCH_QUOTES[0].source}
-                  </Text>
+                  {RESEARCH_QUOTES[0].text}
                 </Text>
               </GlassCard>
             </>
@@ -1599,30 +1649,45 @@ export default function OnboardingScreen() {
               const averageScore = 33;
               const difference = userScore - averageScore;
 
+              // Calculate bar heights based on screen height (responsive)
+              const maxBarHeight = screenHeight * 0.45;
+              const userBarHeight = (userScore / 100) * maxBarHeight;
+              const averageBarHeight = (averageScore / 100) * maxBarHeight;
+
               return (
                 <>
                   <Text style={styles.analysisTitle}>
                     It doesn&apos;t look good so far...
                   </Text>
                   <Text style={styles.analysisSubtitle}>
-                    Your response indicates a clear{"\n"}
+                    Your responses suggest a strong{"\n"}
                     <Text style={styles.analysisHighlight}>
-                      negative dependence
+                      reliance on your phone
                     </Text>{" "}
-                    on your phone*
+                    that may be affecting your well-being
                   </Text>
 
                   {/* Bar chart */}
                   <View style={styles.chartContainer}>
                     <View style={styles.chartBar}>
                       <View
-                        style={[
-                          styles.chartBarFill,
-                          styles.chartBarUser,
-                          { height: `${userScore}%` },
-                        ]}
+                        style={[styles.chartBarFill, { height: userBarHeight }]}
                       >
-                        <Text style={styles.chartBarValue}>{userScore}%</Text>
+                        <LinearGradient
+                          colors={["#FF9999", "#FF6B6B", "#FF4444", "#CC0000"]}
+                          start={{ x: 0.5, y: 1 }}
+                          end={{ x: 0.5, y: 0 }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            justifyContent: "flex-start",
+                            alignItems: "center",
+                            paddingTop: spacing.md,
+                            borderRadius: 12,
+                          }}
+                        >
+                          <Text style={styles.chartBarValue}>{userScore}%</Text>
+                        </LinearGradient>
                       </View>
                       <Text style={styles.chartBarLabel}>Your Result</Text>
                     </View>
@@ -1630,13 +1695,31 @@ export default function OnboardingScreen() {
                       <View
                         style={[
                           styles.chartBarFill,
-                          styles.chartBarAverage,
-                          { height: `${averageScore}%` },
+                          { height: averageBarHeight },
                         ]}
                       >
-                        <Text style={styles.chartBarValue}>
-                          {averageScore}%
-                        </Text>
+                        <LinearGradient
+                          colors={[
+                            "rgba(0, 212, 255, 0.2)",
+                            "rgba(0, 212, 255, 0.4)",
+                            "rgba(0, 212, 255, 0.6)",
+                            "rgba(0, 212, 255, 0.8)",
+                          ]}
+                          start={{ x: 0.5, y: 1 }}
+                          end={{ x: 0.5, y: 0 }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            justifyContent: "flex-start",
+                            alignItems: "center",
+                            paddingTop: spacing.md,
+                            borderRadius: 12,
+                          }}
+                        >
+                          <Text style={styles.chartBarValue}>
+                            {averageScore}%
+                          </Text>
+                        </LinearGradient>
                       </View>
                       <Text style={styles.chartBarLabel}>Average</Text>
                     </View>
@@ -1650,7 +1733,7 @@ export default function OnboardingScreen() {
                   </Text>
 
                   <Text style={styles.analysisDisclaimer}>
-                    *This is not a psychological diagnosis
+                    Based on your responses about screen time and how you feel
                   </Text>
                 </>
               );
@@ -1661,21 +1744,21 @@ export default function OnboardingScreen() {
               // Calculate projections
               const daysPerYear = Math.round((dailyScreenTime * 365) / 24);
               const yearsInLifetime = Math.round(
-                (dailyScreenTime * 365 * 50) / (24 * 365)
+                (dailyScreenTime * 365 * 50) / (24 * 365),
               );
 
               return (
                 <>
                   <Text style={styles.projectionTitle}>
-                    At your current rate, you&apos;ll spend{"\n"}
+                    Imagine what you could do with{"\n"}
                     <Text style={styles.projectionHighlight}>
-                      {daysPerYear} days
+                      {daysPerYear} extra days
                     </Text>{" "}
-                    on your phone over the next year
+                    each year
                   </Text>
 
                   <Text style={styles.projectionSubtitle}>
-                    Which means you&apos;re on track to spend
+                    That&apos;s how much time you could reclaim
                   </Text>
 
                   <Text style={styles.projectionYears}>
@@ -1683,13 +1766,13 @@ export default function OnboardingScreen() {
                   </Text>
 
                   <Text style={styles.projectionDescription}>
-                    of your life looking down at your phone.{"\n"}
-                    Yep, you read this right.
+                    of presence, creativity, and connection{"\n"}
+                    waiting to be unlocked.
                   </Text>
 
                   <Text style={styles.projectionDisclaimer}>
-                    Projection of your screen time habits based on an 85-year
-                    lifespan and 16 waking hours a day.
+                    Based on your current screen time and mindful reduction
+                    goals.
                   </Text>
                 </>
               );
@@ -1793,7 +1876,7 @@ export default function OnboardingScreen() {
             <>
               {/* Laurel wreath with stats */}
               <View style={styles.laurelContainer}>
-                <Text style={styles.laurelLeft}>🌿</Text>
+                <Ionicons name="leaf-outline" size={40} color={colors.primary} style={{ transform: [{ scaleX: -1 }] }} />
                 <View style={styles.laurelContent}>
                   <Text style={styles.laurelTitle}>
                     Over{" "}
@@ -1803,7 +1886,7 @@ export default function OnboardingScreen() {
                     started with the same goals!
                   </Text>
                 </View>
-                <Text style={styles.laurelRight}>🌿</Text>
+                <Ionicons name="leaf-outline" size={40} color={colors.primary} />
               </View>
 
               {/* User's selected goals */}
@@ -1818,7 +1901,7 @@ export default function OnboardingScreen() {
                 {selectedGoals.size === 0 && (
                   <View style={styles.goalPill}>
                     <Text style={styles.goalPillText}>
-                      📱 Reduce Screen Time by{" "}
+                      Reduce Screen Time by{" "}
                       {dailyScreenTime - targetScreenTime}h
                     </Text>
                   </View>
@@ -1831,7 +1914,11 @@ export default function OnboardingScreen() {
                   <Text style={styles.testimonialName}>
                     {TESTIMONIALS[0].name}
                   </Text>
-                  <Text style={styles.testimonialStars}>⭐⭐⭐⭐⭐</Text>
+                  <View style={{ flexDirection: "row", gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Ionicons key={i} name="star" size={14} color="#FFD700" />
+                    ))}
+                  </View>
                 </View>
                 <Text style={styles.testimonialComment}>
                   &ldquo;{TESTIMONIALS[0].comment}&rdquo;
@@ -1843,7 +1930,11 @@ export default function OnboardingScreen() {
                   <Text style={styles.testimonialName}>
                     {TESTIMONIALS[1].name}
                   </Text>
-                  <Text style={styles.testimonialStars}>⭐⭐⭐⭐⭐</Text>
+                  <View style={{ flexDirection: "row", gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Ionicons key={i} name="star" size={14} color="#FFD700" />
+                    ))}
+                  </View>
                 </View>
                 <Text style={styles.testimonialComment}>
                   &ldquo;{TESTIMONIALS[1].comment}&rdquo;
@@ -1876,7 +1967,7 @@ export default function OnboardingScreen() {
                   ]}
                   onPress={() => setSelectedCategory("suggested")}
                 >
-                  <Text style={styles.categoryTabIcon}>⭐</Text>
+                  <Ionicons name="star-outline" size={16} color={selectedCategory === "suggested" ? colors.primary : colors.textSecondary} />
                   <Text
                     style={[
                       styles.categoryTabLabel,
@@ -1895,7 +1986,7 @@ export default function OnboardingScreen() {
                   ]}
                   onPress={() => setSelectedCategory("all")}
                 >
-                  <Text style={styles.categoryTabIcon}>📋</Text>
+                  <Ionicons name="list-outline" size={16} color={selectedCategory === "all" ? colors.primary : colors.textSecondary} />
                   <Text
                     style={[
                       styles.categoryTabLabel,
@@ -1917,7 +2008,7 @@ export default function OnboardingScreen() {
                     ]}
                     onPress={() => setSelectedCategory(category.id)}
                   >
-                    <Text style={styles.categoryTabIcon}>{category.icon}</Text>
+                    <Ionicons name={category.icon as any} size={16} color={selectedCategory === category.id ? colors.primary : colors.textSecondary} />
                     <Text
                       style={[
                         styles.categoryTabLabel,
@@ -1996,15 +2087,18 @@ export default function OnboardingScreen() {
               )}
 
               <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>
-                  🔒 Your data never leaves your device
-                </Text>
-                <Text style={styles.permissionText}>
-                  👁️ We never see what&apos;s inside your apps
-                </Text>
-                <Text style={styles.permissionText}>
-                  ⚙️ You&apos;re always in control
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.permissionText, { flex: 1 }]}>Your data never leaves your device</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                  <Ionicons name="eye-off-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.permissionText, { flex: 1 }]}>We never see what&apos;s inside your apps</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                  <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.permissionText, { flex: 1 }]}>You&apos;re always in control</Text>
+                </View>
               </View>
 
               {permissionEnabled ? (
@@ -2029,7 +2123,7 @@ export default function OnboardingScreen() {
                       },
                     ]}
                   >
-                    ✅ Permission Enabled
+                    Permission Enabled
                   </Text>
                   <Text
                     style={[
@@ -2045,7 +2139,11 @@ export default function OnboardingScreen() {
                 </View>
               ) : (
                 <Button
-                  label={Platform.OS === "ios" ? "Enable Family Controls" : "Enable Accessibility Permission"}
+                  label={
+                    Platform.OS === "ios"
+                      ? "Enable Family Controls"
+                      : "Enable Accessibility Permission"
+                  }
                   onPress={async () => {
                     if (Platform.OS === "android") {
                       try {
@@ -2055,62 +2153,68 @@ export default function OnboardingScreen() {
                           Alert.alert(
                             "Enable GentleWait",
                             "Find 'GentleWait' in the list and turn it ON, then come back to the app.",
-                            [{ text: "OK" }]
+                            [{ text: "OK" }],
                           );
                         } else {
                           Alert.alert(
                             "Error",
-                            "Native module not available. Make sure you're running on Android."
+                            "Native module not available. Make sure you're running on Android.",
                           );
                         }
                       } catch (error) {
                         console.error(
                           "Error opening accessibility settings:",
-                          error
+                          error,
                         );
                         Alert.alert(
                           "Error",
-                          "Could not open accessibility settings. Please go to Settings > Accessibility manually."
+                          "Could not open accessibility settings. Please go to Settings > Accessibility manually.",
                         );
                       }
                     } else if (Platform.OS === "ios") {
                       try {
                         const { GentleWaitModule } = NativeModules;
-                        if (GentleWaitModule?.requestFamilyControlsAuthorization) {
-                          const granted = await GentleWaitModule.requestFamilyControlsAuthorization();
+                        if (
+                          GentleWaitModule?.requestFamilyControlsAuthorization
+                        ) {
+                          const granted =
+                            await GentleWaitModule.requestFamilyControlsAuthorization();
                           if (granted) {
                             setPermissionEnabled(true);
                             Alert.alert(
                               "Success",
                               "Family Controls authorized! GentleWait can now monitor your app usage.",
-                              [{ text: "OK" }]
+                              [{ text: "OK" }],
                             );
                           } else {
                             Alert.alert(
                               "Permission Denied",
                               "Family Controls permission is required for GentleWait to work. You can enable it later in Settings.",
-                              [{ text: "OK" }]
+                              [{ text: "OK" }],
                             );
                           }
                         } else {
                           Alert.alert(
                             "Not Available",
                             "Family Controls is not available. Make sure you're running iOS 15+ and the native module is properly configured.",
-                            [{ text: "OK" }]
+                            [{ text: "OK" }],
                           );
                         }
                       } catch (error) {
-                        console.error("Error requesting Family Controls:", error);
+                        console.error(
+                          "Error requesting Family Controls:",
+                          error,
+                        );
                         Alert.alert(
                           "Error",
                           "Could not request Family Controls permission. Please try again.",
-                          [{ text: "OK" }]
+                          [{ text: "OK" }],
                         );
                       }
                     } else {
                       Alert.alert(
                         "Not Supported",
-                        "App interception is only available on iOS and Android devices."
+                        "App interception is only available on iOS and Android devices.",
                       );
                     }
                   }}
@@ -2151,11 +2255,7 @@ export default function OnboardingScreen() {
                       {duration} seconds
                     </Text>
                     {pauseDuration === duration && (
-                      <Text
-                        style={[styles.durationValue, { color: colors.bg }]}
-                      >
-                        ✓
-                      </Text>
+                      <Ionicons name="checkmark" size={22} color={colors.bg} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -2163,9 +2263,30 @@ export default function OnboardingScreen() {
             </>
           )}
 
+          {step === "cooldown" && (
+            <>
+              <Text style={styles.title}>How often should we check in?</Text>
+              <Text style={styles.description}>
+                After you complete a pause, how long before we{" "}
+                <Text style={styles.descriptionAccent}>
+                  gently remind you again
+                </Text>{" "}
+                for the same app?
+              </Text>
+
+              <View style={{ alignItems: "center", marginTop: spacing.lg }}>
+                <WheelPicker
+                  items={COOLDOWN_OPTIONS}
+                  selectedValue={cooldownMinutes}
+                  onValueChange={setCooldownMinutes}
+                />
+              </View>
+            </>
+          )}
+
           {step === "done" && (
             <>
-              <Text style={styles.title}>You&apos;re ready! 🌟</Text>
+              <Text style={styles.title}>You&apos;re ready!</Text>
               <Text style={styles.description}>
                 Your{" "}
                 <Text style={styles.descriptionAccent}>mindful journey</Text>{" "}
@@ -2193,18 +2314,18 @@ export default function OnboardingScreen() {
         <Button
           label={
             step === "done"
-              ? "Begin My Journey"
+              ? "Start My Journey"
               : step === "welcome-hero"
-              ? "Let's Go"
-              : step === "program-preview"
-              ? "I'm Ready"
-              : step === "setup-choice"
-              ? "Continue"
-              : step === "summary"
-              ? "I'm Next"
-              : skipToStep === "select-apps" && step === "select-apps"
-              ? "Save"
-              : "Next"
+                ? "Get Started"
+                : step === "program-preview"
+                  ? "Let's Begin"
+                  : step === "setup-choice"
+                    ? "Continue"
+                    : step === "summary"
+                      ? "Almost There"
+                      : skipToStep === "select-apps" && step === "select-apps"
+                        ? "Save"
+                        : "Continue"
           }
           onPress={handleNext}
           variant="primary"

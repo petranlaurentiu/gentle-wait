@@ -155,6 +155,25 @@ export async function markAppHandled(packageName: string): Promise<void> {
 }
 
 /**
+ * Set the cooldown duration (time before an app can be intercepted again)
+ * Synced to native SharedPreferences (Android) / UserDefaults (iOS)
+ */
+export async function setCooldownDuration(minutes: number): Promise<void> {
+  if (!GentleWaitModule) {
+    console.log("[NativeService] GentleWaitModule not available");
+    return;
+  }
+
+  try {
+    const durationMs = minutes * 60 * 1000;
+    await GentleWaitModule.setCooldownDuration(durationMs);
+    console.log("[NativeService] Set cooldown duration:", minutes, "min");
+  } catch (error) {
+    console.error("[NativeService] Error setting cooldown duration:", error);
+  }
+}
+
+/**
  * Launch an app by package name (Android only)
  * iOS does not support launching apps by bundle ID from third-party apps
  */

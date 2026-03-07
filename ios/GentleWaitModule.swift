@@ -36,32 +36,16 @@ class GentleWaitModule: NSObject {
   
   @objc
   func requestFamilyControlsAuthorization(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    if #available(iOS 16.0, *) {
-      Task {
-        do {
-          try await authCenter.requestAuthorization(for: .individual)
-          let isAuthorized = authCenter.authorizationStatus == .approved
-          DispatchQueue.main.async {
-            resolve(isAuthorized)
-          }
-        } catch {
-          DispatchQueue.main.async {
-            reject("AUTHORIZATION_FAILED", "Failed to request Family Controls authorization: \(error.localizedDescription)", error)
-          }
+    Task {
+      do {
+        try await authCenter.requestAuthorization(for: .individual)
+        let isAuthorized = authCenter.authorizationStatus == .approved
+        DispatchQueue.main.async {
+          resolve(isAuthorized)
         }
-      }
-    } else {
-      authCenter.requestAuthorization { result in
-        switch result {
-        case .success:
-          let isAuthorized = self.authCenter.authorizationStatus == .approved
-          DispatchQueue.main.async {
-            resolve(isAuthorized)
-          }
-        case .failure(let error):
-          DispatchQueue.main.async {
-            reject("AUTHORIZATION_FAILED", "Failed to request Family Controls authorization: \(error.localizedDescription)", error)
-          }
+      } catch {
+        DispatchQueue.main.async {
+          reject("AUTHORIZATION_FAILED", "Failed to request Family Controls authorization: \(error.localizedDescription)", error)
         }
       }
     }
@@ -145,16 +129,6 @@ class GentleWaitModule: NSObject {
     userDefaults.synchronize()
     
     NSLog("[GentleWait] Marked app as handled: \(bundleId)")
-    resolve(true)
-  }
-  
-  // MARK: - Cooldown Configuration
-  
-  @objc
-  func setCooldownDuration(_ durationMs: Double, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    userDefaults.set(Int64(durationMs), forKey: "cooldown_duration")
-    userDefaults.synchronize()
-    NSLog("[GentleWait] Set cooldown duration: \(durationMs)ms")
     resolve(true)
   }
   

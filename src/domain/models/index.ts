@@ -12,6 +12,7 @@ export interface UserSettings {
   id: string; // singleton
   userName?: string;
   pauseDurationSec: number; // 10-30
+  cooldownMinutes: number; // 5, 15, 30, or 60
   promptFrequency: "off" | "sometimes" | "always";
   selectedApps: SelectedApp[];
   theme: "system" | "light" | "dark";

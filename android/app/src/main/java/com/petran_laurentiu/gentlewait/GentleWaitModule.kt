@@ -113,6 +113,16 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
+  fun setCooldownDuration(durationMs: Double, promise: Promise) {
+    try {
+      prefs.edit().putLong(KEY_COOLDOWN_DURATION, durationMs.toLong()).apply()
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("SET_COOLDOWN_FAILED", e)
+    }
+  }
+
+  @ReactMethod
   fun launchApp(packageName: String, promise: Promise) {
     try {
       val intent = reactApplicationContext.packageManager.getLaunchIntentForPackage(packageName)
@@ -135,5 +145,6 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
     private const val KEY_PENDING_APP_LABEL = "pending_app_label"
     private const val KEY_PENDING_APP_TS = "pending_app_ts"
     private const val KEY_PENDING_TS = "pending_ts"
+    private const val KEY_COOLDOWN_DURATION = "cooldown_duration"
   }
 }

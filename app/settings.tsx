@@ -9,19 +9,28 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
   NativeModules,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
 import { useAppStore } from "@/src/services/storage";
 import { mmkvStorage } from "@/src/services/storage/mmkv";
 import { deleteAllEvents } from "@/src/services/storage/sqlite";
+import { Button } from "@/src/components/Button";
+import {
+  COOLDOWN_OPTIONS,
+  WheelPicker,
+  formatCooldown,
+} from "@/src/components/WheelPicker";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
 import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
 import { triggerSelectionFeedback } from "@/src/utils/haptics";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const PAUSE_DURATIONS = [8, 10, 15, 20, 30];
 const PROMPT_OPTIONS: Array<"off" | "sometimes" | "always"> = [
@@ -36,6 +45,8 @@ export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
+  const [pendingCooldown, setPendingCooldown] = useState(settings.cooldownMinutes || 15);
 
   // Animation hooks
   const headerAnimation = useFadeInAnimation();
@@ -102,11 +113,34 @@ export default function SettingsScreen() {
     });
   };
 
+  const handleCompleteProfile = () => {
+    // Navigate to onboarding in complete-profile mode
+    router.push({
+      pathname: "/onboarding",
+      params: { mode: "complete-profile" },
+    });
+  };
+
+  // Check if user has completed personalization (Quick Setup users won't have goals/emotions)
+  const hasCompletedPersonalization =
+    (settings.goals && settings.goals.length > 0) ||
+    (settings.emotions && settings.emotions.length > 0);
+
   const handleChangePauseDuration = async () => {
     await triggerSelectionFeedback();
     const currentIndex = PAUSE_DURATIONS.indexOf(settings.pauseDurationSec);
     const nextIndex = (currentIndex + 1) % PAUSE_DURATIONS.length;
     updateSettings({ pauseDurationSec: PAUSE_DURATIONS[nextIndex] });
+  };
+
+  const handleOpenCooldownPicker = () => {
+    setPendingCooldown(settings.cooldownMinutes || 15);
+    setCooldownModalVisible(true);
+  };
+
+  const handleConfirmCooldown = () => {
+    updateSettings({ cooldownMinutes: pendingCooldown });
+    setCooldownModalVisible(false);
   };
 
   const handleChangePromptFrequency = async () => {
@@ -345,6 +379,31 @@ export default function SettingsScreen() {
       textAlign: "center",
       marginTop: spacing.xl,
     },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
+    },
+    modalContent: {
+      width: "85%",
+      borderRadius: radius.card,
+      padding: spacing.lg,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.1)",
+    },
+    modalTitle: {
+      fontFamily: fonts.medium,
+      fontSize: typography.heading.fontSize,
+      marginBottom: spacing.lg,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: spacing.md,
+      marginTop: spacing.lg,
+      width: "100%",
+    },
   });
 
   const getPromptLabel = (value: string) => {
@@ -369,7 +428,7 @@ export default function SettingsScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.closeButtonText}>✕</Text>
+          <Ionicons name="close" size={18} color={colors.text} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -427,6 +486,22 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Animated.View>
 
+        {/* Cooldown */}
+        <Animated.View style={[styles.section, pauseDurationAnimation]}>
+          <Text style={styles.sectionTitle}>Cooldown</Text>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={handleOpenCooldownPicker}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingLabel}>Time between pauses</Text>
+            <Text style={styles.settingValue}>
+              {formatCooldown(settings.cooldownMinutes || 15)}
+            </Text>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* Prompt Frequency */}
         <Animated.View style={[styles.section, promptsAnimation]}>
           <Text style={styles.sectionTitle}>Reflection Prompts</Text>
@@ -449,7 +524,7 @@ export default function SettingsScreen() {
           <View style={styles.settingItem}>
             <Text style={styles.settingLabel}>Current plan</Text>
             <Text style={styles.settingValue}>
-              {settings.premium ? "✨ Premium" : "Free"}
+              {settings.premium ? "Premium" : "Free"}
             </Text>
           </View>
           {!settings.premium && (
@@ -464,11 +539,31 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.settingLabel, { color: colors.primary }]}>
-                ✨ Upgrade to Premium
+                Upgrade to Premium
               </Text>
             </TouchableOpacity>
           )}
         </Animated.View>
+
+        {/* Complete Profile - only show if user did Quick Setup */}
+        {!hasCompletedPersonalization && (
+          <Animated.View style={[styles.section, privacyAnimation]}>
+            <Text style={styles.sectionTitle}>Personalization</Text>
+            <Text style={[styles.settingLabel, { marginBottom: spacing.md, color: colors.textSecondary }]}>
+              Complete your profile to get personalized insights and AI coaching tailored to your goals.
+            </Text>
+            <TouchableOpacity
+              style={[styles.settingItem, styles.settingItemActive]}
+              onPress={handleCompleteProfile}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                Complete Profile Setup
+              </Text>
+              <Text style={styles.settingArrow}>›</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Privacy & Data */}
         <Animated.View style={[styles.section, privacyAnimation]}>
@@ -505,13 +600,47 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <Text style={[styles.settingLabel, styles.dangerText]}>
-              🗑️ Clear All Data & Start Fresh
+              Clear All Data & Start Fresh
             </Text>
           </TouchableOpacity>
         </Animated.View>
 
         <Text style={styles.versionText}>GentleWait v1.0.0</Text>
       </ScrollView>
+
+      <Modal
+        visible={cooldownModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCooldownModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.bg }]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Time between pauses
+            </Text>
+            <WheelPicker
+              items={COOLDOWN_OPTIONS}
+              selectedValue={pendingCooldown}
+              onValueChange={setPendingCooldown}
+            />
+            <View style={styles.modalButtons}>
+              <Button
+                label="Cancel"
+                onPress={() => setCooldownModalVisible(false)}
+                variant="ghost"
+              />
+              <Button
+                label="Done"
+                onPress={handleConfirmCooldown}
+                variant="primary"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

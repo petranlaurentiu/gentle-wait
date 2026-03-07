@@ -5,6 +5,7 @@
  */
 import React, { ReactNode } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { spacing, typography, fonts } from "@/src/theme/theme";
 
 interface Props {
@@ -116,7 +117,7 @@ function ErrorFallback({
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.icon}>⚠️</Text>
+        <Ionicons name="warning-outline" size={64} color="#F87171" style={{ marginBottom: spacing.lg }} />
         <Text style={styles.title}>Something Went Wrong</Text>
         <Text style={styles.message}>
           An unexpected error occurred. Try refreshing or restarting the app.

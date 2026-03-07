@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   id: 'default',
   userName: '',
   pauseDurationSec: 15,
+  cooldownMinutes: 15,
   promptFrequency: 'sometimes',
   selectedApps: [],
   theme: 'system',
@@ -54,6 +55,13 @@ export const useAppStore = create<AppStore>((set) => ({
         updatedAt: Date.now(),
       };
       mmkvStorage.setJSON(SETTINGS_KEY, updated);
+
+      if (updates.cooldownMinutes !== undefined) {
+        nativeService.setCooldownDuration(updates.cooldownMinutes).catch((e) => {
+          console.error('Error syncing cooldown to native:', e);
+        });
+      }
+
       return { settings: updated };
     });
   },

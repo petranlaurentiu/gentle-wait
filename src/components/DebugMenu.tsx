@@ -13,6 +13,7 @@
  */
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts } from "@/src/theme/theme";
 import {
@@ -163,7 +164,7 @@ export function DebugMenu() {
         accessible={true}
         accessibilityLabel="Debug menu"
       >
-        <Text style={styles.fabText}>🐛</Text>
+        <Ionicons name="bug-outline" size={24} color={colors.bg} />
       </TouchableOpacity>
 
       {/* Debug Menu Modal */}
@@ -185,7 +186,7 @@ export function DebugMenu() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? "⏳ Generating..." : "📊 Generate 30 Events"}
+                {loading ? "Generating..." : "Generate 30 Events"}
               </Text>
             </TouchableOpacity>
 
@@ -196,8 +197,8 @@ export function DebugMenu() {
             >
               <Text style={styles.buttonText}>
                 {loading
-                  ? "⏳ Generating..."
-                  : "📈 Generate Daily Data (7 days)"}
+                  ? "Generating..."
+                  : "Generate Daily Data (7 days)"}
               </Text>
             </TouchableOpacity>
 
@@ -211,7 +212,7 @@ export function DebugMenu() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? "⏳ Clearing..." : "🗑️  Clear All Events"}
+                {loading ? "Clearing..." : "Clear All Events"}
               </Text>
             </TouchableOpacity>
 

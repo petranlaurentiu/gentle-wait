@@ -1,10 +1,10 @@
 export default {
   expo: {
-    name: "gentle-wait",
+    name: "GentleWait",
     slug: "gentle-wait",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/images/main_logo-app.png",
     scheme: "gentlewait",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -14,17 +14,15 @@ export default {
       infoPlist: {
         NSFamilyControlsUsageDescription: "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",
       },
-      entitlements: {
-        "com.apple.developer.family-controls": true,
-      },
+      // Disabled for Personal Team device builds.
+      // Re-enable when using a paid/approved Apple Developer team.
+      entitlements: {},
       buildNumber: "1",
     },
     android: {
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/android-icon-foreground.png",
-        backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png",
+        foregroundImage: "./assets/images/main_logo-app.png",
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -38,14 +36,14 @@ export default {
     },
     web: {
       output: "static",
-      favicon: "./assets/images/favicon.png",
+      favicon: "./assets/images/main_logo.png",
     },
     plugins: [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
+          image: "./assets/images/main_logo.png",
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",

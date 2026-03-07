@@ -9,6 +9,8 @@ import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -213,7 +215,7 @@ export default function PrayerScreen() {
       alignSelf: "center",
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
-      borderRadius: radius.full,
+      borderRadius: radius.pills,
       backgroundColor: "rgba(255, 255, 255, 0.08)",
       marginTop: spacing.lg,
     },
@@ -261,7 +263,7 @@ export default function PrayerScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.completeContainer}>
-          <Text style={styles.completeEmoji}>🕊️</Text>
+          <Ionicons name="heart-outline" size={64} color={colors.primary} style={{ marginBottom: spacing.lg }} />
           <Text style={styles.completeTitle}>Peace Be With You</Text>
           <Text style={styles.completeMessage}>
             You took a moment to connect with something greater.{"\n"}
@@ -286,7 +288,7 @@ export default function PrayerScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.prayerName}>{prayer.icon} {prayer.name}</Text>
+          <Text style={styles.prayerName}>{prayer.name}</Text>
           {prayer.attribution && (
             <Text style={styles.prayerAttribution}>{prayer.attribution}</Text>
           )}
@@ -311,7 +313,7 @@ export default function PrayerScreen() {
             />
           </Animated.View>
 
-          <Text style={styles.prayerIcon}>✝️</Text>
+          <MaterialCommunityIcons name={"cross-bolnisi" as any} size={64} color={colors.primary} />
           <Text style={styles.timerText}>{timeLeft}s</Text>
         </View>
 

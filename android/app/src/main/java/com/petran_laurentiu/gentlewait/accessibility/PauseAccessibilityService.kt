@@ -4,6 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
@@ -13,14 +16,12 @@ class PauseAccessibilityService : AccessibilityService() {
     const val PREFS_NAME = "GentleWaitPrefs"
     private const val SHORT_COOLDOWN_MS = 2000L // 2 seconds
     private const val DEFAULT_HANDLED_COOLDOWN_MS = 1 * 60 * 1000L // 1 minute
-    private const val APP_CLOSED_THRESHOLD_MS = 30 * 1000L // 30 seconds
     private val SYSTEM_PACKAGES = setOf(
       "android", "com.android", "com.google.android", "com.sec.android", "com.samsung.android"
     )
   }
 
   private val appInterceptCooldowns = ConcurrentHashMap<String, Long>()
-  private val appLastSeenTime = ConcurrentHashMap<String, Long>() // Track last seen time
 
   override fun onServiceConnected() {
     super.onServiceConnected()
@@ -37,25 +38,17 @@ class PauseAccessibilityService : AccessibilityService() {
     if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
     val packageName = event.packageName?.toString() ?: return
-    if (isSystemPackage(packageName) || packageName == "com.petran_laurentiu.gentlewait") return
+    if (packageName == "com.petran_laurentiu.gentlewait") return
 
-    val currentTime = System.currentTimeMillis()
-    val lastSeen = appLastSeenTime[packageName] ?: 0
-
-    // If app was closed for a while, reset its handled cooldown
-    if (currentTime - lastSeen > APP_CLOSED_THRESHOLD_MS) {
-      val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-      prefs.edit().remove("handled_$packageName").apply()
-      Log.d("PauseAccessibility", "Reset handled cooldown for $packageName due to inactivity")
-    }
-    appLastSeenTime[packageName] = currentTime // Update last seen time
+    // Allow user-selected apps through even if they match system package prefixes (e.g. YouTube)
+    if (isSystemPackage(packageName) && !isAppSelected(packageName)) return
 
     if (isInCooldown(packageName)) return
 
     if (!isAppSelected(packageName)) return
 
-    appInterceptCooldowns[packageName] = currentTime
-    showPauseScreen(packageName, event.text?.firstOrNull()?.toString() ?: packageName)
+    appInterceptCooldowns[packageName] = System.currentTimeMillis()
+    showPauseScreen(packageName, getAppLabel(packageName))
   }
 
   override fun onInterrupt() {}
@@ -83,6 +76,15 @@ class PauseAccessibilityService : AccessibilityService() {
     return false
   }
 
+  private fun getAppLabel(packageName: String): String {
+    return try {
+      val appInfo = packageManager.getApplicationInfo(packageName, 0)
+      packageManager.getApplicationLabel(appInfo).toString()
+    } catch (e: PackageManager.NameNotFoundException) {
+      packageName
+    }
+  }
+
   private fun isSystemPackage(packageName: String): Boolean {
     return SYSTEM_PACKAGES.any { packageName.startsWith(it) } || packageName.isEmpty()
   }
@@ -104,13 +106,18 @@ class PauseAccessibilityService : AccessibilityService() {
         apply()
       }
 
-      // Launch main activity to show pause screen
+      // Dismiss the intercepted app by going home first, then launch Gentle Wait.
+      // Without this, the intercepted app's activity transition completes and regains focus.
+      performGlobalAction(GLOBAL_ACTION_HOME)
+
       val intent = Intent(this, com.petran_laurentiu.gentlewait.MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         putExtra("appPackage", appPackage)
         putExtra("appLabel", appLabel)
       }
-      startActivity(intent)
+      Handler(Looper.getMainLooper()).postDelayed({
+        startActivity(intent)
+      }, 300)
     } catch (e: Exception) {
       Log.e("PauseAccessibility", "Error showing pause screen: ${e.message}")
     }

@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
 import { triggerLightImpact } from "@/src/utils/haptics";
@@ -24,6 +26,8 @@ interface ButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  iconName?: string;
+  iconSet?: "ionicons" | "material";
 }
 
 export function Button({
@@ -33,6 +37,8 @@ export function Button({
   disabled = false,
   style,
   textStyle,
+  iconName,
+  iconSet = "ionicons",
 }: ButtonProps) {
   const { colors } = useTheme();
 
@@ -41,6 +47,28 @@ export function Button({
       await triggerLightImpact();
       onPress();
     }
+  };
+
+  const renderIcon = (color: string, size: number) => {
+    if (!iconName) return null;
+    if (iconSet === "material") {
+      return (
+        <MaterialCommunityIcons
+          name={iconName as any}
+          size={size}
+          color={color}
+          style={{ marginRight: spacing.sm }}
+        />
+      );
+    }
+    return (
+      <Ionicons
+        name={iconName as any}
+        size={size}
+        color={color}
+        style={{ marginRight: spacing.sm }}
+      />
+    );
   };
 
   if (variant === "primary") {
@@ -57,9 +85,11 @@ export function Button({
           end={{ x: 1, y: 1 }}
           style={[styles.primaryButton, disabled && styles.disabled]}
         >
-          {/* Inner highlight */}
           <View style={styles.primaryHighlight} />
-          <Text style={[styles.primaryText, textStyle]}>{label}</Text>
+          <View style={styles.labelRow}>
+            {renderIcon("#FFFFFF", 20)}
+            <Text style={[styles.primaryText, textStyle]}>{label}</Text>
+          </View>
         </LinearGradient>
       </TouchableOpacity>
     );
@@ -86,15 +116,18 @@ export function Button({
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
             >
-              <Text
-                style={[
-                  styles.secondaryText,
-                  { color: colors.text },
-                  textStyle,
-                ]}
-              >
-                {label}
-              </Text>
+              <View style={styles.labelRow}>
+                {renderIcon(colors.text, 20)}
+                <Text
+                  style={[
+                    styles.secondaryText,
+                    { color: colors.text },
+                    textStyle,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </View>
             </LinearGradient>
           </BlurView>
           <View style={styles.glassBorder} pointerEvents="none" />
@@ -111,11 +144,14 @@ export function Button({
       activeOpacity={0.6}
       style={[styles.ghostButton, disabled && styles.disabled, style]}
     >
-      <Text
-        style={[styles.ghostText, { color: colors.textSecondary }, textStyle]}
-      >
-        {label}
-      </Text>
+      <View style={styles.labelRow}>
+        {renderIcon(colors.textSecondary, 18)}
+        <Text
+          style={[styles.ghostText, { color: colors.textSecondary }, textStyle]}
+        >
+          {label}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -152,6 +188,7 @@ const styles = StyleSheet.create({
     fontSize: typography.button.fontSize + 1,
     color: "#FFFFFF",
     letterSpacing: 0.5,
+    textAlign: "center",
   },
   glassButtonContainer: {
     borderRadius: radius.button,
@@ -178,6 +215,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: typography.button.fontSize,
     letterSpacing: 0.3,
+    textAlign: "center",
   },
   ghostButton: {
     paddingVertical: spacing.md,
@@ -188,6 +226,12 @@ const styles = StyleSheet.create({
   ghostText: {
     fontFamily: fonts.medium,
     fontSize: typography.button.fontSize,
+    textAlign: "center",
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   disabled: {
     opacity: 0.5,

@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Helper to get start and end of current week (Monday - Sunday)
@@ -259,11 +260,11 @@ export default function InsightsScreen() {
             style={styles.closeButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Ionicons name="close" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
         <EmptyState
-          icon="📊"
+          icon="bar-chart-outline"
           title="No Data Yet"
           description="Start using GentleWait to see your insights. Complete your first pause to get started!"
           actionLabel="Go Home"
@@ -281,7 +282,7 @@ export default function InsightsScreen() {
           style={styles.closeButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.closeButtonText}>✕</Text>
+          <Ionicons name="close" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 

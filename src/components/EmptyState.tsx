@@ -3,6 +3,7 @@
  * Displayed when there's no data to show
  */
 import { View, Text, StyleSheet } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, radius } from "@/src/theme/theme";
 import { Button } from "./Button";
@@ -16,7 +17,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon = "📭",
+  icon = "mail-open-outline",
   title,
   description,
   actionLabel,
@@ -58,7 +59,7 @@ export function EmptyState({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      <Ionicons name={icon as any} size={56} color={colors.textMuted} style={{ marginBottom: spacing.xl }} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {actionLabel && onAction && (

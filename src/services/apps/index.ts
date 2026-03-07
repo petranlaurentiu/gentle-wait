@@ -31,49 +31,49 @@ export const APP_CATEGORIES: AppCategoryInfo[] = [
   {
     id: "social",
     label: "Social Media",
-    icon: "📱",
+    icon: "people-outline",
     description: "Instagram, TikTok, Facebook, etc.",
   },
   {
     id: "video",
     label: "Video & Streaming",
-    icon: "🎬",
+    icon: "film-outline",
     description: "YouTube, Netflix, Twitch, etc.",
   },
   {
     id: "messaging",
     label: "Messaging",
-    icon: "💬",
+    icon: "chatbubble-outline",
     description: "WhatsApp, Messenger, Discord, etc.",
   },
   {
     id: "news",
     label: "News & Reading",
-    icon: "📰",
+    icon: "newspaper-outline",
     description: "Twitter/X, Reddit, News apps, etc.",
   },
   {
     id: "shopping",
     label: "Shopping",
-    icon: "🛒",
+    icon: "cart-outline",
     description: "Amazon, eBay, etc.",
   },
   {
     id: "games",
     label: "Games",
-    icon: "🎮",
+    icon: "game-controller-outline",
     description: "Mobile games",
   },
   {
     id: "productivity",
     label: "Productivity",
-    icon: "📊",
+    icon: "bar-chart-outline",
     description: "Email, work apps, etc.",
   },
   {
     id: "other",
     label: "Other",
-    icon: "📦",
+    icon: "apps-outline",
     description: "Other apps",
   },
 ];
@@ -103,7 +103,7 @@ const MOCK_INSTALLED_APPS: CategorizedApp[] = [
   { packageName: "com.bereal.ft", label: "BeReal", category: "social" },
 
   // Video & Streaming
-  { packageName: "com.youtube.android", label: "YouTube", category: "video" },
+  { packageName: "com.google.android.youtube", label: "YouTube", category: "video" },
   {
     packageName: "com.netflix.mediaclient",
     label: "Netflix",
@@ -218,7 +218,7 @@ export function getSuggestedApps(apps: CategorizedApp[]): CategorizedApp[] {
     "com.twitter.android",
     "com.reddit.frontpage",
     "com.facebook.katana",
-    "com.youtube.android",
+    "com.google.android.youtube",
     "com.snapchat.android",
     "com.whatsapp",
     "com.netflix.mediaclient",

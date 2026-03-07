@@ -22,7 +22,7 @@ export const PRAYERS: Prayer[] = [
     text: "Our Father, who art in heaven, hallowed be thy name. Thy kingdom come, thy will be done, on earth as it is in heaven. Give us this day our daily bread, and forgive us our trespasses, as we forgive those who trespass against us. And lead us not into temptation, but deliver us from evil. Amen.",
     category: "traditional",
     durationSec: 30,
-    icon: "🙏",
+    icon: "hands-pray",
     attribution: "Matthew 6:9-13",
   },
   {
@@ -31,7 +31,7 @@ export const PRAYERS: Prayer[] = [
     text: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou among women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
     category: "traditional",
     durationSec: 20,
-    icon: "🙏",
+    icon: "hands-pray",
     attribution: "Traditional Catholic Prayer",
   },
   {
@@ -40,7 +40,7 @@ export const PRAYERS: Prayer[] = [
     text: "Glory be to the Father, and to the Son, and to the Holy Spirit. As it was in the beginning, is now, and ever shall be, world without end. Amen.",
     category: "traditional",
     durationSec: 15,
-    icon: "✨",
+    icon: "sparkles-outline",
     attribution: "Traditional Doxology",
   },
   {
@@ -49,7 +49,7 @@ export const PRAYERS: Prayer[] = [
     text: "God, grant me the serenity to accept the things I cannot change, courage to change the things I can, and wisdom to know the difference.",
     category: "peace",
     durationSec: 15,
-    icon: "☮️",
+    icon: "heart-outline",
     attribution: "Reinhold Niebuhr",
   },
   {
@@ -58,7 +58,7 @@ export const PRAYERS: Prayer[] = [
     text: "Lord, make me an instrument of your peace. Where there is hatred, let me sow love. Where there is injury, pardon. Where there is doubt, faith. Where there is despair, hope. Where there is darkness, light. Where there is sadness, joy.",
     category: "peace",
     durationSec: 30,
-    icon: "🕊️",
+    icon: "dove",
     attribution: "Prayer of St. Francis",
   },
 
@@ -69,7 +69,7 @@ export const PRAYERS: Prayer[] = [
     text: "Lord Jesus Christ, Son of God, have mercy on me, a sinner.",
     category: "short",
     durationSec: 10,
-    icon: "✝️",
+    icon: "cross-outline",
     attribution: "Eastern Orthodox Tradition",
   },
   {
@@ -78,7 +78,7 @@ export const PRAYERS: Prayer[] = [
     text: "Angel of God, my guardian dear, to whom God's love commits me here, ever this day be at my side, to light and guard, to rule and guide. Amen.",
     category: "traditional",
     durationSec: 20,
-    icon: "👼",
+    icon: "shield-outline",
     attribution: "Traditional Catholic Prayer",
   },
   {
@@ -87,7 +87,7 @@ export const PRAYERS: Prayer[] = [
     text: "O my God, I firmly believe that you are one God in three divine Persons: Father, Son, and Holy Spirit. I believe that your divine Son became man and died for our sins, and that he will come to judge the living and the dead. I believe these and all the truths which the Holy Catholic Church teaches, because you have revealed them, who can neither deceive nor be deceived. Amen.",
     category: "traditional",
     durationSec: 40,
-    icon: "🙏",
+    icon: "hands-pray",
     attribution: "Traditional Catholic Prayer",
   },
   {
@@ -96,7 +96,7 @@ export const PRAYERS: Prayer[] = [
     text: "O my God, relying on your infinite goodness and promises, I hope to obtain pardon of my sins, the help of your grace, and life everlasting, through the merits of Jesus Christ, my Lord and Redeemer. Amen.",
     category: "traditional",
     durationSec: 25,
-    icon: "⭐",
+    icon: "star-outline",
     attribution: "Traditional Catholic Prayer",
   },
   {
@@ -105,7 +105,7 @@ export const PRAYERS: Prayer[] = [
     text: "O my God, I love you above all things, with my whole heart and soul, because you are all good and worthy of all my love. I love my neighbor as myself for the love of you. I forgive all who have injured me, and I ask pardon of all whom I have injured. Amen.",
     category: "traditional",
     durationSec: 30,
-    icon: "❤️",
+    icon: "heart",
     attribution: "Traditional Catholic Prayer",
   },
 
@@ -116,7 +116,7 @@ export const PRAYERS: Prayer[] = [
     text: "Gracious God, I thank you for this moment of pause. Help me to remember that in stillness, I can find you. In silence, I can hear your voice. Thank you for your constant presence. Amen.",
     category: "gratitude",
     durationSec: 20,
-    icon: "🙏",
+    icon: "hands-pray",
   },
   {
     id: "morning-offering",
@@ -124,7 +124,7 @@ export const PRAYERS: Prayer[] = [
     text: "O Jesus, through the Immaculate Heart of Mary, I offer you my prayers, works, joys, and sufferings of this day for all the intentions of your Sacred Heart. Amen.",
     category: "gratitude",
     durationSec: 20,
-    icon: "🌅",
+    icon: "sunny-outline",
     attribution: "Traditional Catholic Prayer",
   },
   {
@@ -133,7 +133,7 @@ export const PRAYERS: Prayer[] = [
     text: "Lord Jesus Christ, have mercy on me. (Breathe in: 'Lord Jesus Christ', Breathe out: 'have mercy on me')",
     category: "short",
     durationSec: 15,
-    icon: "💨",
+    icon: "flower-outline",
     attribution: "Ancient Christian Meditation",
   },
 
@@ -144,7 +144,7 @@ export const PRAYERS: Prayer[] = [
     text: "The Lord is my shepherd; I shall not want. He maketh me to lie down in green pastures: he leadeth me beside the still waters. He restoreth my soul.",
     category: "peace",
     durationSec: 20,
-    icon: "🐑",
+    icon: "leaf-outline",
     attribution: "Psalm 23:1-3",
   },
   {
@@ -153,7 +153,7 @@ export const PRAYERS: Prayer[] = [
     text: "Remember, O most gracious Virgin Mary, that never was it known that anyone who fled to thy protection, implored thy help, or sought thy intercession, was left unaided. Inspired with this confidence, I fly unto thee, O Virgin of virgins, my Mother. To thee do I come; before thee I stand, sinful and sorrowful. O Mother of the Word Incarnate, despise not my petitions, but in thy mercy hear and answer me. Amen.",
     category: "traditional",
     durationSec: 45,
-    icon: "🙏",
+    icon: "hands-pray",
     attribution: "Traditional Marian Prayer",
   },
   {
@@ -162,7 +162,7 @@ export const PRAYERS: Prayer[] = [
     text: "St. Michael the Archangel, defend us in battle. Be our protection against the wickedness and snares of the devil. May God rebuke him, we humbly pray. And do thou, O Prince of the Heavenly Host, by the power of God, cast into hell Satan and all the evil spirits who prowl about the world seeking the ruin of souls. Amen.",
     category: "traditional",
     durationSec: 30,
-    icon: "⚔️",
+    icon: "shield-checkmark-outline",
     attribution: "Pope Leo XIII",
   },
   {
@@ -171,7 +171,7 @@ export const PRAYERS: Prayer[] = [
     text: "Lord, calm my anxious heart. In this moment of pause, help me to let go of the urgency and find rest in your presence. Give me peace that surpasses understanding. Amen.",
     category: "peace",
     durationSec: 20,
-    icon: "🕊️",
+    icon: "dove",
   },
   {
     id: "guidance-prayer",
@@ -179,7 +179,7 @@ export const PRAYERS: Prayer[] = [
     text: "Loving Father, guide my steps today. Help me to use my time wisely and to be present with those around me. Free me from distractions and help me focus on what truly matters. Amen.",
     category: "peace",
     durationSec: 25,
-    icon: "🧭",
+    icon: "compass-outline",
   },
 
   // Brief aspirations (very short prayers)
@@ -189,7 +189,7 @@ export const PRAYERS: Prayer[] = [
     text: "Lord, have mercy. Christ, have mercy. Lord, have mercy.",
     category: "short",
     durationSec: 10,
-    icon: "✝️",
+    icon: "cross-outline",
     attribution: "Ancient Christian Prayer",
   },
   {
@@ -198,7 +198,7 @@ export const PRAYERS: Prayer[] = [
     text: "Thanks be to God for this moment of rest. May I use it to return to you. Amen.",
     category: "gratitude",
     durationSec: 10,
-    icon: "🙏",
+    icon: "hands-pray",
   },
   {
     id: "present-moment",
@@ -206,7 +206,7 @@ export const PRAYERS: Prayer[] = [
     text: "God, you are here with me now. Help me to be fully present in this moment, aware of your loving presence. Amen.",
     category: "peace",
     durationSec: 15,
-    icon: "🌟",
+    icon: "sparkles-outline",
   },
 ];
 

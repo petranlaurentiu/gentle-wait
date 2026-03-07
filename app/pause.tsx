@@ -26,8 +26,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
   Easing,
   interpolate,
@@ -140,21 +141,6 @@ export default function PauseScreen() {
   const handleReasonSelect = async (reason: string) => {
     await triggerSelectionFeedback();
     setSelectedReason(reason);
-  };
-
-  const handleOpenAnyway = async () => {
-    await triggerSuccessNotification();
-    await insertEvent({
-      id: generateId(),
-      ts: Date.now(),
-      appPackage,
-      appLabel,
-      action: "opened_anyway",
-      reason: (selectedReason as any) || undefined,
-      sessionId,
-    });
-    // Pending interception already cleared by deep link handler
-    router.back();
   };
 
   const handleClose = async () => {
@@ -312,8 +298,7 @@ export default function PauseScreen() {
       backgroundColor: "rgba(0, 212, 255, 0.25)",
       borderColor: colors.primary,
     },
-    chipEmoji: {
-      fontSize: 24,
+    chipIcon: {
       marginBottom: 4,
     },
     chipText: {
@@ -349,13 +334,13 @@ export default function PauseScreen() {
     },
   });
 
-  const reasonChoices = [
-    { label: "To Relax", value: "relax", emoji: "😌" },
-    { label: "Connection", value: "connect", emoji: "💬" },
-    { label: "Escape", value: "distraction", emoji: "🫥" },
-    { label: "Quick Info", value: "info", emoji: "📱" },
-    { label: "Just Habit", value: "habit", emoji: "🔄" },
-    { label: "Not Sure", value: "unsure", emoji: "🤔" },
+  const reasonChoices: { label: string; value: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
+    { label: "To Relax", value: "relax", icon: "leaf-outline" },
+    { label: "Connection", value: "connect", icon: "chatbubbles-outline" },
+    { label: "Escape", value: "distraction", icon: "exit-outline" },
+    { label: "Quick Info", value: "info", icon: "phone-portrait-outline" },
+    { label: "Just Habit", value: "habit", icon: "refresh-outline" },
+    { label: "Not Sure", value: "unsure", icon: "help-circle-outline" },
   ];
 
   return (
@@ -441,7 +426,11 @@ export default function PauseScreen() {
                     onPress={() => handleReasonSelect(choice.value)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.chipEmoji}>{choice.emoji}</Text>
+                    <Ionicons
+                      name={choice.icon}
+                      size={24}
+                      color={selectedReason === choice.value ? colors.primary : colors.textSecondary}
+                    />
                     <Text
                       style={[
                         styles.chipText,
@@ -461,31 +450,37 @@ export default function PauseScreen() {
         <View style={styles.actionContainer}>
           <Text style={styles.actionTitle}>What would you like to do?</Text>
           <Button
-            label="🙏  Take a Moment to Pray"
+            label="Take a Moment to Pray"
             onPress={() => handleAlternative("prayer")}
             variant="primary"
+            iconName="hands-pray"
+            iconSet="material"
           />
           <Button
-            label="🧘  Breathe & Ground"
+            label="Breathe"
             onPress={() => handleAlternative("breathe")}
             variant="secondary"
+            iconName="flower-outline"
           />
           <Button
-            label="💪  Quick Movement Break"
+            label="Ground Yourself"
+            onPress={() => handleAlternative("grounding")}
+            variant="secondary"
+            iconName="leaf-outline"
+          />
+          <Button
+            label="Quick Movement Break"
             onPress={() => handleAlternative("exercise")}
             variant="secondary"
+            iconName="fitness-outline"
           />
           <Button
-            label="📝  Journal This Moment"
+            label="Journal This Moment"
             onPress={() => handleAlternative("reflect")}
             variant="secondary"
+            iconName="journal-outline"
           />
           <View style={styles.divider} />
-          <Button
-            label={`Open ${appLabel} anyway`}
-            onPress={handleOpenAnyway}
-            variant="ghost"
-          />
           <Button
             label="I don't need this right now"
             onPress={handleClose}

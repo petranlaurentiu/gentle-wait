@@ -21,6 +21,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
 import { insertEvent } from "@/src/services/storage/sqlite";
@@ -43,35 +44,35 @@ type ScreenPhase = "select" | "exercise" | "complete";
 const CATEGORIES: {
   id: ExerciseCategory;
   label: string;
-  icon: string;
+  iconName: React.ComponentProps<typeof Ionicons>["name"];
   description: string;
   color: string;
 }[] = [
   {
     id: "desk-stretch",
     label: "Desk Stretches",
-    icon: "🪑",
+    iconName: "body-outline",
     description: "Quick stretches you can do sitting down",
     color: "rgba(0, 212, 255, 0.15)",
   },
   {
     id: "standing",
     label: "Standing",
-    icon: "🧍",
+    iconName: "walk-outline",
     description: "Get up and move your body",
     color: "rgba(168, 85, 247, 0.15)",
   },
   {
     id: "energy",
     label: "Energy Boost",
-    icon: "⚡",
+    iconName: "flash-outline",
     description: "Quick exercises to wake you up",
     color: "rgba(255, 107, 157, 0.15)",
   },
   {
     id: "eye-posture",
     label: "Eyes & Posture",
-    icon: "👁️",
+    iconName: "eye-outline",
     description: "Reduce screen strain and fix posture",
     color: "rgba(16, 185, 129, 0.15)",
   },
@@ -464,22 +465,23 @@ export default function ExerciseScreen() {
                 onPress={() => handleSelectCategory(category.id)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Ionicons name={category.iconName} size={32} color={colors.primary} />
                 <View style={styles.categoryContent}>
                   <Text style={styles.categoryLabel}>{category.label}</Text>
                   <Text style={styles.categoryDescription}>
                     {category.description}
                   </Text>
                 </View>
-                <Text style={styles.categoryArrow}>→</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
 
           <Button
-            label="🎲  Surprise Me"
+            label="Surprise Me"
             onPress={handleRandomExercise}
             variant="secondary"
+            iconName="shuffle-outline"
           />
         </ScrollView>
 
@@ -553,7 +555,7 @@ export default function ExerciseScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.completeContainer}>
-        <Text style={styles.completeEmoji}>💪</Text>
+        <Ionicons name="fitness-outline" size={64} color={colors.primary} style={{ marginBottom: spacing.lg }} />
         <Text style={styles.completeTitle}>Great Job!</Text>
         <Text style={styles.completeMessage}>
           You just moved your body instead of scrolling.{"\n"}

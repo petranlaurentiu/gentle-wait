@@ -55,6 +55,19 @@ export async function initializeDatabase() {
 
         -- Reason-based queries (for triggers/insights)
         CREATE INDEX IF NOT EXISTS idx_reason ON interception_events(reason);
+
+        -- Journal entries table
+        CREATE TABLE IF NOT EXISTS journal_entries (
+          id TEXT PRIMARY KEY,
+          ts INTEGER NOT NULL,
+          content TEXT NOT NULL,
+          prompt TEXT,
+          appPackage TEXT,
+          appLabel TEXT
+        );
+
+        -- Index for recent entries
+        CREATE INDEX IF NOT EXISTS idx_journal_ts_desc ON journal_entries(ts DESC);
       `);
 
       console.log('Database initialized successfully');
@@ -200,4 +213,71 @@ export async function clearOldEvents(daysToKeep: number = 30): Promise<void> {
 export async function deleteAllEvents(): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM interception_events`);
+}
+
+// ==================== JOURNAL ENTRIES ====================
+
+export interface JournalEntry {
+  id: string;
+  ts: number;
+  content: string;
+  prompt?: string;
+  appPackage?: string;
+  appLabel?: string;
+}
+
+/**
+ * Insert a journal entry
+ */
+export async function insertJournalEntry(entry: JournalEntry): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT INTO journal_entries (id, ts, content, prompt, appPackage, appLabel)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      entry.id,
+      entry.ts,
+      entry.content,
+      entry.prompt || null,
+      entry.appPackage || null,
+      entry.appLabel || null,
+    ]
+  );
+}
+
+/**
+ * Get recent journal entries
+ */
+export async function getRecentJournalEntries(
+  limit: number = 10
+): Promise<JournalEntry[]> {
+  const database = await getDb();
+  const results = await database.getAllAsync<JournalEntry>(
+    `SELECT * FROM journal_entries ORDER BY ts DESC LIMIT ?`,
+    [limit]
+  );
+  return results;
+}
+
+/**
+ * Get journal entries for a date range
+ */
+export async function getJournalEntriesByDateRange(
+  startTs: number,
+  endTs: number
+): Promise<JournalEntry[]> {
+  const database = await getDb();
+  const results = await database.getAllAsync<JournalEntry>(
+    `SELECT * FROM journal_entries WHERE ts >= ? AND ts <= ? ORDER BY ts DESC`,
+    [startTs, endTs]
+  );
+  return results;
+}
+
+/**
+ * Delete all journal entries
+ */
+export async function deleteAllJournalEntries(): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM journal_entries`);
 }

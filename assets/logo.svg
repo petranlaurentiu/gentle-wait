@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Background dark blue -->
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#121830"/>
+      <stop offset="100%" stop-color="#0A0E1A"/>
+    </radialGradient>
+
+    <!-- Core orb gradient: cyan → purple -->
+    <radialGradient id="orb" cx="40%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="45%" stop-color="#5B8DEF"/>
+      <stop offset="80%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </radialGradient>
+
+    <!-- Inner glow: brighter cyan center -->
+    <radialGradient id="innerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.6"/>
+      <stop offset="60%" stop-color="#00D4FF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Glass specular highlight (top-left) -->
+    <radialGradient id="specular" cx="35%" cy="30%" r="40%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
+      <stop offset="40%" stop-color="rgba(255,255,255,0.15)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+
+    <!-- Ripple ring gradient: cyan → purple with transparency -->
+    <linearGradient id="ring1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="ring2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#A855F7" stop-opacity="0.5"/>
+    </linearGradient>
+    <linearGradient id="ring3" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#FF6B9D" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#A855F7" stop-opacity="0.25"/>
+    </linearGradient>
+
+    <!-- Pink accent glow -->
+    <radialGradient id="pinkGlow" cx="65%" cy="65%" r="35%">
+      <stop offset="0%" stop-color="#FF6B9D" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Ambient haze behind everything -->
+    <radialGradient id="haze" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#A855F7" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft outer glow filter -->
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Broad ambient glow -->
+    <filter id="ambientGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="24"/>
+    </filter>
+
+    <!-- Subtle drop shadow under orb -->
+    <filter id="shadow" x="-30%" y="-10%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="16" result="shadow"/>
+      <feOffset dx="0" dy="8" in="shadow" result="offsetShadow"/>
+      <feFlood flood-color="#0A0E1A" flood-opacity="0.5" result="color"/>
+      <feComposite in="color" in2="offsetShadow" operator="in" result="coloredShadow"/>
+      <feMerge>
+        <feMergeNode in="coloredShadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip for glass highlight shape -->
+    <clipPath id="orbClip">
+      <circle cx="256" cy="256" r="82"/>
+    </clipPath>
+  </defs>
+
+  <!-- === BACKGROUND === -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- === AMBIENT HAZE === -->
+  <circle cx="256" cy="256" r="220" fill="url(#haze)"/>
+
+  <!-- === AMBIENT GLOW (behind rings) === -->
+  <circle cx="256" cy="256" r="120" fill="#00D4FF" opacity="0.08" filter="url(#ambientGlow)"/>
+  <circle cx="280" cy="280" r="80" fill="#A855F7" opacity="0.06" filter="url(#ambientGlow)"/>
+
+  <!-- === BREATH RIPPLE RINGS (outermost → inner) === -->
+
+  <!-- Ring 3: outermost, faintest -->
+  <circle cx="256" cy="256" r="180" stroke="url(#ring3)" stroke-width="1.5" fill="none" opacity="0.5"/>
+
+  <!-- Ring 2: middle -->
+  <circle cx="256" cy="256" r="140" stroke="url(#ring2)" stroke-width="2" fill="none" opacity="0.6"/>
+
+  <!-- Ring 1: closest to orb, brightest -->
+  <circle cx="256" cy="256" r="108" stroke="url(#ring1)" stroke-width="2.5" fill="none" opacity="0.7"/>
+
+  <!-- === MAIN ORB === -->
+  <g filter="url(#shadow)">
+    <!-- Core sphere -->
+    <circle cx="256" cy="256" r="82" fill="url(#orb)" filter="url(#softGlow)"/>
+
+    <!-- Pink accent reflection (bottom-right) -->
+    <circle cx="256" cy="256" r="82" fill="url(#pinkGlow)"/>
+
+    <!-- Inner luminance -->
+    <circle cx="256" cy="256" r="82" fill="url(#innerGlow)"/>
+
+    <!-- Glass specular highlight -->
+    <g clip-path="url(#orbClip)">
+      <ellipse cx="240" cy="228" rx="56" ry="42" fill="url(#specular)"/>
+    </g>
+  </g>
+
+  <!-- === CENTER DOT: the moment of pause === -->
+  <circle cx="256" cy="256" r="12" fill="rgba(255,255,255,0.35)"/>
+  <circle cx="256" cy="256" r="5" fill="rgba(255,255,255,0.55)"/>
+</svg>

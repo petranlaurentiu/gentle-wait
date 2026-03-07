@@ -6,11 +6,12 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import Animated from "react-native-reanimated";
@@ -21,10 +22,9 @@ import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { DebugMenu } from "@/src/components/DebugMenu";
+const mainLogo = require("@/assets/images/main_logo.png");
 import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
 import { getDailyQuote, getDailyAffirmation } from "@/src/data/mindfulness";
-
-const logoImage = require("@/assets/logo.png");
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -87,18 +87,15 @@ export default function HomeScreen() {
       paddingBottom: spacing.lg,
       gap: spacing.md,
     },
-    headerLogo: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.15)",
-    },
     title: {
       fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
       color: colors.text,
       letterSpacing: 0.5,
+    },
+    titleAccent: {
+      fontFamily: fonts.medium,
+      color: colors.primary,
     },
     scrollContent: {
       paddingHorizontal: spacing.lg,
@@ -286,8 +283,8 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, headerAnimation]}>
-        <Image source={logoImage} style={styles.headerLogo} />
-        <Text style={styles.title}>GentleWait</Text>
+        <Image source={mainLogo} style={{ width: 36, height: 36 }} resizeMode="contain" />
+        <Text style={styles.title}>Gentle<Text style={styles.titleAccent}>Wait</Text></Text>
       </Animated.View>
 
       <ScrollView
@@ -394,7 +391,7 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.7}
               >
-                <Text style={styles.quickActionIcon}>🧘</Text>
+                <Ionicons name="flower-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
                 <Text style={styles.quickActionLabel}>Breathe</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -402,7 +399,7 @@ export default function HomeScreen() {
                 onPress={() => router.push("/exercise")}
                 activeOpacity={0.7}
               >
-                <Text style={styles.quickActionIcon}>💪</Text>
+                <Ionicons name="fitness-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
                 <Text style={styles.quickActionLabel}>Move</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -415,7 +412,7 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.7}
               >
-                <Text style={styles.quickActionIcon}>👁️</Text>
+                <Ionicons name="eye-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
                 <Text style={styles.quickActionLabel}>Eye Strain</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -428,7 +425,7 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.7}
               >
-                <Text style={styles.quickActionIcon}>📝</Text>
+                <Ionicons name="journal-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
                 <Text style={styles.quickActionLabel}>Journal</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -441,7 +438,7 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.7}
               >
-                <Text style={styles.quickActionIcon}>🌿</Text>
+                <Ionicons name="leaf-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
                 <Text style={styles.quickActionLabel}>Ground</Text>
               </TouchableOpacity>
             </View>
@@ -453,14 +450,14 @@ export default function HomeScreen() {
             onPress={() => router.push("/assistant")}
             activeOpacity={0.8}
           >
-            <Text style={styles.assistantIcon}>✨</Text>
+            <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
             <View style={styles.assistantTextContainer}>
               <Text style={styles.assistantTitle}>AI Companion</Text>
               <Text style={styles.assistantSubtitle}>
                 Get personalized guidance & support
               </Text>
             </View>
-            <Text style={styles.assistantArrow}>→</Text>
+            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
           </TouchableOpacity>
 
           {/* Action buttons */}

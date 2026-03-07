@@ -14,8 +14,10 @@ import {
 } from "@/src/services/ai/openrouter";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { useAppStore } from "@/src/services/storage";
+import { getRecentJournalEntries } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -63,9 +65,14 @@ export default function AssistantScreen() {
         const todayStats = await getTodayStats();
         const weeklyStats = await getWeeklyStats();
 
+        // Get recent journal entries
+        const journalEntries = await getRecentJournalEntries(5);
+        const recentJournalEntries = journalEntries.map((entry) => entry.content);
+
         // Build user context
         const context: UserContext = {
           userName: settings.userName,
+          ageRange: settings.ageRange,
           goals: settings.goals,
           emotions: settings.emotions,
           dailyScreenTimeHours: settings.dailyScreenTimeHours,
@@ -82,6 +89,8 @@ export default function AssistantScreen() {
             weeklyStats.alternativeGrounded +
             weeklyStats.alternativePrayed +
             weeklyStats.closedCount,
+          recentJournalEntries:
+            recentJournalEntries.length > 0 ? recentJournalEntries : undefined,
         };
 
         // Set context for AI
@@ -162,7 +171,7 @@ export default function AssistantScreen() {
       const message: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: `✨ Here's an affirmation for you:\n\n"${affirmation}"\n\nTake a moment to let this sink in. You're doing great.`,
+        content: `Here's an affirmation for you:\n\n"${affirmation}"\n\nTake a moment to let this sink in. You're doing great.`,
       };
       setMessages((prev) => [...prev, message]);
     } else {
@@ -170,7 +179,7 @@ export default function AssistantScreen() {
       const message: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: `📝 Journaling prompt:\n\n"${prompt}"\n\nTake a few minutes to reflect on this. There's no right or wrong answer.`,
+        content: `Journaling prompt:\n\n"${prompt}"\n\nTake a few minutes to reflect on this. There's no right or wrong answer.`,
       };
       setMessages((prev) => [...prev, message]);
     }
@@ -367,7 +376,7 @@ export default function AssistantScreen() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={styles.backText}>←</Text>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>AI Companion</Text>
         </View>
@@ -426,13 +435,13 @@ export default function AssistantScreen() {
             style={styles.quickAction}
             onPress={() => handleQuickAction("affirmation")}
           >
-            <Text style={styles.quickActionText}>✨ Get Affirmation</Text>
+            <Text style={styles.quickActionText}>Get Affirmation</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
             onPress={() => handleQuickAction("journal")}
           >
-            <Text style={styles.quickActionText}>📝 Journal Prompt</Text>
+            <Text style={styles.quickActionText}>Journal Prompt</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -483,7 +492,7 @@ export default function AssistantScreen() {
             onPress={() => handleSend()}
             disabled={!inputText.trim() || isLoading}
           >
-            <Text style={styles.sendText}>↑</Text>
+            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

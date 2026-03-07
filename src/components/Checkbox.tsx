@@ -2,6 +2,7 @@
  * Checkbox Component - Liquid Glass Design
  */
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, radius } from "@/src/theme/theme";
 import { triggerSelectionFeedback } from "@/src/utils/haptics";
@@ -65,7 +66,7 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
       activeOpacity={0.7}
     >
       <View style={styles.checkbox}>
-        {checked && <Text style={styles.checkmark}>✓</Text>}
+        {checked && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
       </View>
       <Text style={styles.label}>{label}</Text>
     </TouchableOpacity>

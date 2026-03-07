@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 160" fill="none">
+  <defs>
+    <style type="text/css">
+    <![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500&display=swap');
+    ]]>
+    </style>
+
+    <linearGradient id="textFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E8FBFF"/>
+      <stop offset="50%" stop-color="#D6E4FF"/>
+      <stop offset="100%" stop-color="#C4B5FD"/>
+    </linearGradient>
+
+    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+
+    <linearGradient id="arcOuter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="50%" stop-color="#A855F7"/>
+      <stop offset="100%" stop-color="#FF6B9D"/>
+    </linearGradient>
+
+    <radialGradient id="dotFill" cx="38%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#B07CFF"/>
+    </radialGradient>
+
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="dotGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
+    </filter>
+
+    <filter id="textGlow" x="-3%" y="-15%" width="106%" height="130%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#glow)">
+    <path d="M74 64 Q92 80, 74 96"
+          stroke="url(#arcGrad)" stroke-width="2.8" stroke-linecap="round" fill="none" opacity="0.9"/>
+    <path d="M68 50 Q100 80, 68 110"
+          stroke="url(#arcGrad)" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.5"/>
+    <path d="M62 38 Q106 80, 62 122"
+          stroke="url(#arcOuter)" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.3"/>
+  </g>
+
+  <circle cx="60" cy="80" r="12" fill="#00D4FF" opacity="0.10" filter="url(#dotGlow)"/>
+  <circle cx="60" cy="80" r="5.5" fill="url(#dotFill)"/>
+  <circle cx="58.5" cy="78" r="2" fill="#FFFFFF" opacity="0.45"/>
+
+  <text x="130" y="100"
+        font-family="'Outfit', 'SF Pro Display', 'Inter', system-ui, sans-serif"
+        font-size="54" fill="url(#textFill)" letter-spacing="0.5"
+        filter="url(#textGlow)">
+    <tspan font-weight="300">Gentle</tspan><tspan font-weight="500">Wait</tspan>
+  </text>
+</svg>
