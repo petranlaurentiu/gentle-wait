@@ -1,207 +1,187 @@
 /**
- * Animation utilities and hooks using react-native-reanimated
+ * Shared motion helpers for the liquid-glass UI.
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 import {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
   Easing,
-} from 'react-native-reanimated';
-import { animation } from '@/src/theme/theme';
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import { animation } from "@/src/theme/theme";
 
-/**
- * Hook for fade-in animation when component mounts
- * @param duration - Animation duration in ms (default: 300)
- */
-export function useFadeInAnimation(duration: number = animation.screenFade) {
+export function useFadeInAnimation(duration: number = animation.enterSoft) {
   const opacity = useSharedValue(0);
 
   useEffect(() => {
     opacity.value = withTiming(1, {
       duration,
-      easing: Easing.out(Easing.ease),
+      easing: Easing.out(Easing.cubic),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opacity]);
+  }, [duration, opacity]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for scale animation (grows from small to full size)
- * @param duration - Animation duration in ms (default: 300)
- */
-export function useScaleInAnimation(duration: number = animation.screenFade) {
-  const scale = useSharedValue(0.9);
+export function useScaleInAnimation(duration: number = animation.enterSoft) {
+  const scale = useSharedValue(0.96);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     scale.value = withTiming(1, {
       duration,
-      easing: Easing.out(Easing.ease),
+      easing: Easing.out(Easing.cubic),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scale]);
+    opacity.value = withTiming(1, {
+      duration,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [duration, opacity, scale]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
+    opacity: opacity.value,
     transform: [{ scale: scale.value }],
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for staggered fade-in animations (for lists/grids)
- * @param index - Index of the item in the list
- * @param totalItems - Total number of items
- * @param duration - Animation duration in ms (default: 300)
- * @param staggerDelay - Delay between each item in ms (default: 50)
- */
 export function useStaggeredFadeIn(
   index: number,
-  totalItems: number,
-  duration: number = animation.screenFade,
-  staggerDelay: number = 50
+  _totalItems: number,
+  duration: number = animation.enterLift,
+  staggerDelay: number = 85
 ) {
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
+  const translateY = useSharedValue(18);
+  const scale = useSharedValue(0.985);
 
   useEffect(() => {
     const delay = index * staggerDelay;
-    // Stagger each item's animation
-    setTimeout(() => {
-      opacity.value = withTiming(1, {
+    opacity.value = withDelay(
+      delay,
+      withTiming(1, {
         duration,
-        easing: Easing.out(Easing.ease),
-      });
-      translateY.value = withTiming(0, {
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+    translateY.value = withDelay(
+      delay,
+      withTiming(0, {
         duration,
-        easing: Easing.out(Easing.ease),
-      });
-    }, delay);
-  }, [opacity, translateY, index, duration, staggerDelay]);
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+    scale.value = withDelay(
+      delay,
+      withTiming(1, {
+        duration,
+        easing: Easing.out(Easing.cubic),
+      })
+    );
+  }, [duration, index, opacity, scale, staggerDelay, translateY]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for spring animation (bouncy effect)
- * Used for button presses and emphasis
- */
-export function useSpringAnimation(
-  trigger: boolean,
-  scale: number = 0.95
-) {
+export function useSpringAnimation(trigger: boolean, scale: number = 0.97) {
   const springScale = useSharedValue(1);
 
   useEffect(() => {
-    if (trigger) {
-      springScale.value = withSpring(scale, {
-        damping: 10,
-        mass: 1,
-        stiffness: 100,
-      });
-      // Reset after brief delay
-      setTimeout(() => {
-        springScale.value = withSpring(1);
-      }, 100);
-    }
-  }, [trigger, springScale, scale]);
+    if (!trigger) return;
 
-  const animatedStyle = useAnimatedStyle(() => ({
+    springScale.value = withSequence(
+      withTiming(scale, {
+        duration: animation.pressScale,
+        easing: Easing.out(Easing.quad),
+      }),
+      withSpring(1, {
+        damping: 14,
+        mass: 0.7,
+        stiffness: 180,
+      })
+    );
+  }, [scale, springScale, trigger]);
+
+  return useAnimatedStyle(() => ({
     transform: [{ scale: springScale.value }],
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for continuous loop animation (breathing effect)
- * @param minScale - Minimum scale value (default: 1)
- * @param maxScale - Maximum scale value (default: 1.3)
- * @param cycleDuration - Full cycle duration in ms (default: 8000 for breathing)
- */
 export function useLoopAnimation(
   minScale: number = 1,
-  maxScale: number = 1.3,
+  maxScale: number = 1.03,
   cycleDuration: number = animation.breathingCycle
 ) {
   const loopValue = useSharedValue(minScale);
 
   useEffect(() => {
-    loopValue.value = withTiming(maxScale, {
-      duration: cycleDuration / 2,
-      easing: Easing.inOut(Easing.ease),
-    });
-
-    const interval = setInterval(() => {
-      loopValue.value = withTiming(
-        loopValue.value === maxScale ? minScale : maxScale,
-        {
+    loopValue.value = withRepeat(
+      withSequence(
+        withTiming(maxScale, {
           duration: cycleDuration / 2,
-          easing: Easing.inOut(Easing.ease),
-        }
-      );
-    }, cycleDuration / 2);
+          easing: Easing.inOut(Easing.sin),
+        }),
+        withTiming(minScale, {
+          duration: cycleDuration / 2,
+          easing: Easing.inOut(Easing.sin),
+        })
+      ),
+      -1,
+      false
+    );
+  }, [cycleDuration, loopValue, maxScale, minScale]);
 
-    return () => clearInterval(interval);
-  }, [loopValue, minScale, maxScale, cycleDuration]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
     transform: [{ scale: loopValue.value }],
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for slide-in from left animation
- * @param duration - Animation duration in ms
- */
-export function useSlideInFromLeft(duration: number = animation.screenFade) {
-  const translateX = useSharedValue(-100);
+export function useSlideInFromLeft(duration: number = animation.enterLift) {
+  const translateX = useSharedValue(-36);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     translateX.value = withTiming(0, {
       duration,
-      easing: Easing.out(Easing.ease),
+      easing: Easing.out(Easing.cubic),
     });
-  }, [translateX, duration]);
+    opacity.value = withTiming(1, {
+      duration,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [duration, opacity, translateX]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
+    opacity: opacity.value,
     transform: [{ translateX: translateX.value }],
   }));
-
-  return animatedStyle;
 }
 
-/**
- * Hook for slide-in from bottom animation
- * @param duration - Animation duration in ms
- */
-export function useSlideInFromBottom(duration: number = animation.screenFade) {
-  const translateY = useSharedValue(100);
+export function useSlideInFromBottom(duration: number = animation.enterLift) {
+  const translateY = useSharedValue(30);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     translateY.value = withTiming(0, {
       duration,
-      easing: Easing.out(Easing.ease),
+      easing: Easing.out(Easing.cubic),
     });
-  }, [translateY, duration]);
+    opacity.value = withTiming(1, {
+      duration,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [duration, opacity, translateY]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  return useAnimatedStyle(() => ({
+    opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
-
-  return animatedStyle;
 }

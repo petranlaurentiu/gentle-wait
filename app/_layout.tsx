@@ -12,11 +12,22 @@ import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect } from "react";
-import { ActivityIndicator, AppState, NativeModules, View } from "react-native";
+import { ActivityIndicator, AppState, View } from "react-native";
 import "react-native-reanimated";
 
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { ErrorBoundary } from "@/src/components/ErrorBoundary";
+import {
+  addBillingCustomerInfoListener,
+  getBillingPackages,
+  getCustomerInfo,
+  hasPremiumAccess,
+  initializeBilling,
+} from "@/src/services/billing";
+import {
+  getPendingInterception,
+  markAppHandled,
+} from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { initializeDatabase } from "@/src/services/storage/sqlite";
 import { ThemeProvider } from "@/src/theme/ThemeProvider";
@@ -24,17 +35,18 @@ import { ThemeProvider } from "@/src/theme/ThemeProvider";
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
-const { GentleWaitModule } = NativeModules;
-
 export const unstable_settings = {
   initialRouteName: "index",
 };
 
 export default function RootLayout() {
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const setBillingAvailable = useAppStore((state) => state.setBillingAvailable);
+  const setBillingPackages = useAppStore((state) => state.setBillingPackages);
   const setCurrentInterceptionEvent = useAppStore(
     (state) => state.setCurrentInterceptionEvent
   );
+  const updateSettings = useAppStore((state) => state.updateSettings);
   const router = useRouter();
 
   // Load custom fonts
@@ -67,14 +79,7 @@ export default function RootLayout() {
           return;
         }
 
-        if (!GentleWaitModule?.getPendingInterception || !GentleWaitModule?.markAppHandled) {
-          console.log(
-            "[DeepLink] GentleWaitModule not available, skipping interception check"
-          );
-          return;
-        }
-
-        const pending = await GentleWaitModule.getPendingInterception();
+        const pending = await getPendingInterception();
         if (pending && pending.appPackage) {
           console.log(
             "[DeepLink] Pending interception found:",
@@ -85,7 +90,7 @@ export default function RootLayout() {
           isProcessing = true;
           
           // Clear the pending interception IMMEDIATELY to prevent loops
-          await GentleWaitModule.markAppHandled(pending.appPackage);
+          await markAppHandled(pending.appPackage);
           console.log("[DeepLink] Cleared pending interception:", pending.appPackage);
           
           setCurrentInterceptionEvent({
@@ -138,18 +143,56 @@ export default function RootLayout() {
     loadSettings();
   }, [loadSettings]);
 
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    const bootstrapBilling = async () => {
+      try {
+        const result = await initializeBilling();
+        setBillingAvailable(result.available && result.configured);
+
+        if (!result.available || !result.configured) {
+          setBillingPackages([]);
+          return;
+        }
+
+        const [customerInfo, packages] = await Promise.all([
+          getCustomerInfo(),
+          getBillingPackages(),
+        ]);
+
+        setBillingPackages(packages);
+        updateSettings({ premium: hasPremiumAccess(customerInfo) });
+
+        unsubscribe = await addBillingCustomerInfoListener((info) => {
+          updateSettings({ premium: hasPremiumAccess(info) });
+        });
+      } catch (error) {
+        console.warn("[Billing] Failed to bootstrap RevenueCat:", error);
+        setBillingAvailable(false);
+        setBillingPackages([]);
+      }
+    };
+
+    bootstrapBilling();
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [setBillingAvailable, setBillingPackages, updateSettings]);
+
   // Show loading until fonts are ready
   if (!fontsLoaded) {
     return (
       <View
         style={{
           flex: 1,
-          backgroundColor: "#0A0E1A",
+          backgroundColor: "#0F1724",
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <ActivityIndicator size="large" color="#00D4FF" />
+        <ActivityIndicator size="large" color="#8FD6FF" />
       </View>
     );
   }
@@ -215,6 +258,13 @@ export default function RootLayout() {
                 name="assistant"
                 options={{
                   headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="paywall"
+                options={{
+                  headerShown: false,
+                  presentation: "modal",
                 }}
               />
               <Stack.Screen

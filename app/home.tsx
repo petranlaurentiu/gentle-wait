@@ -1,30 +1,36 @@
 /**
- * Home screen - Main dashboard
- * Liquid Glass Design System
+ * Home screen - Main dashboard.
  */
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button } from "@/src/components/Button";
+import { DebugMenu } from "@/src/components/DebugMenu";
+import { GlassCard } from "@/src/components/GlassCard";
+import { Text as AppText } from "@/src/components/Typography";
+import {
+  FREE_PROTECTED_APPS_LIMIT,
+  getUpgradePitch,
+} from "@/src/constants/monetization";
+import { getDailyAffirmation, getDailyQuote } from "@/src/data/mindfulness";
 import { useAppStore } from "@/src/services/storage";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
-import { Button } from "@/src/components/Button";
-import { GlassCard } from "@/src/components/GlassCard";
-import { DebugMenu } from "@/src/components/DebugMenu";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { radius, spacing } from "@/src/theme/theme";
+import { useFadeInAnimation, useLoopAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
+
 const mainLogo = require("@/assets/images/main_logo.png");
-import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
-import { getDailyQuote, getDailyAffirmation } from "@/src/data/mindfulness";
+
+const QUICK_ACTIONS = [
+  { label: "Breathe", icon: "flower-outline", onPress: "/alternatives", params: { type: "breathe" } },
+  { label: "Move", icon: "fitness-outline", onPress: "/exercise" },
+  { label: "Eye Reset", icon: "eye-outline", onPress: "/exercise", params: { category: "eye-posture" } },
+  { label: "Journal", icon: "journal-outline", onPress: "/alternatives", params: { type: "reflect" } },
+  { label: "Ground", icon: "leaf-outline", onPress: "/alternatives", params: { type: "grounding" } },
+] as const;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -37,20 +43,22 @@ export default function HomeScreen() {
     mindfulMinutes: 0,
   });
 
-  // Daily content
   const dailyQuote = getDailyQuote();
   const dailyAffirmation = getDailyAffirmation();
 
-  // Animation hooks for staggered card entrance
   const headerAnimation = useFadeInAnimation();
-  const cardOneAnimation = useStaggeredFadeIn(0, 6);
-  const cardTwoAnimation = useStaggeredFadeIn(1, 6);
-  const cardThreeAnimation = useStaggeredFadeIn(2, 6);
-  const cardFourAnimation = useStaggeredFadeIn(3, 6);
-  const buttonsAnimation = useStaggeredFadeIn(4, 6);
-  const quoteAnimation = useStaggeredFadeIn(5, 6);
+  const heroAnimation = useStaggeredFadeIn(0, 6);
+  const todayCardAnimation = useStaggeredFadeIn(1, 6);
+  const weeklyCardAnimation = useStaggeredFadeIn(2, 6);
+  const appsCardAnimation = useStaggeredFadeIn(3, 6);
+  const actionsAnimation = useStaggeredFadeIn(4, 6);
+  const footerAnimation = useStaggeredFadeIn(5, 6);
+  const logoFloat = useLoopAnimation(1, 1.015, 9000);
+  const protectedAppsRemaining = Math.max(
+    FREE_PROTECTED_APPS_LIMIT - settings.selectedApps.length,
+    0,
+  );
 
-  // Load stats when screen is focused
   useFocusEffect(
     React.useCallback(() => {
       (async () => {
@@ -82,209 +90,166 @@ export default function HomeScreen() {
     header: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+    },
+    brandWrap: {
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.md,
     },
-    title: {
-      fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
-      color: colors.text,
-      letterSpacing: 0.5,
+    logoFrame: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    titleAccent: {
-      fontFamily: fonts.medium,
-      color: colors.primary,
+    headerMeta: {
+      gap: 2,
     },
     scrollContent: {
       paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.xl * 2,
-    },
-    cardsContainer: {
+      paddingBottom: spacing.xxl * 2,
       gap: spacing.md,
     },
-    cardTitle: {
-      fontFamily: fonts.semiBold,
-      fontSize: typography.label.fontSize,
-      color: colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      marginBottom: spacing.sm,
+    heroCard: {
+      overflow: "hidden",
     },
-    cardValue: {
-      fontFamily: fonts.thin,
-      fontSize: typography.display.fontSize,
-      color: colors.primary,
-      letterSpacing: -3,
-      marginBottom: spacing.xs,
+    heroTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: spacing.lg,
     },
-    cardSubtitle: {
-      fontFamily: fonts.regular,
-      fontSize: 16,
-      color: colors.textSecondary,
-      lineHeight: 24,
+    heroBadge: {
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.pills,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      alignSelf: "flex-start",
     },
-    cardSubtitleAccent: {
-      fontFamily: fonts.medium,
-      color: colors.primary,
+    heroStatWrap: {
+      gap: spacing.xs,
+      alignItems: "flex-end",
     },
-    statsRow: {
+    heroTitle: {
+      maxWidth: "76%",
+    },
+    mutedCard: {
+      backgroundColor: colors.glassFill,
+    },
+    statGrid: {
       gap: spacing.md,
       marginTop: spacing.sm,
     },
-    statItem: {
+    statRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.sm,
     },
     statDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.primary,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 6,
-    },
-    statDotSecondary: {
-      backgroundColor: colors.secondary,
-      shadowColor: colors.secondary,
-    },
-    statDotAccent: {
-      backgroundColor: colors.accent,
-      shadowColor: colors.accent,
-    },
-    statText: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
     },
     appsList: {
-      marginTop: spacing.sm,
+      gap: spacing.sm,
+      marginTop: spacing.md,
     },
-    appItem: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-      paddingVertical: spacing.xs + 2,
+    appChip: {
+      alignSelf: "flex-start",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pills,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      marginRight: spacing.sm,
+      marginBottom: spacing.sm,
     },
-    appItemMore: {
-      fontFamily: fonts.medium,
-      fontSize: typography.caption.fontSize,
-      color: colors.primary,
-      paddingVertical: spacing.xs,
-    },
-    sectionTitle: {
-      fontFamily: fonts.semiBold,
-      fontSize: typography.label.fontSize,
-      color: colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      marginBottom: spacing.md,
+    appChipsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
     },
     quickActionsGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: spacing.md,
+      justifyContent: "space-between",
+      rowGap: spacing.md,
     },
     quickActionCard: {
-      width: "47%",
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      width: "48.2%",
+      minHeight: 112,
       borderRadius: radius.glass,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
       padding: spacing.lg,
+      justifyContent: "space-between",
+      shadowColor: colors.glassShadowSoft,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.14,
+      shadowRadius: 22,
+    },
+    iconBadge: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
       alignItems: "center",
       justifyContent: "center",
-      minHeight: 100,
-    },
-    quickActionIcon: {
-      fontSize: 32,
-      marginBottom: spacing.sm,
-    },
-    quickActionLabel: {
-      fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-    },
-    buttonRow: {
-      flexDirection: "row",
-      gap: spacing.md,
-      marginTop: spacing.md,
+      marginBottom: spacing.md,
     },
     assistantButton: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "rgba(0, 212, 255, 0.15)",
-      borderWidth: 1,
-      borderColor: "rgba(0, 212, 255, 0.3)",
+      padding: spacing.lg,
       borderRadius: radius.glass,
-      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      backgroundColor: colors.glassFillStrong,
       gap: spacing.md,
-      marginTop: spacing.lg,
-    },
-    assistantIcon: {
-      fontSize: 28,
     },
     assistantTextContainer: {
       flex: 1,
+      gap: 4,
     },
-    assistantTitle: {
-      fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-      marginBottom: 2,
-    },
-    assistantSubtitle: {
-      fontFamily: fonts.regular,
-      fontSize: typography.caption.fontSize,
-      color: colors.textSecondary,
-    },
-    assistantArrow: {
-      fontFamily: fonts.light,
-      fontSize: typography.heading.fontSize,
-      color: colors.primary,
-    },
-    affirmationText: {
-      fontFamily: fonts.light,
-      fontSize: typography.bodyLarge.fontSize,
-      color: colors.text,
-      fontStyle: "italic",
-      textAlign: "center",
-      lineHeight: 26,
+    buttonRow: {
+      flexDirection: "row",
+      gap: spacing.md,
     },
     quoteContainer: {
-      marginTop: spacing.xl,
-      paddingHorizontal: spacing.md,
-    },
-    quoteText: {
-      fontFamily: fonts.light,
-      fontSize: typography.body.fontSize,
-      color: colors.textMuted,
-      fontStyle: "italic",
-      textAlign: "center",
-      lineHeight: 24,
-      marginBottom: spacing.sm,
-    },
-    quoteAuthor: {
-      fontFamily: fonts.regular,
-      fontSize: typography.caption.fontSize,
-      color: colors.textMuted,
-      textAlign: "center",
-    },
-    statValue: {
-      fontFamily: fonts.semiBold,
-      color: colors.primary,
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.sm,
+      gap: spacing.sm,
     },
   });
 
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, headerAnimation]}>
-        <Image source={mainLogo} style={{ width: 36, height: 36 }} resizeMode="contain" />
-        <Text style={styles.title}>Gentle<Text style={styles.titleAccent}>Wait</Text></Text>
+        <View style={styles.brandWrap}>
+          <Animated.View style={[styles.logoFrame, logoFloat]}>
+            <Image source={mainLogo} style={{ width: 28, height: 28 }} resizeMode="contain" />
+          </Animated.View>
+          <View style={styles.headerMeta}>
+            <AppText variant="eyebrow" color="secondary">Daily reset</AppText>
+            <AppText variant="screenTitle">GentleWait</AppText>
+          </View>
+        </View>
+        <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/settings")}>
+          <Ionicons name="options-outline" size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
       </Animated.View>
 
       <ScrollView
@@ -292,198 +257,176 @@ export default function HomeScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.cardsContainer}>
-          {/* Daily affirmation */}
-          <Animated.View style={cardOneAnimation}>
-            <GlassCard intensity="light">
-              <Text style={styles.affirmationText}>&ldquo;{dailyAffirmation}&rdquo;</Text>
-            </GlassCard>
-          </Animated.View>
+        <Animated.View style={heroAnimation}>
+          <GlassCard glowColor="primary" style={styles.heroCard}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroTitle}>
+                <View style={styles.heroBadge}>
+                  <AppText variant="eyebrow" color="primary">Today&apos;s tone</AppText>
+                </View>
+                <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+                  <AppText variant="hero">A calmer rhythm before every tap.</AppText>
+                  <AppText variant="bodyLarge" color="secondary">
+                    {dailyAffirmation}
+                  </AppText>
+                </View>
+              </View>
+              <View style={styles.heroStatWrap}>
+                <AppText variant="eyebrow" color="tertiary">Pauses</AppText>
+                <AppText variant="display" color="primary">{todayPauses}</AppText>
+              </View>
+            </View>
+            <AppText variant="caption" color="secondary">
+              {todayPauses === 0
+                ? "Your first mindful pause is waiting."
+                : todayPauses === 1
+                  ? "A gentle start. Keep the pace light."
+                  : `${todayPauses} mindful moments already shifted the tone of your day.`}
+            </AppText>
+          </GlassCard>
+        </Animated.View>
 
-          {/* Today card */}
-          <Animated.View style={cardTwoAnimation}>
-            <GlassCard glowColor="primary">
-              <Text style={styles.cardTitle}>Today&apos;s Mindful Moments</Text>
-              <Text style={styles.cardValue}>{todayPauses}</Text>
-              <Text style={styles.cardSubtitle}>
-                {todayPauses === 0
-                  ? "Your first pause is waiting"
-                  : todayPauses === 1
-                  ? "A beautiful start to your journey"
-                  : `${todayPauses} times you chose presence`}
-              </Text>
-            </GlassCard>
-          </Animated.View>
+        <Animated.View style={todayCardAnimation}>
+          <GlassCard intensity="light">
+            <AppText variant="eyebrow" color="secondary">Weekly overview</AppText>
+            <View style={styles.statGrid}>
+              <View style={styles.statRow}>
+                <View style={[styles.statDot, { backgroundColor: colors.primary }]} />
+                <AppText variant="bodyLarge">
+                  <AppText variant="bodyLarge" color="primary">{weeklyStats.pausesTotal}</AppText> mindful pauses
+                </AppText>
+              </View>
+              <View style={styles.statRow}>
+                <View style={[styles.statDot, { backgroundColor: colors.secondary }]} />
+                <AppText variant="bodyLarge">
+                  <AppText variant="bodyLarge" color="primary">{weeklyStats.choseCalmCount}</AppText> moments of calm
+                </AppText>
+              </View>
+              <View style={styles.statRow}>
+                <View style={[styles.statDot, { backgroundColor: colors.accent }]} />
+                <AppText variant="bodyLarge">
+                  <AppText variant="bodyLarge" color="primary">{weeklyStats.mindfulMinutes}</AppText> minutes reclaimed
+                </AppText>
+              </View>
+            </View>
+          </GlassCard>
+        </Animated.View>
 
-          {/* Weekly progress */}
-          <Animated.View style={cardThreeAnimation}>
+        {settings.selectedApps.length > 0 && (
+          <Animated.View style={weeklyCardAnimation}>
             <GlassCard glowColor="secondary">
-              <Text style={styles.cardTitle}>Your Week in Review</Text>
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <View style={styles.statDot} />
-                  <Text style={styles.statText}>
-                    <Text style={styles.statValue}>
-                      {weeklyStats.pausesTotal}
-                    </Text>{" "}
-                    mindful pauses
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <View style={[styles.statDot, styles.statDotSecondary]} />
-                  <Text style={styles.statText}>
-                    <Text style={styles.statValue}>
-                      {weeklyStats.choseCalmCount}
-                    </Text>{" "}
-                    moments of calm
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <View style={[styles.statDot, styles.statDotAccent]} />
-                  <Text style={styles.statText}>
-                    <Text style={styles.statValue}>
-                      {weeklyStats.mindfulMinutes}
-                    </Text>{" "}
-                    minutes reclaimed
-                  </Text>
+              <AppText variant="eyebrow" color="secondary">Protected space</AppText>
+              <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+                <AppText variant="sectionTitle">Apps under your care</AppText>
+                <AppText variant="body" color="secondary">
+                  {settings.selectedApps.length} app{settings.selectedApps.length !== 1 ? "s" : ""} now open with a reflective pause.
+                </AppText>
+              </View>
+              <View style={styles.appsList}>
+                <View style={styles.appChipsWrap}>
+                  {settings.selectedApps.slice(0, 4).map((app) => (
+                    <View key={app.packageName} style={styles.appChip}>
+                      <AppText variant="body" color="secondary">{app.label}</AppText>
+                    </View>
+                  ))}
+                  {settings.selectedApps.length > 4 && (
+                    <View style={styles.appChip}>
+                      <AppText variant="body" color="primary">+{settings.selectedApps.length - 4} more</AppText>
+                    </View>
+                  )}
                 </View>
               </View>
             </GlassCard>
           </Animated.View>
+        )}
 
-          {/* Protected apps */}
-          {settings.selectedApps.length > 0 && (
-            <Animated.View style={cardFourAnimation}>
-              <GlassCard glowColor="accent">
-                <Text style={styles.cardTitle}>Apps Under Your Care</Text>
-                <Text style={styles.cardSubtitle}>
-                  {settings.selectedApps.length} app
-                  {settings.selectedApps.length !== 1 ? "s" : ""} with gentle
-                  reminders
-                </Text>
-                <View style={styles.appsList}>
-                  {settings.selectedApps.slice(0, 3).map((app) => (
-                    <Text key={app.packageName} style={styles.appItem}>
-                      {app.label}
-                    </Text>
-                  ))}
-                  {settings.selectedApps.length > 3 && (
-                    <Text style={styles.appItemMore}>
-                      +{settings.selectedApps.length - 3} more
-                    </Text>
-                  )}
-                </View>
-              </GlassCard>
-            </Animated.View>
-          )}
-
-          {/* Quick Actions */}
-          <Animated.View style={buttonsAnimation}>
-            <Text style={styles.sectionTitle}>Quick Mindful Break</Text>
-            <View style={styles.quickActionsGrid}>
-              <TouchableOpacity
-                style={styles.quickActionCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/alternatives",
-                    params: { type: "breathe" },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Ionicons name="flower-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-                <Text style={styles.quickActionLabel}>Breathe</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickActionCard}
-                onPress={() => router.push("/exercise")}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="fitness-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-                <Text style={styles.quickActionLabel}>Move</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickActionCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/exercise",
-                    params: { category: "eye-posture" },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Ionicons name="eye-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-                <Text style={styles.quickActionLabel}>Eye Strain</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickActionCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/alternatives",
-                    params: { type: "reflect" },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Ionicons name="journal-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-                <Text style={styles.quickActionLabel}>Journal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickActionCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/alternatives",
-                    params: { type: "grounding" },
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Ionicons name="leaf-outline" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-                <Text style={styles.quickActionLabel}>Ground</Text>
-              </TouchableOpacity>
+        <Animated.View style={appsCardAnimation}>
+          <View style={{ gap: spacing.md }}>
+            <View style={{ gap: 4 }}>
+              <AppText variant="eyebrow" color="secondary">Quick reset</AppText>
+              <AppText variant="sectionTitle">Choose a short mindful break</AppText>
             </View>
-          </Animated.View>
+            <View style={styles.quickActionsGrid}>
+              {QUICK_ACTIONS.map((action) => (
+                <TouchableOpacity
+                  key={action.label}
+                  style={styles.quickActionCard}
+                  activeOpacity={0.82}
+                  onPress={() => {
+                    if (action.params) {
+                      router.push({ pathname: action.onPress as never, params: action.params as never });
+                    } else {
+                      router.push(action.onPress as never);
+                    }
+                  }}
+                >
+                  <View>
+                    <View style={styles.iconBadge}>
+                      <Ionicons name={action.icon} size={22} color={colors.primary} />
+                    </View>
+                    <AppText variant="heading">{action.label}</AppText>
+                  </View>
+                  <AppText variant="caption" color="secondary">Take one deliberate minute.</AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
 
-          {/* AI Assistant button */}
+        <Animated.View style={actionsAnimation}>
           <TouchableOpacity
             style={styles.assistantButton}
-            onPress={() => router.push("/assistant")}
-            activeOpacity={0.8}
+            onPress={() => {
+              if (settings.premium) {
+                router.push("/assistant");
+                return;
+              }
+
+              Alert.alert("AI Companion is Premium", getUpgradePitch(), [
+                { text: "Not now", style: "cancel" },
+                { text: "View Premium", onPress: () => router.push("/paywall") },
+              ]);
+            }}
+            activeOpacity={0.86}
           >
-            <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
-            <View style={styles.assistantTextContainer}>
-              <Text style={styles.assistantTitle}>AI Companion</Text>
-              <Text style={styles.assistantSubtitle}>
-                Get personalized guidance & support
-              </Text>
+            <View style={styles.iconBadge}>
+              <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
             </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+            <View style={styles.assistantTextContainer}>
+              <AppText variant="heading">
+                {settings.premium ? "AI Companion" : "AI Companion Premium"}
+              </AppText>
+              <AppText variant="body" color="secondary">
+                {settings.premium
+                  ? "Personalized prompts, reflection, and support when your focus slips."
+                  : "Upgrade to unlock guided reflection and personalized AI support."}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Action buttons */}
-          <View style={styles.buttonRow}>
-            <Button
-              label="Insights"
-              onPress={() => router.push("/insights")}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Settings"
-              onPress={() => router.push("/settings")}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-          </View>
+          {!settings.premium && (
+            <AppText variant="caption" color="secondary" align="center">
+              Free plan: {protectedAppsRemaining} of {FREE_PROTECTED_APPS_LIMIT} protected app slots remaining.
+            </AppText>
+          )}
 
-          {/* Daily wisdom */}
-          <Animated.View style={quoteAnimation}>
-            <View style={styles.quoteContainer}>
-              <Text style={styles.quoteText}>&ldquo;{dailyQuote.quote}&rdquo;</Text>
-              <Text style={styles.quoteAuthor}>— {dailyQuote.author}</Text>
-            </View>
-          </Animated.View>
-        </View>
+          <View style={[styles.buttonRow, { marginTop: spacing.md }]}>
+            <Button label="Insights" onPress={() => router.push("/insights")} variant="secondary" style={{ flex: 1 }} />
+            <Button label="Settings" onPress={() => router.push("/settings")} variant="secondary" style={{ flex: 1 }} />
+          </View>
+        </Animated.View>
+
+        <Animated.View style={footerAnimation}>
+          <View style={styles.quoteContainer}>
+            <AppText variant="caption" color="tertiary" align="center">
+              “{dailyQuote.quote}”
+            </AppText>
+            <AppText variant="caption" color="secondary" align="center">
+              {dailyQuote.author}
+            </AppText>
+          </View>
+        </Animated.View>
       </ScrollView>
       <DebugMenu />
     </SafeAreaView>

@@ -6,6 +6,10 @@ import { Button } from "@/src/components/Button";
 import { Checkbox } from "@/src/components/Checkbox";
 import { GlassCard } from "@/src/components/GlassCard";
 import {
+  FREE_PROTECTED_APPS_LIMIT,
+  getUpgradePitch,
+} from "@/src/constants/monetization";
+import {
   COOLDOWN_OPTIONS,
   WheelPicker,
 } from "@/src/components/WheelPicker";
@@ -18,6 +22,20 @@ import {
   getInstalledApps,
   getSuggestedApps,
 } from "@/src/services/apps";
+import type { IOSFamilyActivitySelection } from "@/src/domain/models";
+import {
+  DeviceActivitySelectionView,
+} from "react-native-device-activity";
+import {
+  clearIOSFamilyControlsSelection,
+  exceedsFreeIOSSelectionLimit,
+  getIOSSelectionSummary,
+  isIOSFamilyControlsAvailable,
+  isServiceEnabled,
+  requestServiceAuthorization,
+  saveIOSFamilyControlsSelection,
+  setSelectedApps as syncSelectedAppsToNative,
+} from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
@@ -25,20 +43,19 @@ import { useFadeInAnimation } from "@/src/utils/animations";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   AppState,
-  Dimensions,
   Image,
-  NativeModules,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import ReanimatedAnimated, {
@@ -52,7 +69,24 @@ import ReanimatedAnimated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const mainLogo = require("@/assets/images/main_logo.png");
-const { width, height: screenHeight } = Dimensions.get("window");
+
+const PROGRAM_PREVIEW_STEPS = [
+  {
+    label: "Breathe",
+    icon: "flower-outline",
+    description: "Interrupt the impulse with one calm inhale and a softer exhale.",
+  },
+  {
+    label: "Reflect",
+    icon: "pencil-outline",
+    description: "Notice what you need before habit takes over the moment.",
+  },
+  {
+    label: "Grow",
+    icon: "leaf-outline",
+    description: "Build a steadier relationship with your time, focus, and energy.",
+  },
+] as const;
 
 type SetupPath = "quick" | "personalized" | null;
 
@@ -173,6 +207,8 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
+  const { width, height: screenHeight } = useWindowDimensions();
+  const isNarrowPreviewLayout = width < 420;
 
   // Check if we should skip to a specific step (e.g., from settings)
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
@@ -223,6 +259,14 @@ export default function OnboardingScreen() {
     isCompleteProfileMode ? (currentSettings.ageRange || null) : null
   );
   const [permissionEnabled, setPermissionEnabled] = useState(false);
+  const [iosFamilyActivitySelection, setIOSFamilyActivitySelection] =
+    useState<IOSFamilyActivitySelection | null>(
+      currentSettings.iosFamilyActivitySelection || null,
+    );
+  const hasReachedFreeAppLimit =
+    !currentSettings.premium &&
+    selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT;
+  const isIOSFamilyControlsFlow = Platform.OS === "ios";
 
   // Animation hooks
   const stepAnimation = useFadeInAnimation();
@@ -236,6 +280,13 @@ export default function OnboardingScreen() {
   useEffect(() => {
     (async () => {
       try {
+        if (isIOSFamilyControlsFlow) {
+          if (skipToStep === "select-apps" && currentSettings.iosFamilyActivitySelection) {
+            setIOSFamilyActivitySelection(currentSettings.iosFamilyActivitySelection);
+          }
+          return;
+        }
+
         const apps = await getInstalledApps();
         setAvailableApps(apps);
 
@@ -250,27 +301,19 @@ export default function OnboardingScreen() {
         console.error("Failed to load apps:", error);
       }
     })();
-  }, [skipToStep, currentSettings.selectedApps]);
+  }, [
+    currentSettings.iosFamilyActivitySelection,
+    currentSettings.selectedApps,
+    isIOSFamilyControlsFlow,
+    skipToStep,
+  ]);
 
   // Check accessibility/Family Controls permission status
   const checkPermissionStatus = async () => {
     if (Platform.OS !== "android" && Platform.OS !== "ios") return;
     try {
-      const { GentleWaitModule } = NativeModules;
-      if (
-        Platform.OS === "android" &&
-        GentleWaitModule?.isAccessibilityServiceEnabled
-      ) {
-        const isEnabled =
-          await GentleWaitModule.isAccessibilityServiceEnabled();
-        setPermissionEnabled(isEnabled);
-      } else if (
-        Platform.OS === "ios" &&
-        GentleWaitModule?.isFamilyControlsAuthorized
-      ) {
-        const isEnabled = await GentleWaitModule.isFamilyControlsAuthorized();
-        setPermissionEnabled(isEnabled);
-      }
+      const enabled = await isServiceEnabled();
+      setPermissionEnabled(enabled);
     } catch (error) {
       console.error("Error checking permission status:", error);
     }
@@ -306,6 +349,20 @@ export default function OnboardingScreen() {
     if (newSet.has(packageName)) {
       newSet.delete(packageName);
     } else {
+      if (
+        !currentSettings.premium &&
+        selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT
+      ) {
+        Alert.alert(
+          "Free plan limit",
+          `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "View Premium", onPress: () => router.push("/paywall") },
+          ],
+        );
+        return;
+      }
       newSet.add(packageName);
     }
     setSelectedAppSet(newSet);
@@ -344,10 +401,78 @@ export default function OnboardingScreen() {
       // Deselect all displayed
       displayedApps.forEach((app) => newSet.delete(app.packageName));
     } else {
+      if (!currentSettings.premium) {
+        const remainingSlots = Math.max(
+          FREE_PROTECTED_APPS_LIMIT - newSet.size,
+          0,
+        );
+
+        if (remainingSlots === 0) {
+          Alert.alert(
+            "Free plan limit",
+            `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
+            [
+              { text: "Not now", style: "cancel" },
+              { text: "View Premium", onPress: () => router.push("/paywall") },
+            ],
+          );
+          return;
+        }
+
+        const appsToAdd = displayedApps.filter(
+          (app) => !newSet.has(app.packageName),
+        );
+
+        appsToAdd.slice(0, remainingSlots).forEach((app) => {
+          newSet.add(app.packageName);
+        });
+
+        if (appsToAdd.length > remainingSlots) {
+          Alert.alert(
+            "Free plan limit",
+            `Only ${remainingSlots} more ${
+              remainingSlots === 1 ? "app fits" : "apps fit"
+            } on the free plan.\n\n${getUpgradePitch()}`,
+            [
+              { text: "Not now", style: "cancel" },
+              { text: "View Premium", onPress: () => router.push("/paywall") },
+            ],
+          );
+        }
+
+        setSelectedAppSet(newSet);
+        return;
+      }
+
       // Select all displayed
       displayedApps.forEach((app) => newSet.add(app.packageName));
     }
     setSelectedAppSet(newSet);
+  };
+
+  const validateIOSSelectionForPlan = () => {
+    if (currentSettings.premium) {
+      return true;
+    }
+
+    if (
+      exceedsFreeIOSSelectionLimit(
+        iosFamilyActivitySelection,
+        FREE_PROTECTED_APPS_LIMIT,
+      )
+    ) {
+      Alert.alert(
+        "Premium required",
+        `On iPhone, the free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} individual apps. Categories, websites, and larger selections are part of Premium.`,
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "View Premium", onPress: () => router.push("/paywall") },
+        ],
+      );
+      return false;
+    }
+
+    return true;
   };
 
   const handleNext = async () => {
@@ -397,11 +522,24 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (step === "select-apps" && selectedAppSet.size === 0) {
+    if (
+      step === "select-apps" &&
+      ((isIOSFamilyControlsFlow &&
+        !iosFamilyActivitySelection?.familyActivitySelection) ||
+        (!isIOSFamilyControlsFlow && selectedAppSet.size === 0))
+    ) {
       Alert.alert(
         "Select Apps",
         "Please select at least one app to monitor. This is required for GentleWait to work.",
       );
+      return;
+    }
+
+    if (
+      step === "select-apps" &&
+      isIOSFamilyControlsFlow &&
+      !validateIOSSelectionForPlan()
+    ) {
       return;
     }
 
@@ -419,7 +557,12 @@ export default function OnboardingScreen() {
       );
 
       updateSettings({
-        selectedApps,
+        selectedApps: isIOSFamilyControlsFlow
+          ? currentSettings.selectedApps
+          : selectedApps,
+        iosFamilyActivitySelection: isIOSFamilyControlsFlow
+          ? iosFamilyActivitySelection
+          : currentSettings.iosFamilyActivitySelection,
         // Preserve other settings
         pauseDurationSec: currentSettings.pauseDurationSec || pauseDuration,
         userName: currentSettings.userName || userName,
@@ -433,23 +576,14 @@ export default function OnboardingScreen() {
         onboardingCompleted: currentSettings.onboardingCompleted ?? true,
       });
 
-      // Sync selected apps to native storage (Android SharedPreferences / iOS UserDefaults)
-      if (Platform.OS === "android" || Platform.OS === "ios") {
-        try {
-          const { GentleWaitModule } = NativeModules;
-          if (GentleWaitModule?.setSelectedApps) {
-            const appPackageNames = selectedApps.map((app) => app.packageName);
-            await GentleWaitModule.setSelectedApps(appPackageNames);
-            console.log(
-              "[Settings] Synced",
-              appPackageNames.length,
-              "apps to native:",
-              appPackageNames,
-            );
-          }
-        } catch (error) {
-          console.error("[Settings] Failed to sync apps to native:", error);
+      try {
+        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
+          await saveIOSFamilyControlsSelection(iosFamilyActivitySelection);
+        } else {
+          await syncSelectedAppsToNative(selectedApps);
         }
+      } catch (error) {
+        console.error("[Settings] Failed to sync apps to native:", error);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -482,7 +616,7 @@ export default function OnboardingScreen() {
       );
 
       updateSettings({
-        selectedApps,
+        selectedApps: isIOSFamilyControlsFlow ? [] : selectedApps,
         pauseDurationSec: pauseDuration,
         cooldownMinutes,
         userName,
@@ -491,26 +625,20 @@ export default function OnboardingScreen() {
         dailyScreenTimeHours: dailyScreenTime,
         targetScreenTimeHours: targetScreenTime,
         ageRange: selectedAge || undefined,
+        iosFamilyActivitySelection: isIOSFamilyControlsFlow
+          ? iosFamilyActivitySelection
+          : null,
         onboardingCompleted: true,
       });
 
-      // Sync selected apps to native storage for app interception service
-      if (Platform.OS === "android" || Platform.OS === "ios") {
-        try {
-          const { GentleWaitModule } = NativeModules;
-          if (GentleWaitModule?.setSelectedApps) {
-            const appPackageNames = selectedApps.map((app) => app.packageName);
-            await GentleWaitModule.setSelectedApps(appPackageNames);
-            console.log(
-              "[Onboarding] Synced",
-              appPackageNames.length,
-              "apps to native:",
-              appPackageNames,
-            );
-          }
-        } catch (error) {
-          console.error("[Onboarding] Failed to sync apps to native:", error);
+      try {
+        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
+          await saveIOSFamilyControlsSelection(iosFamilyActivitySelection);
+        } else {
+          await syncSelectedAppsToNative(selectedApps);
         }
+      } catch (error) {
+        console.error("[Onboarding] Failed to sync apps to native:", error);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -583,10 +711,10 @@ export default function OnboardingScreen() {
       borderRadius: width * 0.35,
     },
     appNameLarge: {
-      fontFamily: fonts.light,
-      fontSize: 42,
+      fontFamily: fonts.semiBold,
+      fontSize: typography.hero.fontSize,
       color: colors.text,
-      letterSpacing: 0.5,
+      letterSpacing: typography.hero.letterSpacing,
       marginTop: spacing.xl,
     },
     appNameAccent: {
@@ -595,22 +723,22 @@ export default function OnboardingScreen() {
     },
     // Typography
     title: {
-      fontFamily: fonts.medium,
-      fontSize: 32,
+      fontFamily: typography.screenTitle.fontFamily,
+      fontSize: typography.screenTitle.fontSize,
       color: colors.text,
       marginBottom: spacing.lg,
       textAlign: "center",
-      letterSpacing: -0.3,
-      lineHeight: 40,
+      letterSpacing: typography.screenTitle.letterSpacing,
+      lineHeight: typography.screenTitle.lineHeight,
     },
     subtitle: {
-      fontFamily: fonts.medium,
-      fontSize: 26,
+      fontFamily: typography.title.fontFamily,
+      fontSize: typography.title.fontSize,
       color: colors.text,
       marginBottom: spacing.xl,
       textAlign: "center",
-      lineHeight: 34,
-      letterSpacing: -0.2,
+      lineHeight: typography.title.lineHeight,
+      letterSpacing: typography.title.letterSpacing,
     },
     titleAccent: {
       color: colors.primary,
@@ -621,11 +749,11 @@ export default function OnboardingScreen() {
     },
     description: {
       fontFamily: fonts.regular,
-      fontSize: 18,
+      fontSize: typography.bodyLarge.fontSize,
       color: colors.textSecondary,
       marginBottom: spacing.lg,
       textAlign: "center",
-      lineHeight: 28,
+      lineHeight: typography.bodyLarge.lineHeight,
     },
     descriptionAccent: {
       fontFamily: fonts.medium,
@@ -649,14 +777,14 @@ export default function OnboardingScreen() {
     // Glass input
     searchInput: {
       fontFamily: fonts.regular,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       padding: spacing.md + 4,
       marginBottom: spacing.md,
       color: colors.text,
       fontSize: typography.body.fontSize,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
     },
     categoryScroll: {
       marginBottom: spacing.md,
@@ -671,14 +799,14 @@ export default function OnboardingScreen() {
       alignItems: "center",
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.md,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.pills,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
       gap: spacing.xs,
     },
     categoryTabSelected: {
-      backgroundColor: "rgba(0, 212, 255, 0.2)",
+      backgroundColor: colors.primaryLight,
       borderColor: colors.primary,
     },
     categoryTabIcon: {
@@ -697,27 +825,63 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       marginBottom: spacing.md,
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
+      backgroundColor: colors.surface,
       borderRadius: radius.button,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
     },
     selectAllText: {
       fontFamily: fonts.medium,
       fontSize: typography.caption.fontSize,
       color: colors.primary,
     },
+    iosPickerCard: {
+      position: "relative",
+      overflow: "hidden",
+      minHeight: 220,
+      marginBottom: spacing.md,
+      borderRadius: radius.card,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    iosPickerContent: {
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    iosPickerEyebrow: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    iosPickerTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.sectionTitle.fontSize,
+      color: colors.text,
+    },
+    iosPickerDescription: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
+    iosSelectionView: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.02,
+    },
     appList: {
       marginBottom: spacing.lg,
     },
     permissionContainer: {
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       padding: spacing.lg,
       marginBottom: spacing.md,
       gap: spacing.sm,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
     },
     permissionText: {
       fontFamily: fonts.regular,
@@ -734,14 +898,14 @@ export default function OnboardingScreen() {
       alignItems: "center",
       paddingVertical: spacing.md + 4,
       paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       marginBottom: spacing.sm,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
     },
     durationOptionSelected: {
-      backgroundColor: "rgba(0, 212, 255, 0.2)",
+      backgroundColor: colors.primaryLight,
       borderColor: colors.primary,
     },
     durationLabel: {
@@ -768,13 +932,13 @@ export default function OnboardingScreen() {
       borderRadius: radius.glass,
       padding: spacing.lg,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      borderColor: colors.glassStroke,
+      backgroundColor: colors.glassFill,
       overflow: "hidden",
     },
     setupOptionSelected: {
       borderColor: colors.primary,
-      backgroundColor: "rgba(0, 212, 255, 0.2)",
+      backgroundColor: colors.primaryLight,
     },
     setupOptionTitle: {
       fontFamily: fonts.medium,
@@ -813,9 +977,9 @@ export default function OnboardingScreen() {
     },
     timeValue: {
       fontFamily: fonts.thin,
-      fontSize: 72,
+      fontSize: typography.display.fontSize,
       color: colors.primary,
-      letterSpacing: -4,
+      letterSpacing: typography.display.letterSpacing,
     },
     timeLabel: {
       fontFamily: fonts.regular,
@@ -832,10 +996,10 @@ export default function OnboardingScreen() {
     timeButton: {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
       minWidth: 60,
       alignItems: "center",
     },
@@ -853,11 +1017,11 @@ export default function OnboardingScreen() {
     },
     savingsCard: {
       marginTop: spacing.xl,
-      backgroundColor: "rgba(0, 212, 255, 0.15)",
+      backgroundColor: colors.primaryLight,
       borderRadius: radius.glass,
       padding: spacing.lg,
       borderWidth: 1,
-      borderColor: "rgba(0, 212, 255, 0.3)",
+      borderColor: colors.glassStroke,
     },
     savingsText: {
       fontFamily: fonts.regular,
@@ -911,12 +1075,12 @@ export default function OnboardingScreen() {
       marginBottom: spacing.xl,
     },
     goalPill: {
-      backgroundColor: "rgba(0, 212, 255, 0.2)",
+      backgroundColor: colors.primaryLight,
       borderRadius: radius.pills,
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.lg,
       borderWidth: 1,
-      borderColor: "rgba(0, 212, 255, 0.4)",
+      borderColor: colors.primary,
     },
     goalPillText: {
       fontFamily: fonts.medium,
@@ -955,14 +1119,14 @@ export default function OnboardingScreen() {
     ageOption: {
       paddingVertical: spacing.md + 4,
       paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
       alignItems: "center",
     },
     ageOptionSelected: {
-      backgroundColor: "rgba(0, 212, 255, 0.2)",
+      backgroundColor: colors.primaryLight,
       borderColor: colors.primary,
     },
     ageOptionText: {
@@ -985,7 +1149,7 @@ export default function OnboardingScreen() {
       width: 60,
       height: 60,
       borderRadius: 16,
-      backgroundColor: "rgba(255, 107, 157, 0.2)",
+      backgroundColor: colors.accentLight,
       alignItems: "center",
       justifyContent: "center",
       alignSelf: "center",
@@ -1000,16 +1164,16 @@ export default function OnboardingScreen() {
       alignSelf: "center",
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 152, 0, 0.15)",
+      backgroundColor: colors.accentLight,
       borderRadius: radius.pills,
       borderWidth: 1,
-      borderColor: "rgba(255, 152, 0, 0.4)",
+      borderColor: colors.accent,
       gap: spacing.sm,
       marginBottom: spacing.xl,
     },
     stateEmotionPillPositive: {
-      backgroundColor: "rgba(0, 212, 255, 0.15)",
-      borderColor: "rgba(0, 212, 255, 0.4)",
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
     },
     stateEmotionIcon: {
       fontSize: 20,
@@ -1017,14 +1181,14 @@ export default function OnboardingScreen() {
     stateEmotionText: {
       fontFamily: fonts.medium,
       fontSize: typography.body.fontSize,
-      color: "#FF9800",
+      color: colors.accent,
     },
     stateEmotionTextPositive: {
       color: colors.primary,
     },
     stateDivider: {
       height: 1,
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: colors.glassStroke,
       marginVertical: spacing.xl,
       width: "80%",
       alignSelf: "center",
@@ -1100,7 +1264,7 @@ export default function OnboardingScreen() {
     },
     analysisHighlight: {
       fontFamily: fonts.semiBold,
-      color: "#FF6B6B",
+      color: colors.error,
     },
     chartContainer: {
       flexDirection: "row",
@@ -1161,7 +1325,7 @@ export default function OnboardingScreen() {
     },
     projectionHighlight: {
       fontFamily: fonts.semiBold,
-      color: "#FF6B6B",
+      color: colors.error,
     },
     projectionSubtitle: {
       fontFamily: fonts.regular,
@@ -1172,10 +1336,10 @@ export default function OnboardingScreen() {
     },
     projectionYears: {
       fontFamily: fonts.thin,
-      fontSize: 72,
-      color: "#FF6B6B",
+      fontSize: typography.display.fontSize,
+      color: colors.error,
       textAlign: "center",
-      letterSpacing: -4,
+      letterSpacing: typography.display.letterSpacing,
       marginBottom: spacing.md,
     },
     projectionDescription: {
@@ -1193,34 +1357,200 @@ export default function OnboardingScreen() {
       textAlign: "center",
       lineHeight: 18,
     },
-    programDays: {
-      flexDirection: "row",
-      justifyContent: "space-around",
+    previewIntro: {
       alignItems: "center",
-      marginVertical: spacing.md,
-      width: "100%",
+      marginBottom: spacing.lg,
+      gap: spacing.md,
     },
-    programDay: {
+    previewBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    previewBadgeText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    previewHeroCard: {
+      marginVertical: spacing.xl,
+      overflow: "hidden",
+    },
+    previewHeroGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.9,
+    },
+    previewHeroTop: {
+      alignItems: "center",
+      gap: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    previewSpotlight: {
+      width: isNarrowPreviewLayout ? 110 : 132,
+      height: isNarrowPreviewLayout ? 110 : 132,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    previewSpotlightRing: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 999,
+      padding: isNarrowPreviewLayout ? 12 : 14,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.22,
+      shadowRadius: 26,
+      shadowOffset: { width: 0, height: 10 },
+    },
+    previewSpotlightCore: {
+      flex: 1,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(245, 247, 251, 0.88)",
+    },
+    previewHeroCopy: {
       alignItems: "center",
       gap: spacing.sm,
-      padding: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      borderRadius: radius.glass,
-      minWidth: 85,
     },
-    programDayIcon: {
-      fontSize: 36,
+    previewHeroTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: isNarrowPreviewLayout ? typography.title.fontSize : 30,
+      lineHeight: isNarrowPreviewLayout ? typography.title.lineHeight : 36,
+      letterSpacing: -0.4,
+      color: colors.text,
+      textAlign: "center",
+      maxWidth: 320,
+    },
+    previewHeroDescription: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+      maxWidth: 320,
+    },
+    previewMetricsRow: {
+      flexDirection: "row",
+      alignItems: "stretch",
+      justifyContent: "center",
+      gap: spacing.md,
+      marginBottom: spacing.xl,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: isNarrowPreviewLayout ? spacing.sm : spacing.md,
+      borderRadius: radius.card,
+      backgroundColor: "rgba(255, 255, 255, 0.04)",
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    previewMetric: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 2,
+      minHeight: 60,
+    },
+    previewMetricValue: {
+      fontFamily: fonts.thin,
+      fontSize: 34,
+      lineHeight: 36,
+      letterSpacing: -1.2,
+      color: colors.text,
+    },
+    previewMetricLabel: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    previewMetricDivider: {
+      width: 1,
+      backgroundColor: colors.glassStroke,
+      opacity: 0.8,
+    },
+    programDays: {
+      flexDirection: "column",
+      gap: spacing.sm,
+    },
+    programDay: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.md,
+      paddingVertical: spacing.md + 2,
+      paddingHorizontal: isNarrowPreviewLayout ? spacing.md : spacing.lg,
+      backgroundColor: "rgba(255, 255, 255, 0.045)",
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    programDayIndex: {
+      width: 34,
+      paddingTop: 2,
+      alignItems: "center",
+      flexShrink: 0,
+    },
+    programDayIndexText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+    programDayIconWrap: {
+      width: isNarrowPreviewLayout ? 46 : 52,
+      height: isNarrowPreviewLayout ? 46 : 52,
+      borderRadius: isNarrowPreviewLayout ? 18 : 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      flexShrink: 0,
+    },
+    programDayContent: {
+      flex: 1,
+      gap: spacing.xs,
+      paddingTop: 2,
     },
     programDayLabel: {
-      fontFamily: fonts.medium,
-      fontSize: 14,
+      fontFamily: fonts.semiBold,
+      fontSize: typography.heading.fontSize,
+      lineHeight: typography.heading.lineHeight,
       color: colors.text,
-      letterSpacing: 0.3,
     },
-    programDayArrow: {
-      fontSize: 24,
-      color: colors.primary,
-      opacity: 0.7,
+    programDayDescription: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+    },
+    programConnector: {
+      flexDirection: isNarrowPreviewLayout ? "column" : "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      opacity: 0.82,
+      paddingVertical: isNarrowPreviewLayout ? 0 : spacing.xs,
+      paddingHorizontal: isNarrowPreviewLayout ? 0 : spacing.lg,
+    },
+    programConnectorLine: {
+      width: isNarrowPreviewLayout ? 1 : 44,
+      height: isNarrowPreviewLayout ? 18 : 1,
+      backgroundColor: colors.glassStroke,
+    },
+    previewFooter: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: spacing.lg,
     },
     textInput: {
       marginVertical: spacing.lg,
@@ -1264,8 +1594,8 @@ export default function OnboardingScreen() {
                   <ReanimatedAnimated.View style={[styles.heroGlow, glowStyle]}>
                     <LinearGradient
                       colors={[
-                        "rgba(0, 212, 255, 0.35)",
-                        "rgba(168, 85, 247, 0.15)",
+                        colors.gradientAccent1,
+                        colors.gradientAccent2,
                         "transparent",
                       ]}
                       style={{
@@ -1307,42 +1637,134 @@ export default function OnboardingScreen() {
 
           {step === "program-preview" && (
             <>
-              <Text style={styles.title}>Build Better Habits</Text>
-              <Text style={styles.description}>
-                Small pauses lead to{" "}
-                <Text style={styles.descriptionAccent}>big changes</Text>.
-                {"\n"}We&apos;ll guide you one step at a time.
-              </Text>
+              <View style={styles.previewIntro}>
+                <View style={styles.previewBadge}>
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={14}
+                    color={colors.secondary}
+                  />
+                  <Text style={styles.previewBadgeText}>A calmer ritual in 3 moves</Text>
+                </View>
 
-              <GlassCard
-                glowColor="primary"
-                style={{ marginVertical: spacing.xl }}
-              >
+                <Text style={styles.title}>
+                  Breathe. Reflect.{" "}
+                  <Text style={styles.titleAccent}>Grow.</Text>
+                </Text>
+                <Text style={styles.description}>
+                  Instead of dropping you into another habit loop, GentleWait
+                  creates a short, beautiful pause that helps you come back to
+                  yourself.
+                </Text>
+              </View>
+
+              <GlassCard glowColor="primary" style={styles.previewHeroCard}>
+                <LinearGradient
+                  colors={[
+                    colors.primaryLight,
+                    "rgba(126, 230, 198, 0.14)",
+                    "transparent",
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.previewHeroGradient}
+                />
+
+                <View style={styles.previewHeroTop}>
+                  <View style={styles.previewSpotlight}>
+                    <LinearGradient
+                      colors={[
+                        colors.gradientAccent1,
+                        colors.gradientAccent2,
+                        colors.gradientAccent3,
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.previewSpotlightRing}
+                    >
+                      <View style={styles.previewSpotlightCore}>
+                        <Ionicons
+                          name="leaf-outline"
+                          size={isNarrowPreviewLayout ? 30 : 36}
+                          color={colors.bg}
+                        />
+                      </View>
+                    </LinearGradient>
+                  </View>
+
+                  <View style={styles.previewHeroCopy}>
+                    <Text style={styles.previewHeroTitle}>
+                      Every interruption becomes a gentle reset
+                    </Text>
+                    <Text style={styles.previewHeroDescription}>
+                      A short sequence designed to slow the urge, surface intent,
+                      and make the next choice feel lighter.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.previewMetricsRow}>
+                  <View style={styles.previewMetric}>
+                    <Text style={styles.previewMetricValue}>3</Text>
+                    <Text style={styles.previewMetricLabel}>small rituals</Text>
+                  </View>
+                  <View style={styles.previewMetricDivider} />
+                  <View style={styles.previewMetric}>
+                    <Text style={styles.previewMetricValue}>1</Text>
+                    <Text style={styles.previewMetricLabel}>calmer response</Text>
+                  </View>
+                </View>
+
                 <View style={styles.programDays}>
-                  <View style={styles.programDay}>
-                    <Ionicons name="flower-outline" size={36} color={colors.primary} />
-                    <Text style={styles.programDayLabel}>Breathe</Text>
-                  </View>
-                  <Ionicons name="arrow-forward" size={24} color={colors.primary} style={{ opacity: 0.7 }} />
-                  <View style={styles.programDay}>
-                    <Ionicons name="pencil-outline" size={36} color={colors.primary} />
-                    <Text style={styles.programDayLabel}>Reflect</Text>
-                  </View>
-                  <Ionicons name="arrow-forward" size={24} color={colors.primary} style={{ opacity: 0.7 }} />
-                  <View style={styles.programDay}>
-                    <Ionicons name="leaf-outline" size={36} color={colors.primary} />
-                    <Text style={styles.programDayLabel}>Grow</Text>
-                  </View>
+                  {PROGRAM_PREVIEW_STEPS.map((item, index) => (
+                    <Fragment key={item.label}>
+                      <View style={styles.programDay}>
+                        <View style={styles.programDayIndex}>
+                          <Text style={styles.programDayIndexText}>0{index + 1}</Text>
+                        </View>
+
+                        <View style={styles.programDayIconWrap}>
+                          <Ionicons
+                            name={item.icon}
+                            size={isNarrowPreviewLayout ? 24 : 28}
+                            color={index === 1 ? colors.secondary : colors.primary}
+                          />
+                        </View>
+
+                        <View style={styles.programDayContent}>
+                          <Text style={styles.programDayLabel}>{item.label}</Text>
+                          <Text style={styles.programDayDescription}>
+                            {item.description}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {index < PROGRAM_PREVIEW_STEPS.length - 1 && (
+                        <View style={styles.programConnector}>
+                          <View style={styles.programConnectorLine} />
+                          <Ionicons
+                            name={
+                              isNarrowPreviewLayout
+                                ? "arrow-down"
+                                : "arrow-forward"
+                            }
+                            size={16}
+                            color={colors.textMuted}
+                          />
+                          <View style={styles.programConnectorLine} />
+                        </View>
+                      )}
+                    </Fragment>
+                  ))}
                 </View>
               </GlassCard>
 
-              <Text style={styles.description}>
-                Breathing exercises, journaling prompts, and gentle nudges—
+              <Text style={styles.previewFooter}>
+                Breathing space, reflection prompts, and steady encouragement.
                 {"\n"}
                 <Text style={styles.descriptionAccent}>
-                  no judgment, just presence
+                  No guilt. No pressure. Just a better rhythm.
                 </Text>
-                .
               </Text>
             </>
           )}
@@ -1580,7 +2002,7 @@ export default function OnboardingScreen() {
 
               {/* Current emotion pill */}
               <View style={styles.stateEmotionPill}>
-                <Ionicons name="alert-circle-outline" size={20} color="#FF9800" />
+                <Ionicons name="alert-circle-outline" size={20} color={colors.accent} />
                 <Text style={styles.stateEmotionText}>
                   {selectedEmotions.size > 0
                     ? Array.from(selectedEmotions)[0]
@@ -1674,7 +2096,7 @@ export default function OnboardingScreen() {
                         style={[styles.chartBarFill, { height: userBarHeight }]}
                       >
                         <LinearGradient
-                          colors={["#FF9999", "#FF6B6B", "#FF4444", "#CC0000"]}
+                          colors={["#FF9999", colors.error, "#FF4444", "#CC0000"]}
                           start={{ x: 0.5, y: 1 }}
                           end={{ x: 0.5, y: 0 }}
                           style={{
@@ -1700,8 +2122,8 @@ export default function OnboardingScreen() {
                       >
                         <LinearGradient
                           colors={[
-                            "rgba(0, 212, 255, 0.2)",
-                            "rgba(0, 212, 255, 0.4)",
+                            colors.primaryLight,
+                            colors.primary,
                             "rgba(0, 212, 255, 0.6)",
                             "rgba(0, 212, 255, 0.8)",
                           ]}
@@ -1946,125 +2368,220 @@ export default function OnboardingScreen() {
           {step === "select-apps" && (
             <>
               <Text style={styles.title}>Which apps grab your attention?</Text>
-              <Text style={styles.description}>
-                Select the apps you reach for most—we&apos;ll add a{" "}
-                <Text style={styles.descriptionAccent}>gentle pause</Text>{" "}
-                before they open.
-              </Text>
-
-              {/* Category Filter Tabs */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoryScroll}
-                contentContainerStyle={styles.categoryScrollContent}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.categoryTab,
-                    selectedCategory === "suggested" &&
-                      styles.categoryTabSelected,
-                  ]}
-                  onPress={() => setSelectedCategory("suggested")}
-                >
-                  <Ionicons name="star-outline" size={16} color={selectedCategory === "suggested" ? colors.primary : colors.textSecondary} />
-                  <Text
-                    style={[
-                      styles.categoryTabLabel,
-                      selectedCategory === "suggested" &&
-                        styles.categoryTabLabelSelected,
-                    ]}
-                  >
-                    Suggested
+              {isIOSFamilyControlsFlow ? (
+                <>
+                  <Text style={styles.description}>
+                    Choose the apps or categories you want GentleWait to manage
+                    from Apple&apos;s secure Family Controls picker.
                   </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.categoryTab,
-                    selectedCategory === "all" && styles.categoryTabSelected,
-                  ]}
-                  onPress={() => setSelectedCategory("all")}
-                >
-                  <Ionicons name="list-outline" size={16} color={selectedCategory === "all" ? colors.primary : colors.textSecondary} />
-                  <Text
-                    style={[
-                      styles.categoryTabLabel,
-                      selectedCategory === "all" &&
-                        styles.categoryTabLabelSelected,
-                    ]}
-                  >
-                    All Apps
-                  </Text>
-                </TouchableOpacity>
-
-                {APP_CATEGORIES.slice(0, 6).map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryTab,
-                      selectedCategory === category.id &&
-                        styles.categoryTabSelected,
-                    ]}
-                    onPress={() => setSelectedCategory(category.id)}
-                  >
-                    <Ionicons name={category.icon as any} size={16} color={selectedCategory === category.id ? colors.primary : colors.textSecondary} />
-                    <Text
-                      style={[
-                        styles.categoryTabLabel,
-                        selectedCategory === category.id &&
-                          styles.categoryTabLabelSelected,
-                      ]}
-                    >
-                      {category.label.split(" ")[0]}
+                  {!currentSettings.premium && (
+                    <Text style={styles.selectedCount}>
+                      Free plan: up to {FREE_PROTECTED_APPS_LIMIT} individual
+                      iPhone apps. Categories and websites are Premium.
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              {/* Search Input */}
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search apps..."
-                placeholderTextColor={colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-
-              {/* Select All / Deselect All Button */}
-              {displayedApps.length > 0 && (
-                <TouchableOpacity
-                  style={styles.selectAllButton}
-                  onPress={handleToggleAllDisplayed}
-                >
-                  <Text style={styles.selectAllText}>
-                    {allDisplayedSelected
-                      ? `✓ Deselect All (${displayedApps.length})`
-                      : `Select All (${displayedApps.length})`}
+                  )}
+                  <View style={styles.permissionContainer}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                      <Ionicons name="phone-portrait-outline" size={18} color={colors.textSecondary} />
+                      <Text style={[styles.permissionText, { flex: 1 }]}>
+                        Apple shows the selector. GentleWait does not read your full installed app list.
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                      <Ionicons name="shield-checkmark-outline" size={18} color={colors.textSecondary} />
+                      <Text style={[styles.permissionText, { flex: 1 }]}>
+                        You can change this selection later from Settings.
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.iosPickerCard}>
+                    <View style={styles.iosPickerContent}>
+                      <Text style={styles.iosPickerEyebrow}>Apple picker</Text>
+                      <Text style={styles.iosPickerTitle}>
+                        Choose apps in Family Controls
+                      </Text>
+                      <Text style={styles.iosPickerDescription}>
+                        Tap anywhere below to open Apple&apos;s selector.
+                      </Text>
+                      <Text style={styles.selectedCount}>
+                        {getIOSSelectionSummary(iosFamilyActivitySelection)}
+                      </Text>
+                      {!currentSettings.premium &&
+                        exceedsFreeIOSSelectionLimit(
+                          iosFamilyActivitySelection,
+                          FREE_PROTECTED_APPS_LIMIT,
+                        ) && (
+                          <Text style={styles.descriptionSmall}>
+                            This selection is larger than the free iPhone plan.
+                            Upgrade to keep it.
+                          </Text>
+                        )}
+                    </View>
+                    {isIOSFamilyControlsAvailable() ? (
+                      <DeviceActivitySelectionView
+                        style={styles.iosSelectionView}
+                        familyActivitySelection={
+                          iosFamilyActivitySelection?.familyActivitySelection || null
+                        }
+                        headerText="Choose apps GentleWait should manage"
+                        footerText="You can update this later in Settings."
+                        onSelectionChange={(event) => {
+                          const nextSelection = event.nativeEvent;
+                          setIOSFamilyActivitySelection({
+                            familyActivitySelection:
+                              nextSelection.familyActivitySelection || "",
+                            applicationCount: nextSelection.applicationCount || 0,
+                            categoryCount: nextSelection.categoryCount || 0,
+                            webDomainCount: nextSelection.webDomainCount || 0,
+                            includeEntireCategory:
+                              nextSelection.includeEntireCategory || false,
+                            updatedAt: Date.now(),
+                          });
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                  {iosFamilyActivitySelection ? (
+                    <TouchableOpacity
+                      style={styles.selectAllButton}
+                      onPress={async () => {
+                        setIOSFamilyActivitySelection(null);
+                        await clearIOSFamilyControlsSelection();
+                      }}
+                    >
+                      <Text style={styles.selectAllText}>Clear selection</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.description}>
+                    Select the apps you reach for most-we&apos;ll add a{" "}
+                    <Text style={styles.descriptionAccent}>gentle pause</Text>{" "}
+                    before they open.
                   </Text>
-                </TouchableOpacity>
+                  {!currentSettings.premium && (
+                    <Text style={styles.selectedCount}>
+                      Free plan: protect up to {FREE_PROTECTED_APPS_LIMIT} apps.
+                    </Text>
+                  )}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoryScroll}
+                    contentContainerStyle={styles.categoryScrollContent}
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.categoryTab,
+                        selectedCategory === "suggested" &&
+                          styles.categoryTabSelected,
+                      ]}
+                      onPress={() => setSelectedCategory("suggested")}
+                    >
+                      <Ionicons name="star-outline" size={16} color={selectedCategory === "suggested" ? colors.primary : colors.textSecondary} />
+                      <Text
+                        style={[
+                          styles.categoryTabLabel,
+                          selectedCategory === "suggested" &&
+                            styles.categoryTabLabelSelected,
+                        ]}
+                      >
+                        Suggested
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.categoryTab,
+                        selectedCategory === "all" && styles.categoryTabSelected,
+                      ]}
+                      onPress={() => setSelectedCategory("all")}
+                    >
+                      <Ionicons name="list-outline" size={16} color={selectedCategory === "all" ? colors.primary : colors.textSecondary} />
+                      <Text
+                        style={[
+                          styles.categoryTabLabel,
+                          selectedCategory === "all" &&
+                            styles.categoryTabLabelSelected,
+                        ]}
+                      >
+                        All Apps
+                      </Text>
+                    </TouchableOpacity>
+
+                    {APP_CATEGORIES.slice(0, 6).map((category) => (
+                      <TouchableOpacity
+                        key={category.id}
+                        style={[
+                          styles.categoryTab,
+                          selectedCategory === category.id &&
+                            styles.categoryTabSelected,
+                        ]}
+                        onPress={() => setSelectedCategory(category.id)}
+                      >
+                        <Ionicons name={category.icon as any} size={16} color={selectedCategory === category.id ? colors.primary : colors.textSecondary} />
+                        <Text
+                          style={[
+                            styles.categoryTabLabel,
+                            selectedCategory === category.id &&
+                              styles.categoryTabLabelSelected,
+                          ]}
+                        >
+                          {category.label.split(" ")[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search apps..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+
+                  {displayedApps.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.selectAllButton}
+                      onPress={handleToggleAllDisplayed}
+                    >
+                      <Text style={styles.selectAllText}>
+                        {allDisplayedSelected
+                          ? `✓ Deselect All (${displayedApps.length})`
+                          : `Select All (${displayedApps.length})`}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.appList}>
+                    {displayedApps.length > 0 ? (
+                      displayedApps.map((app) => (
+                        <Checkbox
+                          key={app.packageName}
+                          label={`${app.label}`}
+                          checked={selectedAppSet.has(app.packageName)}
+                          onPress={() => handleAppToggle(app.packageName)}
+                        />
+                      ))
+                    ) : (
+                      <Text style={styles.description}>No apps found</Text>
+                    )}
+                  </View>
+
+                  <Text style={styles.selectedCount}>
+                    {selectedAppSet.size} app{selectedAppSet.size !== 1 ? "s" : ""}{" "}
+                    selected
+                  </Text>
+                  {!currentSettings.premium && hasReachedFreeAppLimit && (
+                    <Text style={styles.descriptionSmall}>
+                      You&apos;ve reached the free plan limit. Upgrade to protect more
+                      apps and unlock the AI Companion.
+                    </Text>
+                  )}
+                </>
               )}
-
-              {/* App List */}
-              <View style={styles.appList}>
-                {displayedApps.length > 0 ? (
-                  displayedApps.map((app) => (
-                    <Checkbox
-                      key={app.packageName}
-                      label={`${app.label}`}
-                      checked={selectedAppSet.has(app.packageName)}
-                      onPress={() => handleAppToggle(app.packageName)}
-                    />
-                  ))
-                ) : (
-                  <Text style={styles.description}>No apps found</Text>
-                )}
-              </View>
-
-              <Text style={styles.selectedCount}>
-                {selectedAppSet.size} app{selectedAppSet.size !== 1 ? "s" : ""}{" "}
-                selected
-              </Text>
             </>
           )}
 
@@ -2073,16 +2590,29 @@ export default function OnboardingScreen() {
               <Text style={styles.title}>One small step</Text>
               {permissionEnabled ? (
                 <Text style={styles.description}>
-                  Great! Accessibility permission is enabled. GentleWait can now
-                  help you pause.
+                  {isIOSFamilyControlsFlow
+                    ? "Family Controls is enabled. Your iPhone is ready for GentleWait protection."
+                    : "Great! Accessibility permission is enabled. GentleWait can now help you pause."}
                 </Text>
               ) : (
                 <Text style={styles.description}>
-                  To create that pause moment, GentleWait needs{" "}
-                  <Text style={styles.descriptionAccent}>
-                    accessibility access
-                  </Text>{" "}
-                  to know when you open an app.
+                  {isIOSFamilyControlsFlow ? (
+                    <>
+                      To manage selected apps on iPhone, GentleWait needs{" "}
+                      <Text style={styles.descriptionAccent}>
+                        Family Controls authorization
+                      </Text>
+                      .
+                    </>
+                  ) : (
+                    <>
+                      To create that pause moment, GentleWait needs{" "}
+                      <Text style={styles.descriptionAccent}>
+                        accessibility access
+                      </Text>{" "}
+                      to know when you open an app.
+                    </>
+                  )}
                 </Text>
               )}
 
@@ -2106,7 +2636,7 @@ export default function OnboardingScreen() {
                   style={[
                     styles.permissionContainer,
                     {
-                      backgroundColor: "rgba(16, 185, 129, 0.15)",
+                      backgroundColor: "rgba(141, 224, 186, 0.16)",
                       borderColor: colors.success,
                       borderWidth: 2,
                       marginTop: spacing.lg,
@@ -2134,7 +2664,9 @@ export default function OnboardingScreen() {
                       },
                     ]}
                   >
-                    GentleWait is ready to help you pause!
+                    {isIOSFamilyControlsFlow
+                      ? "GentleWait is ready to work with your Apple-managed selection."
+                      : "GentleWait is ready to help you pause!"}
                   </Text>
                 </View>
               ) : (
@@ -2147,9 +2679,8 @@ export default function OnboardingScreen() {
                   onPress={async () => {
                     if (Platform.OS === "android") {
                       try {
-                        const { GentleWaitModule } = NativeModules;
-                        if (GentleWaitModule) {
-                          await GentleWaitModule.openAccessibilitySettings();
+                        const granted = await requestServiceAuthorization();
+                        if (granted) {
                           Alert.alert(
                             "Enable GentleWait",
                             "Find 'GentleWait' in the list and turn it ON, then come back to the app.",
@@ -2173,32 +2704,28 @@ export default function OnboardingScreen() {
                       }
                     } else if (Platform.OS === "ios") {
                       try {
-                        const { GentleWaitModule } = NativeModules;
-                        if (
-                          GentleWaitModule?.requestFamilyControlsAuthorization
-                        ) {
-                          const granted =
-                            await GentleWaitModule.requestFamilyControlsAuthorization();
+                        if (!isIOSFamilyControlsAvailable()) {
+                          Alert.alert(
+                            "Not Available",
+                            "Family Controls is unavailable until the iOS native build includes the entitlement and extension targets.",
+                            [{ text: "OK" }],
+                          );
+                        } else {
+                          const granted = await requestServiceAuthorization();
                           if (granted) {
                             setPermissionEnabled(true);
                             Alert.alert(
                               "Success",
-                              "Family Controls authorized! GentleWait can now monitor your app usage.",
+                              "Family Controls authorized. You can now choose protected apps on iPhone.",
                               [{ text: "OK" }],
                             );
                           } else {
                             Alert.alert(
                               "Permission Denied",
-                              "Family Controls permission is required for GentleWait to work. You can enable it later in Settings.",
+                              "Family Controls permission is required for GentleWait to work on iPhone. You can enable it later in Settings.",
                               [{ text: "OK" }],
                             );
                           }
-                        } else {
-                          Alert.alert(
-                            "Not Available",
-                            "Family Controls is not available. Make sure you're running iOS 15+ and the native module is properly configured.",
-                            [{ text: "OK" }],
-                          );
                         }
                       } catch (error) {
                         console.error(

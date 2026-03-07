@@ -1,5 +1,5 @@
 /**
- * Glass Button Component - Liquid Glass styled buttons
+ * Liquid-glass button variants with softer accent treatment.
  */
 import {
   TouchableOpacity,
@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
+import { radius, spacing, typography, fonts, glassEffects } from "@/src/theme/theme";
 import { triggerLightImpact } from "@/src/utils/haptics";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
@@ -54,7 +54,7 @@ export function Button({
     if (iconSet === "material") {
       return (
         <MaterialCommunityIcons
-          name={iconName as any}
+          name={iconName as never}
           size={size}
           color={color}
           style={{ marginRight: spacing.sm }}
@@ -63,7 +63,7 @@ export function Button({
     }
     return (
       <Ionicons
-        name={iconName as any}
+        name={iconName as never}
         size={size}
         color={color}
         style={{ marginRight: spacing.sm }}
@@ -76,19 +76,21 @@ export function Button({
       <TouchableOpacity
         onPress={handlePress}
         disabled={disabled}
-        activeOpacity={0.8}
+        activeOpacity={0.88}
         style={[styles.buttonContainer, style]}
       >
         <LinearGradient
-          colors={["#00D4FF", "#0099CC", "#007ACC"]}
-          start={{ x: 0, y: 0 }}
+          colors={["rgba(189, 231, 255, 0.92)", colors.primary, colors.primaryDark]}
+          start={{ x: 0.04, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.primaryButton, disabled && styles.disabled]}
         >
           <View style={styles.primaryHighlight} />
           <View style={styles.labelRow}>
-            {renderIcon("#FFFFFF", 20)}
-            <Text style={[styles.primaryText, textStyle]}>{label}</Text>
+            {renderIcon(colors.textInverse, 19)}
+            <Text style={[styles.primaryText, { color: colors.textInverse }, textStyle]}>
+              {label}
+            </Text>
           </View>
         </LinearGradient>
       </TouchableOpacity>
@@ -100,55 +102,43 @@ export function Button({
       <TouchableOpacity
         onPress={handlePress}
         disabled={disabled}
-        activeOpacity={0.8}
+        activeOpacity={0.88}
         style={[styles.buttonContainer, style]}
       >
-        <View
-          style={[styles.glassButtonContainer, disabled && styles.disabled]}
-        >
-          <BlurView intensity={30} style={styles.glassBlur} tint="dark">
+        <View style={[styles.glassButtonContainer, disabled && styles.disabled]}>
+          <BlurView intensity={glassEffects.blur.medium} style={styles.glassBlur} tint="dark">
             <LinearGradient
-              colors={[
-                "rgba(255, 255, 255, 0.15)",
-                "rgba(255, 255, 255, 0.05)",
-              ]}
+              colors={[colors.glassFillStrong, colors.glassFill]}
               style={styles.glassGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
               <View style={styles.labelRow}>
-                {renderIcon(colors.text, 20)}
+                {renderIcon(colors.textPrimary, 18)}
                 <Text
-                  style={[
-                    styles.secondaryText,
-                    { color: colors.text },
-                    textStyle,
-                  ]}
+                  style={[styles.secondaryText, { color: colors.textPrimary }, textStyle]}
                 >
                   {label}
                 </Text>
               </View>
             </LinearGradient>
           </BlurView>
-          <View style={styles.glassBorder} pointerEvents="none" />
+          <View style={[styles.glassBorder, { borderColor: colors.glassStroke }]} pointerEvents="none" />
         </View>
       </TouchableOpacity>
     );
   }
 
-  // Ghost variant
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled}
-      activeOpacity={0.6}
+      activeOpacity={0.7}
       style={[styles.ghostButton, disabled && styles.disabled, style]}
     >
       <View style={styles.labelRow}>
         {renderIcon(colors.textSecondary, 18)}
-        <Text
-          style={[styles.ghostText, { color: colors.textSecondary }, textStyle]}
-        >
+        <Text style={[styles.ghostText, { color: colors.textSecondary }, textStyle]}>
           {label}
         </Text>
       </View>
@@ -162,32 +152,30 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   primaryButton: {
-    paddingVertical: spacing.md + 4,
+    paddingVertical: spacing.md + 3,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.button,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 56,
-    shadowColor: "#00D4FF",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    elevation: 10,
   },
   primaryHighlight: {
     position: "absolute",
     top: 0,
-    left: 20,
-    right: 20,
+    left: 18,
+    right: 18,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: "rgba(255, 255, 255, 0.56)",
     borderRadius: 1,
   },
   primaryText: {
     fontFamily: fonts.semiBold,
-    fontSize: typography.button.fontSize + 1,
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
+    fontSize: typography.button.fontSize,
+    letterSpacing: 0.2,
     textAlign: "center",
   },
   glassButtonContainer: {
@@ -199,7 +187,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   glassGradient: {
-    paddingVertical: spacing.md + 4,
+    paddingVertical: spacing.md + 3,
     paddingHorizontal: spacing.xl,
     alignItems: "center",
     justifyContent: "center",
@@ -209,12 +197,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: radius.button,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   secondaryText: {
     fontFamily: fonts.medium,
     fontSize: typography.button.fontSize,
-    letterSpacing: 0.3,
+    letterSpacing: 0.1,
     textAlign: "center",
   },
   ghostButton: {

@@ -22,7 +22,7 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const systemColorScheme = useColorScheme();
+  useColorScheme();
   // Default to dark mode for Liquid Glass design
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
 

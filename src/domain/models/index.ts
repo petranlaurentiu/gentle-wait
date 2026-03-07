@@ -8,6 +8,15 @@ export interface SelectedApp {
   iconUri?: string;
 }
 
+export interface IOSFamilyActivitySelection {
+  familyActivitySelection: string;
+  applicationCount: number;
+  categoryCount: number;
+  webDomainCount: number;
+  includeEntireCategory: boolean;
+  updatedAt: number;
+}
+
 export interface UserSettings {
   id: string; // singleton
   userName?: string;
@@ -17,6 +26,7 @@ export interface UserSettings {
   selectedApps: SelectedApp[];
   theme: "system" | "light" | "dark";
   premium: boolean;
+  iosFamilyActivitySelection?: IOSFamilyActivitySelection | null;
   createdAt: number;
   updatedAt: number;
   // Onboarding personalization data

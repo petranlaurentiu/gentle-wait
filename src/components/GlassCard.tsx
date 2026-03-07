@@ -1,11 +1,11 @@
 /**
- * Glass Card Component - Liquid Glass UI element with blur and light effects
+ * Glass card with softened liquid highlights and restrained ambient bloom.
  */
 import { StyleSheet, View, ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/src/theme/ThemeProvider";
-import { radius, spacing } from "@/src/theme/theme";
+import { glassEffects, radius, spacing } from "@/src/theme/theme";
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -25,57 +25,59 @@ export function GlassCard({
   const { colors } = useTheme();
 
   const blurIntensity = {
-    light: 20,
-    medium: 40,
-    strong: 60,
+    light: glassEffects.blur.light,
+    medium: glassEffects.blur.medium,
+    strong: glassEffects.blur.heavy,
   }[intensity];
 
   const glowColors = {
-    primary: ["rgba(0, 212, 255, 0.15)", "transparent"],
-    secondary: ["rgba(168, 85, 247, 0.15)", "transparent"],
-    accent: ["rgba(255, 107, 157, 0.15)", "transparent"],
+    primary: [colors.primaryLight, "transparent"],
+    secondary: [colors.secondaryLight, "transparent"],
+    accent: [colors.accentLight, "transparent"],
     none: ["transparent", "transparent"],
-  };
+  } as const;
 
   return (
     <View style={[styles.container, style]}>
-      {/* Glow effect behind card */}
       {glowColor !== "none" && (
         <LinearGradient
-          colors={glowColors[glowColor] as [string, string]}
+          colors={glowColors[glowColor]}
           style={styles.glowEffect}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
         />
       )}
 
-      {/* Glass card */}
       <View style={styles.glassContainer}>
         <BlurView intensity={blurIntensity} style={styles.blur} tint="dark">
-          {/* Inner highlight gradient */}
           <LinearGradient
-            colors={[
-              "rgba(255, 255, 255, 0.12)",
-              "rgba(255, 255, 255, 0.05)",
-              "rgba(255, 255, 255, 0.02)",
-            ]}
-            locations={[0, 0.3, 1]}
+            colors={[colors.glassFillStrong, colors.glassFill, "rgba(255,255,255,0.02)"]}
+            locations={[0, 0.38, 1]}
             style={styles.innerGradient}
-            start={{ x: 0, y: 0 }}
+            start={{ x: 0.08, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            {/* Top edge highlight */}
-            <View style={styles.topHighlight} />
-
-            {/* Content */}
-            <View style={[styles.content, noPadding && styles.noPadding]}>
-              {children}
-            </View>
+            <LinearGradient
+              colors={[colors.glassSpecular, "transparent"]}
+              start={{ x: 0.05, y: 0 }}
+              end={{ x: 0.8, y: 0.7 }}
+              style={styles.specularSweep}
+            />
+            <View style={[styles.topHighlight, { backgroundColor: colors.glassSpecular }]} />
+            <View style={[styles.content, noPadding && styles.noPadding]}>{children}</View>
           </LinearGradient>
         </BlurView>
 
-        {/* Border overlay */}
-        <View style={styles.borderOverlay} pointerEvents="none" />
+        <View
+          style={[
+            styles.borderOverlay,
+            {
+              borderColor: colors.glassStroke,
+              shadowColor: colors.glassShadowSoft,
+            },
+          ]}
+          pointerEvents="none"
+        />
       </View>
     </View>
   );
@@ -87,11 +89,12 @@ const styles = StyleSheet.create({
   },
   glowEffect: {
     position: "absolute",
-    top: -20,
-    left: 20,
-    right: 20,
-    height: 60,
+    top: -26,
+    left: 18,
+    right: 18,
+    height: 86,
     borderRadius: radius.glass,
+    opacity: 0.95,
   },
   glassContainer: {
     borderRadius: radius.glass,
@@ -103,15 +106,24 @@ const styles = StyleSheet.create({
   },
   innerGradient: {
     borderRadius: radius.glass,
+    minHeight: 1,
+  },
+  specularSweep: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "60%",
+    height: "58%",
+    opacity: 0.18,
   },
   topHighlight: {
     position: "absolute",
     top: 0,
-    left: 20,
-    right: 20,
+    left: 18,
+    right: 18,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 1,
+    opacity: 0.85,
   },
   content: {
     padding: spacing.lg,
@@ -123,6 +135,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: radius.glass,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
   },
 });

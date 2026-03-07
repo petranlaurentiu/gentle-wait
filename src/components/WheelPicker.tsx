@@ -48,8 +48,8 @@ export function WheelPicker({
       overlayItemStyle={[
         styles.overlay,
         {
-          borderColor: "rgba(0, 212, 255, 0.25)",
-          backgroundColor: "rgba(0, 212, 255, 0.12)",
+          borderColor: colors.glassStroke,
+          backgroundColor: colors.primaryLight,
         },
       ]}
       style={styles.picker}
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   picker: {
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "rgba(218, 228, 248, 0.08)",
   },
   itemText: {
     fontSize: 18,

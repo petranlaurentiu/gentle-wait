@@ -1,29 +1,150 @@
 /**
- * Native module bridge for GentleWait (iOS & Android)
- * 
- * Android: Uses Accessibility Service
- * iOS: Uses Family Controls + DeviceActivity
+ * Native platform bridge for app protection.
+ *
+ * Android uses the legacy GentleWait native module.
+ * iOS uses Apple's Family Controls via react-native-device-activity.
  */
 import { NativeModules, Platform } from "react-native";
+import {
+  AuthorizationStatus,
+  getAuthorizationStatus,
+  isAvailable as isDeviceActivityAvailable,
+  pollAuthorizationStatus,
+  requestAuthorization,
+  setFamilyActivitySelectionId,
+  stopMonitoring,
+  resetBlocks,
+  userDefaultsGet,
+  userDefaultsRemove,
+  userDefaultsSet,
+} from "react-native-device-activity";
+import type { IOSFamilyActivitySelection, SelectedApp } from "@/src/domain/models";
 
-const GentleWaitModule = NativeModules.GentleWaitModule || null;
+const GentleWaitModule = NativeModules.GentleWaitModule ?? null;
 
-/**
- * Check if the app interception service is authorized/enabled
- * - Android: Checks Accessibility Service status
- * - iOS: Checks Family Controls authorization status
- */
-export async function isServiceEnabled(): Promise<boolean> {
-  if (!GentleWaitModule) {
+const IOS_SELECTION_ID = "gentlewait.protected-selection";
+const IOS_SELECTION_METADATA_KEY = "gentlewait.protected-selection.metadata";
+const FAMILY_ACTIVITY_SELECTION_IDS_KEY = "familyActivitySelectionIds";
+
+type PendingInterception = {
+  appPackage: string;
+  appLabel: string;
+  ts: number;
+};
+
+const isAndroidNativeModuleAvailable = () => Boolean(GentleWaitModule);
+
+export function isIOSFamilyControlsAvailable(): boolean {
+  return Platform.OS === "ios" && isDeviceActivityAvailable();
+}
+
+export function getIOSFamilyControlsSelectionId(): string {
+  return IOS_SELECTION_ID;
+}
+
+export function getIOSFamilyControlsSelection(): IOSFamilyActivitySelection | null {
+  if (!isIOSFamilyControlsAvailable()) {
+    return null;
+  }
+
+  const metadata = userDefaultsGet<IOSFamilyActivitySelection>(
+    IOS_SELECTION_METADATA_KEY,
+  );
+
+  if (!metadata?.familyActivitySelection) {
+    return null;
+  }
+
+  return metadata;
+}
+
+export async function saveIOSFamilyControlsSelection(
+  selection: IOSFamilyActivitySelection,
+): Promise<void> {
+  if (!isIOSFamilyControlsAvailable()) {
+    return;
+  }
+
+  setFamilyActivitySelectionId({
+    id: IOS_SELECTION_ID,
+    familyActivitySelection: selection.familyActivitySelection,
+  });
+
+  userDefaultsSet(IOS_SELECTION_METADATA_KEY, selection);
+}
+
+export async function clearIOSFamilyControlsSelection(): Promise<void> {
+  if (!isIOSFamilyControlsAvailable()) {
+    return;
+  }
+
+  const currentSelectionIds =
+    userDefaultsGet<Record<string, string>>(FAMILY_ACTIVITY_SELECTION_IDS_KEY) ?? {};
+
+  if (currentSelectionIds[IOS_SELECTION_ID]) {
+    const { [IOS_SELECTION_ID]: _removed, ...remaining } = currentSelectionIds;
+    userDefaultsSet(FAMILY_ACTIVITY_SELECTION_IDS_KEY, remaining);
+  }
+
+  userDefaultsRemove(IOS_SELECTION_METADATA_KEY);
+
+  stopMonitoring();
+  resetBlocks("clearIOSFamilyControlsSelection");
+}
+
+export function getIOSSelectionSummary(
+  selection: IOSFamilyActivitySelection | null | undefined,
+): string {
+  if (!selection) {
+    return "No apps selected yet.";
+  }
+
+  const parts = [
+    selection.applicationCount > 0
+      ? `${selection.applicationCount} app${selection.applicationCount === 1 ? "" : "s"}`
+      : null,
+    selection.categoryCount > 0
+      ? `${selection.categoryCount} categor${selection.categoryCount === 1 ? "y" : "ies"}`
+      : null,
+    selection.webDomainCount > 0
+      ? `${selection.webDomainCount} website${selection.webDomainCount === 1 ? "" : "s"}`
+      : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" • ") : "Selection saved in Family Controls.";
+}
+
+export function exceedsFreeIOSSelectionLimit(
+  selection: IOSFamilyActivitySelection | null | undefined,
+  freeLimit: number,
+): boolean {
+  if (!selection) {
     return false;
   }
 
+  return (
+    selection.applicationCount > freeLimit ||
+    selection.categoryCount > 0 ||
+    selection.webDomainCount > 0
+  );
+}
+
+export async function isServiceEnabled(): Promise<boolean> {
   try {
     if (Platform.OS === "android") {
-      return await GentleWaitModule.isAccessibilityServiceEnabled();
-    } else if (Platform.OS === "ios") {
-      return await GentleWaitModule.isFamilyControlsAuthorized();
+      return Boolean(
+        isAndroidNativeModuleAvailable() &&
+          (await GentleWaitModule.isAccessibilityServiceEnabled()),
+      );
     }
+
+    if (Platform.OS === "ios") {
+      return (
+        isIOSFamilyControlsAvailable() &&
+        getAuthorizationStatus() === AuthorizationStatus.approved
+      );
+    }
+
     return false;
   } catch (error) {
     console.error("[NativeService] Error checking service status:", error);
@@ -31,24 +152,27 @@ export async function isServiceEnabled(): Promise<boolean> {
   }
 }
 
-/**
- * Request authorization for the app interception service
- * - Android: Opens Accessibility Settings
- * - iOS: Requests Family Controls authorization
- */
 export async function requestServiceAuthorization(): Promise<boolean> {
-  if (!GentleWaitModule) {
-    console.warn("[NativeService] GentleWaitModule not available");
-    return false;
-  }
-
   try {
     if (Platform.OS === "android") {
+      if (!isAndroidNativeModuleAvailable()) {
+        return false;
+      }
+
       await GentleWaitModule.openAccessibilitySettings();
-      return true; // User needs to manually enable
-    } else if (Platform.OS === "ios") {
-      return await GentleWaitModule.requestFamilyControlsAuthorization();
+      return true;
     }
+
+    if (Platform.OS === "ios") {
+      if (!isIOSFamilyControlsAvailable()) {
+        return false;
+      }
+
+      await requestAuthorization("individual");
+      const status = await pollAuthorizationStatus();
+      return status === AuthorizationStatus.approved;
+    }
+
     return false;
   } catch (error) {
     console.error("[NativeService] Error requesting authorization:", error);
@@ -56,140 +180,88 @@ export async function requestServiceAuthorization(): Promise<boolean> {
   }
 }
 
-/**
- * Legacy Android-specific method (deprecated, use isServiceEnabled instead)
- */
-export async function isAccessibilityServiceEnabled(): Promise<boolean> {
-  return isServiceEnabled();
-}
-
-/**
- * Legacy Android-specific method (deprecated, use requestServiceAuthorization instead)
- */
-export async function openAccessibilitySettings(): Promise<void> {
-  await requestServiceAuthorization();
-}
-
-/**
- * Save selected apps to native storage (synced with React Native store)
- * Works on both iOS and Android
- */
-export async function setSelectedApps(
-  apps: { packageName: string; label: string }[]
-): Promise<void> {
-  if (!GentleWaitModule) {
-    console.log("[NativeService] GentleWaitModule not available");
+export async function setSelectedApps(apps: SelectedApp[]): Promise<void> {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return;
   }
 
   try {
-    // Extract just package names (bundle IDs on iOS) for native module
-    const packageNames = apps.map((app) => app.packageName);
-    console.log(
-      "[NativeService] Syncing selected apps to native:",
-      packageNames
-    );
-    await GentleWaitModule.setSelectedApps(packageNames);
-    console.log("[NativeService] Successfully synced selected apps");
+    await GentleWaitModule.setSelectedApps(apps.map((app) => app.packageName));
   } catch (error) {
-    console.error("[NativeService] Error saving selected apps:", error);
+    console.error("[NativeService] Error syncing selected apps:", error);
   }
 }
 
-/**
- * Get selected apps from native storage
- * Works on both iOS and Android
- */
-export async function getSelectedApps(): Promise<
-  { packageName: string; label: string }[]
-> {
-  if (!GentleWaitModule) {
+export async function getSelectedApps(): Promise<SelectedApp[]> {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return [];
   }
 
   try {
     const json = await GentleWaitModule.getSelectedApps();
-    return JSON.parse(json);
+    return JSON.parse(json) as SelectedApp[];
   } catch (error) {
     console.error("[NativeService] Error getting selected apps:", error);
     return [];
   }
 }
 
-/**
- * Get pending app interception from native service
- * Works on both iOS (DeviceActivity) and Android (Accessibility Service)
- */
-export async function getPendingInterception(): Promise<{
-  appPackage: string;
-  appLabel: string;
-  ts: number;
-} | null> {
-  if (!GentleWaitModule) {
+export async function clearProtectedApps(): Promise<void> {
+  if (Platform.OS === "ios") {
+    await clearIOSFamilyControlsSelection();
+    return;
+  }
+
+  if (Platform.OS === "android") {
+    await setSelectedApps([]);
+  }
+}
+
+export async function getPendingInterception(): Promise<PendingInterception | null> {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return null;
   }
 
   try {
-    return await GentleWaitModule.getPendingInterception();
+    return (await GentleWaitModule.getPendingInterception()) as PendingInterception | null;
   } catch (error) {
     console.error("[NativeService] Error getting pending interception:", error);
     return null;
   }
 }
 
-/**
- * Mark an app as handled (sets cooldown timer)
- * Works on both iOS and Android
- */
 export async function markAppHandled(packageName: string): Promise<void> {
-  if (!GentleWaitModule) {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return;
   }
 
   try {
     await GentleWaitModule.markAppHandled(packageName);
-    console.log("[NativeService] Marked app as handled:", packageName);
   } catch (error) {
-    console.error("[NativeService] Error marking app as handled:", error);
+    console.error("[NativeService] Error marking app handled:", error);
   }
 }
 
-/**
- * Set the cooldown duration (time before an app can be intercepted again)
- * Synced to native SharedPreferences (Android) / UserDefaults (iOS)
- */
 export async function setCooldownDuration(minutes: number): Promise<void> {
-  if (!GentleWaitModule) {
-    console.log("[NativeService] GentleWaitModule not available");
+  if (!isAndroidNativeModuleAvailable()) {
     return;
   }
 
   try {
-    const durationMs = minutes * 60 * 1000;
-    await GentleWaitModule.setCooldownDuration(durationMs);
-    console.log("[NativeService] Set cooldown duration:", minutes, "min");
+    await GentleWaitModule.setCooldownDuration(minutes * 60 * 1000);
   } catch (error) {
     console.error("[NativeService] Error setting cooldown duration:", error);
   }
 }
 
-/**
- * Launch an app by package name (Android only)
- * iOS does not support launching apps by bundle ID from third-party apps
- */
 export async function launchApp(packageName: string): Promise<boolean> {
-  if (!GentleWaitModule) {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return false;
   }
 
   try {
-    if (Platform.OS === "android") {
-      await GentleWaitModule.launchApp(packageName);
-      return true;
-    } else {
-      console.warn("[NativeService] launchApp is not supported on iOS");
-      return false;
-    }
+    await GentleWaitModule.launchApp(packageName);
+    return true;
   } catch (error) {
     console.error("[NativeService] Error launching app:", error);
     return false;

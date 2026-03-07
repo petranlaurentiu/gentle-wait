@@ -1,7 +1,6 @@
 /**
- * Design tokens and theme configuration for GentleWait
- * Liquid Glass Design System - iOS 26 inspired
- * Typography: Outfit font family
+ * Design tokens and theme configuration for GentleWait.
+ * Soft liquid-glass system with a dark-first premium palette.
  */
 
 export const spacing = {
@@ -21,10 +20,6 @@ export const radius = {
   sm: 12,
 } as const;
 
-/**
- * Font family definitions
- * Using Outfit - a geometric sans-serif with excellent readability
- */
 export const fonts = {
   thin: "Outfit-Thin",
   extraLight: "Outfit-ExtraLight",
@@ -35,202 +30,184 @@ export const fonts = {
   bold: "Outfit-Bold",
 } as const;
 
-/**
- * Typography scale with improved hierarchy
- * All text uses Outfit font family for consistency
- */
 export const typography = {
-  // Display - for large hero numbers (timers, stats)
   display: {
-    fontSize: 72,
+    fontSize: 60,
     fontFamily: fonts.thin,
-    lineHeight: 80,
-    letterSpacing: -3,
+    lineHeight: 66,
+    letterSpacing: -2.6,
   },
-  // Hero - for main titles on hero sections
   hero: {
-    fontSize: 40,
-    fontFamily: fonts.extraLight,
-    lineHeight: 48,
-    letterSpacing: -0.5,
+    fontSize: 38,
+    fontFamily: fonts.light,
+    lineHeight: 44,
+    letterSpacing: -1.1,
   },
-  // Title - for screen titles and section headers
+  screenTitle: {
+    fontSize: 31,
+    fontFamily: fonts.semiBold,
+    lineHeight: 36,
+    letterSpacing: -0.7,
+  },
   title: {
     fontSize: 28,
-    fontFamily: fonts.light,
-    lineHeight: 36,
-    letterSpacing: 0,
+    fontFamily: fonts.medium,
+    lineHeight: 34,
+    letterSpacing: -0.4,
   },
-  // Heading - for card titles and important labels
-  heading: {
-    fontSize: 20,
+  sectionTitle: {
+    fontSize: 21,
     fontFamily: fonts.medium,
     lineHeight: 28,
-    letterSpacing: 0.2,
+    letterSpacing: -0.2,
   },
-  // Body Large - for important body text
+  heading: {
+    fontSize: 18,
+    fontFamily: fonts.medium,
+    lineHeight: 24,
+    letterSpacing: 0,
+  },
   bodyLarge: {
     fontSize: 17,
     fontFamily: fonts.regular,
-    lineHeight: 26,
-    letterSpacing: 0.1,
+    lineHeight: 25,
+    letterSpacing: 0,
   },
-  // Body - standard body text
   body: {
     fontSize: 15,
     fontFamily: fonts.regular,
-    lineHeight: 24,
-    letterSpacing: 0.1,
+    lineHeight: 22,
+    letterSpacing: 0,
   },
-  // Button - for button labels
   button: {
     fontSize: 16,
     fontFamily: fonts.medium,
-    lineHeight: 24,
-    letterSpacing: 0.3,
+    lineHeight: 20,
+    letterSpacing: 0.1,
   },
-  // Label - for form labels and small headers
-  label: {
-    fontSize: 13,
+  eyebrow: {
+    fontSize: 12,
     fontFamily: fonts.semiBold,
-    lineHeight: 18,
-    letterSpacing: 1.2,
+    lineHeight: 16,
+    letterSpacing: 0.9,
     textTransform: "uppercase" as const,
   },
-  // Caption - for helper text and timestamps
+  label: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    lineHeight: 18,
+    letterSpacing: 0.5,
+  },
   caption: {
     fontSize: 13,
     fontFamily: fonts.regular,
     lineHeight: 18,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
-  // Small - for fine print
   small: {
     fontSize: 11,
     fontFamily: fonts.regular,
-    lineHeight: 16,
-    letterSpacing: 0.2,
+    lineHeight: 15,
+    letterSpacing: 0,
   },
-  // Legacy aliases for backwards compatibility
   prompt: {
     fontSize: 17,
     fontFamily: fonts.regular,
-    lineHeight: 26,
+    lineHeight: 25,
   },
   secondary: {
     fontSize: 15,
     fontFamily: fonts.regular,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 } as const;
 
-// Liquid Glass Color Palette
+const liquidPalette = {
+  bg: "#0F1724",
+  bgElevated: "#162033",
+  surface: "rgba(224, 232, 255, 0.08)",
+  surfaceElevated: "rgba(224, 232, 255, 0.12)",
+  surfaceGlass: "rgba(235, 242, 255, 0.16)",
+  glassFill: "rgba(218, 228, 248, 0.12)",
+  glassFillStrong: "rgba(228, 236, 252, 0.18)",
+  glassStroke: "rgba(236, 244, 255, 0.16)",
+  glassSpecular: "rgba(255, 255, 255, 0.34)",
+  glassShadowSoft: "rgba(4, 9, 20, 0.34)",
+  textPrimary: "#F5F7FB",
+  textSecondary: "rgba(226, 232, 240, 0.78)",
+  textTertiary: "rgba(226, 232, 240, 0.56)",
+  textInverse: "#0F1724",
+  primary: "#8FD6FF",
+  primaryLight: "rgba(143, 214, 255, 0.30)",
+  primaryDark: "#58BDEB",
+  secondary: "#7EE6C6",
+  secondaryLight: "rgba(126, 230, 198, 0.28)",
+  accent: "#FFC9A9",
+  accentLight: "rgba(255, 201, 169, 0.28)",
+  border: "rgba(233, 240, 255, 0.12)",
+  glassBorder: "rgba(236, 244, 255, 0.14)",
+  glassHighlight: "rgba(255, 255, 255, 0.22)",
+  glassShadow: "rgba(0, 0, 0, 0.24)",
+  gradientStart: "#0F1724",
+  gradientMid1: "#162033",
+  gradientMid2: "#1B2840",
+  gradientEnd: "#0C1422",
+  gradientAccent1: "rgba(143, 214, 255, 0.65)",
+  gradientAccent2: "rgba(126, 230, 198, 0.42)",
+  gradientAccent3: "rgba(255, 201, 169, 0.34)",
+  success: "#8DE0BA",
+  error: "#F2A6A0",
+  warning: "#F4C98A",
+  overlay: "rgba(5, 10, 20, 0.64)",
+} as const;
+
 export const colors = {
   light: {
-    // Base colors
-    bg: "#0A0E1A",
-    surface: "rgba(255, 255, 255, 0.08)",
-    surfaceGlass: "rgba(255, 255, 255, 0.12)",
-    text: "#FFFFFF",
-    textSecondary: "rgba(255, 255, 255, 0.7)",
-    textMuted: "rgba(255, 255, 255, 0.5)",
-
-    // Liquid Glass accent colors
-    primary: "#00D4FF",
-    primaryLight: "rgba(0, 212, 255, 0.3)",
-    primaryDark: "#0099CC",
-    secondary: "#A855F7",
-    secondaryLight: "rgba(168, 85, 247, 0.3)",
-    accent: "#FF6B9D",
-    accentLight: "rgba(255, 107, 157, 0.3)",
-
-    // Glass effects
-    glassBorder: "rgba(255, 255, 255, 0.15)",
-    glassHighlight: "rgba(255, 255, 255, 0.25)",
-    glassShadow: "rgba(0, 0, 0, 0.3)",
-
-    // Gradient colors for mesh background
-    gradientStart: "#0A0E1A",
-    gradientMid1: "#1A1F3A",
-    gradientMid2: "#0D1525",
-    gradientEnd: "#050810",
-    gradientAccent1: "#00D4FF",
-    gradientAccent2: "#A855F7",
-    gradientAccent3: "#FF6B9D",
-
-    // Semantic
-    border: "rgba(255, 255, 255, 0.1)",
-    success: "#10B981",
-    error: "#F87171",
-    warning: "#FBBF24",
-    overlay: "rgba(0, 0, 0, 0.6)",
+    ...liquidPalette,
+    text: liquidPalette.textPrimary,
+    textMuted: liquidPalette.textTertiary,
   },
   dark: {
-    // Same as light for this dark-first design
-    bg: "#0A0E1A",
-    surface: "rgba(255, 255, 255, 0.08)",
-    surfaceGlass: "rgba(255, 255, 255, 0.12)",
-    text: "#FFFFFF",
-    textSecondary: "rgba(255, 255, 255, 0.7)",
-    textMuted: "rgba(255, 255, 255, 0.5)",
-
-    primary: "#00D4FF",
-    primaryLight: "rgba(0, 212, 255, 0.3)",
-    primaryDark: "#0099CC",
-    secondary: "#A855F7",
-    secondaryLight: "rgba(168, 85, 247, 0.3)",
-    accent: "#FF6B9D",
-    accentLight: "rgba(255, 107, 157, 0.3)",
-
-    glassBorder: "rgba(255, 255, 255, 0.15)",
-    glassHighlight: "rgba(255, 255, 255, 0.25)",
-    glassShadow: "rgba(0, 0, 0, 0.3)",
-
-    gradientStart: "#0A0E1A",
-    gradientMid1: "#1A1F3A",
-    gradientMid2: "#0D1525",
-    gradientEnd: "#050810",
-    gradientAccent1: "#00D4FF",
-    gradientAccent2: "#A855F7",
-    gradientAccent3: "#FF6B9D",
-
-    border: "rgba(255, 255, 255, 0.1)",
-    success: "#34D399",
-    error: "#F87171",
-    warning: "#FBBF24",
-    overlay: "rgba(0, 0, 0, 0.6)",
+    ...liquidPalette,
+    text: liquidPalette.textPrimary,
+    textMuted: liquidPalette.textTertiary,
   },
 } as const;
 
 export const glassEffects = {
   blur: {
-    light: 20,
-    medium: 40,
+    light: 28,
+    medium: 42,
     heavy: 60,
   },
   opacity: {
-    subtle: 0.05,
+    subtle: 0.06,
     light: 0.1,
-    medium: 0.15,
-    strong: 0.25,
+    medium: 0.16,
+    strong: 0.24,
   },
 } as const;
 
 export const shadows = {
-  sm: "0 2px 8px rgba(0, 0, 0, 0.15)",
-  md: "0 8px 24px rgba(0, 0, 0, 0.2)",
-  lg: "0 16px 48px rgba(0, 0, 0, 0.25)",
+  sm: "0 4px 14px rgba(5, 10, 20, 0.16)",
+  md: "0 14px 32px rgba(5, 10, 20, 0.22)",
+  lg: "0 24px 54px rgba(5, 10, 20, 0.28)",
   glow: {
-    primary: "0 0 30px rgba(0, 212, 255, 0.4)",
-    secondary: "0 0 30px rgba(168, 85, 247, 0.4)",
-    accent: "0 0 30px rgba(255, 107, 157, 0.4)",
+    primary: "0 0 28px rgba(143, 214, 255, 0.24)",
+    secondary: "0 0 28px rgba(126, 230, 198, 0.20)",
+    accent: "0 0 28px rgba(255, 201, 169, 0.18)",
   },
 } as const;
 
 export const animation = {
-  screenFade: 300,
-  breathingCycle: 8000, // 8s total (4 inhale + 4 exhale)
-  breathePhase: 4000, // 4s per phase
+  screenFade: 420,
+  breathingCycle: 8000,
+  breathePhase: 4000,
+  enterSoft: 380,
+  enterLift: 460,
+  glassShift: 9000,
+  specularSweep: 2200,
+  pressScale: 140,
 } as const;
 
 export type Theme = typeof colors.light;

@@ -23,20 +23,18 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
       gap: spacing.md,
       paddingVertical: spacing.md + 2,
       paddingHorizontal: spacing.lg,
-      backgroundColor: checked
-        ? "rgba(0, 212, 255, 0.15)"
-        : "rgba(255, 255, 255, 0.08)",
+      backgroundColor: checked ? colors.primaryLight : colors.glassFill,
       borderRadius: radius.button,
       marginBottom: spacing.sm,
       borderWidth: 1,
-      borderColor: checked ? colors.primary : "rgba(255, 255, 255, 0.1)",
+      borderColor: checked ? colors.primary : colors.glassStroke,
     },
     checkbox: {
       width: 22,
       height: 22,
       borderRadius: 6,
       borderWidth: 2,
-      borderColor: checked ? colors.primary : "rgba(255, 255, 255, 0.3)",
+      borderColor: checked ? colors.primary : colors.textTertiary,
       backgroundColor: checked ? colors.primary : "transparent",
       justifyContent: "center",
       alignItems: "center",

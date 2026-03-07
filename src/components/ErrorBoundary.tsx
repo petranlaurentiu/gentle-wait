@@ -58,7 +58,7 @@ function ErrorFallback({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: "#0A0E1A", // colors.dark.bg
+      backgroundColor: "#0F1724",
       justifyContent: "center",
       alignItems: "center",
       padding: spacing.lg,
@@ -74,7 +74,7 @@ function ErrorFallback({
     title: {
       fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
-      color: "#F87171", // colors.error
+      color: "#F2A6A0",
       marginBottom: spacing.md,
       textAlign: "center",
     },
@@ -87,7 +87,7 @@ function ErrorFallback({
       lineHeight: 20,
     },
     errorBox: {
-      backgroundColor: "rgba(255, 255, 255, 0.1)", // colors.border
+      backgroundColor: "rgba(218, 228, 248, 0.12)",
       borderRadius: 8,
       padding: spacing.md,
       marginBottom: spacing.lg,
@@ -100,7 +100,7 @@ function ErrorFallback({
       fontFamily: "Courier New",
     },
     button: {
-      backgroundColor: "#00D4FF", // colors.primary
+      backgroundColor: "#8FD6FF",
       borderRadius: 12,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
@@ -108,7 +108,7 @@ function ErrorFallback({
     },
     buttonText: {
       fontFamily: fonts.medium,
-      color: "#0A0E1A", // colors.bg
+      color: "#0F1724",
       fontSize: typography.button.fontSize,
       textAlign: "center",
     },
@@ -117,7 +117,7 @@ function ErrorFallback({
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Ionicons name="warning-outline" size={64} color="#F87171" style={{ marginBottom: spacing.lg }} />
+        <Ionicons name="warning-outline" size={64} color="#F2A6A0" style={{ marginBottom: spacing.lg }} />
         <Text style={styles.title}>Something Went Wrong</Text>
         <Text style={styles.message}>
           An unexpected error occurred. Try refreshing or restarting the app.

@@ -1,26 +1,34 @@
 /**
- * Typography Components - Pre-styled text components with Outfit font
- * Ensures consistent typography throughout the app
+ * Typography components backed by the shared liquid-glass type scale.
  */
-import { Text as RNText, TextStyle, TextProps } from "react-native";
-import { typography, fonts } from "@/src/theme/theme";
+import { Text as RNText, TextProps, TextStyle } from "react-native";
+import { fonts, typography } from "@/src/theme/theme";
 import { useTheme } from "@/src/theme/ThemeProvider";
 
 type TypographyVariant =
   | "display"
   | "hero"
+  | "screenTitle"
   | "title"
+  | "sectionTitle"
   | "heading"
   | "bodyLarge"
   | "body"
   | "button"
+  | "eyebrow"
   | "label"
   | "caption"
   | "small";
 
 interface TypographyProps extends TextProps {
   variant?: TypographyVariant;
-  color?: "primary" | "secondary" | "muted" | "accent" | "default";
+  color?:
+    | "default"
+    | "primary"
+    | "secondary"
+    | "tertiary"
+    | "accent"
+    | "inverse";
   align?: "left" | "center" | "right";
   children: React.ReactNode;
   textTransform?: "uppercase" | "lowercase" | "capitalize" | "none";
@@ -30,7 +38,7 @@ export function Text({
   variant = "body",
   color = "default",
   align = "left",
-  textTransform = "none",
+  textTransform,
   style,
   children,
   ...props
@@ -38,11 +46,12 @@ export function Text({
   const { colors } = useTheme();
 
   const colorMap = {
-    default: colors.text,
+    default: colors.textPrimary,
     primary: colors.primary,
     secondary: colors.textSecondary,
-    muted: colors.textMuted,
+    tertiary: colors.textTertiary,
     accent: colors.accent,
+    inverse: colors.textInverse,
   };
 
   const variantStyle = typography[variant];
@@ -54,9 +63,8 @@ export function Text({
     letterSpacing: variantStyle.letterSpacing,
     color: colorMap[color],
     textAlign: align,
-    ...(textTransform && {
-      textTransform: textTransform,
-    }),
+    textTransform:
+      textTransform ?? ("textTransform" in variantStyle ? variantStyle.textTransform : undefined),
   };
 
   return (
@@ -66,44 +74,23 @@ export function Text({
   );
 }
 
-/**
- * Heading component - convenience wrapper for title-level text
- */
-export function Heading({
-  children,
-  style,
-  ...props
-}: Omit<TypographyProps, "variant">) {
+export function Heading({ children, style, ...props }: Omit<TypographyProps, "variant">) {
   return (
-    <Text variant="title" {...props} style={style}>
+    <Text variant="screenTitle" {...props} style={style}>
       {children}
     </Text>
   );
 }
 
-/**
- * Label component - for form labels and section headers
- */
-export function Label({
-  children,
-  style,
-  ...props
-}: Omit<TypographyProps, "variant">) {
+export function Label({ children, style, ...props }: Omit<TypographyProps, "variant">) {
   return (
-    <Text variant="label" color="secondary" {...props} style={style}>
+    <Text variant="eyebrow" color="secondary" {...props} style={style}>
       {children}
     </Text>
   );
 }
 
-/**
- * DisplayNumber component - for large stat numbers
- */
-export function DisplayNumber({
-  children,
-  style,
-  ...props
-}: Omit<TypographyProps, "variant">) {
+export function DisplayNumber({ children, style, ...props }: Omit<TypographyProps, "variant">) {
   return (
     <Text variant="display" color="primary" {...props} style={style}>
       {children}

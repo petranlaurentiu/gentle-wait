@@ -3,6 +3,7 @@
  */
 import { create } from 'zustand';
 import { UserSettings, SelectedApp, InterceptionEvent } from '@/src/domain/models';
+import type { BillingPackage } from '@/src/services/billing';
 import { mmkvStorage } from './mmkv';
 import * as nativeService from '@/src/services/native';
 
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   selectedApps: [],
   theme: 'system',
   premium: false,
+  iosFamilyActivitySelection: null,
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
@@ -35,6 +37,10 @@ interface AppStore {
   // UI state
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  billingAvailable: boolean;
+  billingPackages: BillingPackage[];
+  setBillingAvailable: (available: boolean) => void;
+  setBillingPackages: (packages: BillingPackage[]) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -123,5 +129,16 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setIsLoading: (loading) => {
     set({ isLoading: loading });
+  },
+
+  billingAvailable: false,
+  billingPackages: [],
+
+  setBillingAvailable: (available) => {
+    set({ billingAvailable: available });
+  },
+
+  setBillingPackages: (packages) => {
+    set({ billingPackages: packages });
   },
 }));

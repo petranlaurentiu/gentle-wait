@@ -5,7 +5,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, radius } from "@/src/theme/theme";
+import { spacing, typography } from "@/src/theme/theme";
 import { Button } from "./Button";
 
 interface EmptyStateProps {

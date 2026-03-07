@@ -2,10 +2,12 @@
  * AI Assistant Screen
  * Powered by OpenRouter - Your mindful companion
  */
+import { Button } from "@/src/components/Button";
 import {
   getRandomAffirmation,
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
+import { PRICING } from "@/src/constants/monetization";
 import {
   ChatMessage,
   sendMessage,
@@ -59,6 +61,10 @@ export default function AssistantScreen() {
 
   // Load user context and set welcome message on mount
   useEffect(() => {
+    if (!settings.premium) {
+      return;
+    }
+
     async function loadContext() {
       try {
         // Get stats
@@ -365,7 +371,125 @@ export default function AssistantScreen() {
       fontSize: typography.body.fontSize,
       color: colors.textMuted,
     },
+    lockedWrap: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      justifyContent: "center",
+      gap: spacing.lg,
+    },
+    lockedCard: {
+      gap: spacing.lg,
+    },
+    lockedIconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primaryLight,
+      alignSelf: "center",
+    },
+    lockedTextGroup: {
+      gap: spacing.sm,
+      alignItems: "center",
+    },
+    lockedTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.sectionTitle.fontSize,
+      lineHeight: typography.sectionTitle.lineHeight,
+      color: colors.text,
+      textAlign: "center",
+    },
+    lockedDescription: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    lockedFeatureList: {
+      gap: spacing.sm,
+    },
+    lockedFeatureRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "flex-start",
+    },
+    lockedFeatureText: {
+      flex: 1,
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+    },
+    lockedFooter: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.primary,
+      textAlign: "center",
+    },
   });
+
+  if (!settings.premium) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.title}>AI Companion</Text>
+          </View>
+        </View>
+
+        <View style={styles.lockedWrap}>
+          <View style={[styles.messageBubble, styles.assistantBubble, styles.lockedCard]}>
+            <View style={styles.lockedIconWrap}>
+              <Ionicons name="sparkles-outline" size={28} color={colors.primary} />
+            </View>
+
+            <View style={styles.lockedTextGroup}>
+              <Text style={styles.lockedTitle}>Premium guided reflection</Text>
+              <Text style={styles.lockedDescription}>
+                The AI Companion is a premium feature so the core app can stay
+                free while covering live model costs.
+              </Text>
+            </View>
+
+            <View style={styles.lockedFeatureList}>
+              <View style={styles.lockedFeatureRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+                <Text style={styles.lockedFeatureText}>
+                  Personalized coaching based on your pauses, goals, and journal history.
+                </Text>
+              </View>
+              <View style={styles.lockedFeatureRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+                <Text style={styles.lockedFeatureText}>
+                  Unlimited protected apps and richer support when focus slips.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.lockedFooter}>
+              Premium starts at {PRICING.monthly} or {PRICING.yearly}.
+            </Text>
+          </View>
+
+          <Button
+            label="View Premium"
+            onPress={() => router.push("/paywall")}
+            variant="primary"
+          />
+          <Button label="Back" onPress={() => router.back()} variant="ghost" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

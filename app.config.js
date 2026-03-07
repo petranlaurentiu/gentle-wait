@@ -1,3 +1,8 @@
+const appleTeamId = process.env.EXPO_PUBLIC_APPLE_TEAM_ID || "CNS3PJ66YR";
+const iosAppGroup =
+  process.env.EXPO_PUBLIC_IOS_APP_GROUP ||
+  "group.com.petran-laurentiu.gentlewait";
+
 export default {
   expo: {
     name: "GentleWait",
@@ -14,9 +19,9 @@ export default {
       infoPlist: {
         NSFamilyControlsUsageDescription: "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",
       },
-      // Disabled for Personal Team device builds.
-      // Re-enable when using a paid/approved Apple Developer team.
-      entitlements: {},
+      entitlements: {
+        "com.apple.security.application-groups": [iosAppGroup],
+      },
       buildNumber: "1",
     },
     android: {
@@ -40,6 +45,21 @@ export default {
     },
     plugins: [
       "expo-router",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            deploymentTarget: "15.1",
+          },
+        },
+      ],
+      [
+        "react-native-device-activity",
+        {
+          appleTeamId,
+          appGroup: iosAppGroup,
+        },
+      ],
       [
         "expo-splash-screen",
         {
@@ -65,6 +85,12 @@ export default {
       // EAS Secrets are automatically injected here during build
       // Access via: Constants.expoConfig?.extra?.openRouterApiKey
       openRouterApiKey: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "",
+      revenueCatAppleApiKey:
+        process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || "",
+      revenueCatGoogleApiKey:
+        process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || "",
+      appleTeamId,
+      iosAppGroup,
     },
   },
 };

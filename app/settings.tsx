@@ -1,43 +1,49 @@
 /**
- * Settings screen
- * Liquid Glass Design System
+ * Settings screen.
  */
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
   Modal,
-  NativeModules,
   Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
-import { useAppStore } from "@/src/services/storage";
-import { mmkvStorage } from "@/src/services/storage/mmkv";
-import { deleteAllEvents } from "@/src/services/storage/sqlite";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
+import { GlassCard } from "@/src/components/GlassCard";
+import { Text as AppText } from "@/src/components/Typography";
+import {
+  FREE_PROTECTED_APPS_LIMIT,
+  getUpgradePitch,
+  PRICING,
+} from "@/src/constants/monetization";
+import { presentBillingCustomerCenter } from "@/src/services/billing";
 import {
   COOLDOWN_OPTIONS,
   WheelPicker,
   formatCooldown,
 } from "@/src/components/WheelPicker";
+import { deleteAllEvents } from "@/src/services/storage/sqlite";
+import {
+  clearProtectedApps,
+  getIOSSelectionSummary,
+  setSelectedApps as syncSelectedAppsToNative,
+} from "@/src/services/native";
+import { mmkvStorage } from "@/src/services/storage/mmkv";
+import { useAppStore } from "@/src/services/storage";
 import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
+import { radius, spacing } from "@/src/theme/theme";
 import { triggerSelectionFeedback } from "@/src/utils/haptics";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
 
 const PAUSE_DURATIONS = [8, 10, 15, 20, 30];
-const PROMPT_OPTIONS: Array<"off" | "sometimes" | "always"> = [
-  "off",
-  "sometimes",
-  "always",
-];
+const PROMPT_OPTIONS: ("off" | "sometimes" | "always")[] = ["off", "sometimes", "always"];
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -45,10 +51,10 @@ export default function SettingsScreen() {
   const settings = useAppStore((state) => state.settings);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const loadSettings = useAppStore((state) => state.loadSettings);
+  const billingAvailable = useAppStore((state) => state.billingAvailable);
   const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
   const [pendingCooldown, setPendingCooldown] = useState(settings.cooldownMinutes || 15);
 
-  // Animation hooks
   const headerAnimation = useFadeInAnimation();
   const protectedAppsAnimation = useStaggeredFadeIn(0, 5);
   const pauseDurationAnimation = useStaggeredFadeIn(1, 5);
@@ -56,11 +62,17 @@ export default function SettingsScreen() {
   const premiumAnimation = useStaggeredFadeIn(3, 5);
   const privacyAnimation = useStaggeredFadeIn(4, 5);
 
-  // Handlers
+  const hasCompletedPersonalization =
+    (settings.goals && settings.goals.length > 0) ||
+    (settings.emotions && settings.emotions.length > 0);
+  const isIOSFamilyControlsFlow = Platform.OS === "ios";
+  const iosSelection = settings.iosFamilyActivitySelection;
+  const hasReachedFreeAppLimit =
+    !settings.premium &&
+    settings.selectedApps.length >= FREE_PROTECTED_APPS_LIMIT;
+
   const handleRemoveApp = async (packageName: string) => {
-    const appToRemove = settings.selectedApps.find(
-      (app) => app.packageName === packageName
-    );
+    const appToRemove = settings.selectedApps.find((app) => app.packageName === packageName);
     const appName = appToRemove?.label || "this app";
 
     Alert.alert(
@@ -73,31 +85,13 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             await triggerSelectionFeedback();
-            const updatedApps = settings.selectedApps.filter(
-              (app) => app.packageName !== packageName
-            );
+            const updatedApps = settings.selectedApps.filter((app) => app.packageName !== packageName);
             updateSettings({ selectedApps: updatedApps });
 
-            // Sync to native storage (Android SharedPreferences / iOS UserDefaults)
-            if (Platform.OS === "android" || Platform.OS === "ios") {
-              try {
-                const { GentleWaitModule } = NativeModules;
-                if (GentleWaitModule?.setSelectedApps) {
-                  const appPackageNames = updatedApps.map(
-                    (app) => app.packageName
-                  );
-                  await GentleWaitModule.setSelectedApps(appPackageNames);
-                  console.log(
-                    "[Settings] Synced apps to native after removal:",
-                    appPackageNames
-                  );
-                }
-              } catch (error) {
-                console.error(
-                  "[Settings] Failed to sync apps to native:",
-                  error
-                );
-              }
+            try {
+              await syncSelectedAppsToNative(updatedApps);
+            } catch (error) {
+              console.error("[Settings] Failed to sync apps to native:", error);
             }
           },
         },
@@ -106,25 +100,24 @@ export default function SettingsScreen() {
   };
 
   const handleAddApps = () => {
-    // Navigate to onboarding but skip to app selection step
-    router.push({
-      pathname: "/onboarding",
-      params: { skipToStep: "select-apps" },
-    });
+    if (hasReachedFreeAppLimit) {
+      Alert.alert(
+        "Free plan limit",
+        `The free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} protected apps.\n\n${getUpgradePitch()}`,
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "View Premium", onPress: () => router.push("/paywall") },
+        ],
+      );
+      return;
+    }
+
+    router.push({ pathname: "/onboarding", params: { skipToStep: "select-apps" } });
   };
 
   const handleCompleteProfile = () => {
-    // Navigate to onboarding in complete-profile mode
-    router.push({
-      pathname: "/onboarding",
-      params: { mode: "complete-profile" },
-    });
+    router.push({ pathname: "/onboarding", params: { mode: "complete-profile" } });
   };
-
-  // Check if user has completed personalization (Quick Setup users won't have goals/emotions)
-  const hasCompletedPersonalization =
-    (settings.goals && settings.goals.length > 0) ||
-    (settings.emotions && settings.emotions.length > 0);
 
   const handleChangePauseDuration = async () => {
     await triggerSelectionFeedback();
@@ -150,6 +143,14 @@ export default function SettingsScreen() {
     updateSettings({ promptFrequency: PROMPT_OPTIONS[nextIndex] });
   };
 
+  const handleManageSubscription = async () => {
+    const result = await presentBillingCustomerCenter();
+
+    if (!result.success) {
+      Alert.alert("Customer Center unavailable", result.error || "Please try again later.");
+    }
+  };
+
   const handleResetOnboarding = () => {
     Alert.alert(
       "Reset Onboarding",
@@ -165,6 +166,10 @@ export default function SettingsScreen() {
               selectedApps: [],
               goals: [],
               emotions: [],
+              iosFamilyActivitySelection: null,
+            });
+            clearProtectedApps().catch((error) => {
+              console.error("[Settings] Failed to clear native protection:", error);
             });
             router.replace("/onboarding");
           },
@@ -176,7 +181,7 @@ export default function SettingsScreen() {
   const handleClearAllData = () => {
     Alert.alert(
       "Clear All Data",
-      "This will permanently delete:\n\n• All your pause history & stats\n• All your settings & preferences\n• All protected apps\n\nThis action cannot be undone. Continue?",
+      "This will permanently delete all your pause history, settings, and protected apps. This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -184,227 +189,22 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Clear SQLite database (all events/stats)
               await deleteAllEvents();
-              console.log("[Settings] Cleared all events from database");
 
-              // Clear native storage (selected apps)
-              if (Platform.OS === "android" || Platform.OS === "ios") {
-                try {
-                  const { GentleWaitModule } = NativeModules;
-                  if (GentleWaitModule?.setSelectedApps) {
-                    await GentleWaitModule.setSelectedApps([]);
-                    console.log("[Settings] Cleared native selected apps");
-                  }
-                } catch (error) {
-                  console.error(
-                    "[Settings] Failed to clear native apps:",
-                    error
-                  );
-                }
-              }
+              await clearProtectedApps();
 
-              // Clear MMKV storage (all settings)
               mmkvStorage.clearAll();
-              console.log("[Settings] Cleared all MMKV storage");
-
-              // Reload settings (will load defaults since storage is cleared)
               loadSettings();
-
-              // Navigate to onboarding
               router.replace("/onboarding");
             } catch (error) {
               console.error("[Settings] Error clearing all data:", error);
-              Alert.alert(
-                "Error",
-                "Failed to clear all data. Please try again."
-              );
+              Alert.alert("Error", "Failed to clear all data. Please try again.");
             }
           },
         },
       ]
     );
   };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    header: {
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.md,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    title: {
-      fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
-      color: colors.text,
-      letterSpacing: 0.5,
-    },
-    closeButton: {
-      width: 40,
-      height: 40,
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
-      borderRadius: 20,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    closeButtonText: {
-      fontSize: 18,
-      color: colors.text,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    content: {
-      padding: spacing.lg,
-      paddingBottom: spacing.xl * 3,
-      gap: spacing.lg,
-    },
-    section: {
-      gap: spacing.sm,
-    },
-    sectionTitle: {
-      fontFamily: fonts.semiBold,
-      fontSize: typography.label.fontSize,
-      color: colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
-      marginBottom: spacing.xs,
-    },
-    settingItem: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: spacing.md + 2,
-      paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
-      borderRadius: radius.button,
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
-    },
-    settingItemActive: {
-      backgroundColor: "rgba(0, 212, 255, 0.1)",
-      borderColor: "rgba(0, 212, 255, 0.2)",
-    },
-    settingLabel: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-      flex: 1,
-    },
-    settingValue: {
-      fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.primary,
-    },
-    settingArrow: {
-      fontFamily: fonts.light,
-      fontSize: 16,
-      color: colors.textMuted,
-      marginLeft: spacing.sm,
-    },
-    appList: {
-      gap: spacing.sm,
-    },
-    appItem: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      borderRadius: radius.button,
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.08)",
-    },
-    appLabel: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-      flex: 1,
-    },
-    removeButton: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      backgroundColor: "rgba(255, 107, 157, 0.2)",
-      borderRadius: radius.button / 2,
-      borderWidth: 1,
-      borderColor: "rgba(255, 107, 157, 0.3)",
-    },
-    removeButtonText: {
-      fontFamily: fonts.medium,
-      fontSize: typography.small.fontSize,
-      color: colors.accent,
-    },
-    addButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: spacing.md + 2,
-      paddingHorizontal: spacing.lg,
-      backgroundColor: "rgba(0, 212, 255, 0.15)",
-      borderRadius: radius.button,
-      borderWidth: 1,
-      borderColor: "rgba(0, 212, 255, 0.3)",
-      gap: spacing.sm,
-    },
-    addButtonText: {
-      fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.primary,
-    },
-    emptyText: {
-      fontFamily: fonts.regular,
-      fontSize: typography.caption.fontSize,
-      color: colors.textMuted,
-      textAlign: "center",
-      paddingVertical: spacing.md,
-      fontStyle: "italic",
-    },
-    dangerButton: {
-      backgroundColor: "rgba(248, 113, 113, 0.1)",
-      borderColor: "rgba(248, 113, 113, 0.2)",
-    },
-    dangerText: {
-      color: colors.error,
-    },
-    versionText: {
-      fontFamily: fonts.regular,
-      fontSize: typography.caption.fontSize,
-      color: colors.textMuted,
-      textAlign: "center",
-      marginTop: spacing.xl,
-    },
-    modalOverlay: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-    },
-    modalContent: {
-      width: "85%",
-      borderRadius: radius.card,
-      padding: spacing.lg,
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
-    },
-    modalTitle: {
-      fontFamily: fonts.medium,
-      fontSize: typography.heading.fontSize,
-      marginBottom: spacing.lg,
-    },
-    modalButtons: {
-      flexDirection: "row",
-      gap: spacing.md,
-      marginTop: spacing.lg,
-      width: "100%",
-    },
-  });
 
   const getPromptLabel = (value: string) => {
     switch (value) {
@@ -419,16 +219,131 @@ export default function SettingsScreen() {
     }
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    closeButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xxl * 2,
+      gap: spacing.lg,
+    },
+    introCard: {
+      gap: spacing.md,
+    },
+    section: {
+      gap: spacing.sm,
+    },
+    list: {
+      gap: spacing.sm,
+    },
+    appItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderRadius: radius.button,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.md,
+    },
+    removeButton: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(242, 166, 160, 0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(242, 166, 160, 0.28)",
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      borderRadius: radius.button,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    settingItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: radius.glass,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.md,
+    },
+    settingItemAccent: {
+      backgroundColor: colors.surfaceElevated,
+    },
+    settingMain: {
+      flex: 1,
+      gap: 2,
+    },
+    valueWrap: {
+      alignItems: "flex-end",
+      gap: 2,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.overlay,
+      padding: spacing.lg,
+    },
+    modalContent: {
+      width: "100%",
+      borderRadius: radius.card,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      backgroundColor: colors.bgElevated,
+      gap: spacing.lg,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: spacing.md,
+      justifyContent: "flex-end",
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View style={[styles.header, headerAnimation]}>
-        <Text style={styles.title}>Settings</Text>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close" size={18} color={colors.text} />
+        <View>
+          <AppText variant="eyebrow" color="secondary">Preferences</AppText>
+          <AppText variant="screenTitle">Settings</AppText>
+        </View>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()} activeOpacity={0.8}>
+          <Ionicons name="close" size={18} color={colors.textPrimary} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -438,174 +353,237 @@ export default function SettingsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
-        {/* Protected Apps */}
+        <Animated.View style={protectedAppsAnimation}>
+          <GlassCard glowColor="primary">
+            <View style={styles.introCard}>
+              <View style={{ gap: 4 }}>
+                <AppText variant="eyebrow" color="secondary">Configuration</AppText>
+                <AppText variant="sectionTitle">Shape the pause to fit your day</AppText>
+              </View>
+              <AppText variant="body" color="secondary">
+                Your protected apps, pacing, and prompts all live here. The goal is calm friction, not interruption.
+              </AppText>
+            </View>
+          </GlassCard>
+        </Animated.View>
+
         <Animated.View style={[styles.section, protectedAppsAnimation]}>
-          <Text style={styles.sectionTitle}>Protected Apps</Text>
-          {settings.selectedApps.length > 0 ? (
-            <View style={styles.appList}>
-              {settings.selectedApps.map((app) => (
-                <View key={app.packageName} style={styles.appItem}>
-                  <Text style={styles.appLabel}>{app.label}</Text>
+          <AppText variant="eyebrow" color="secondary">Protected apps</AppText>
+          {isIOSFamilyControlsFlow ? (
+            iosSelection ? (
+              <View style={styles.list}>
+                <View style={styles.appItem}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="heading">Family Controls selection</AppText>
+                    <AppText variant="caption" color="secondary">
+                      {getIOSSelectionSummary(iosSelection)}
+                    </AppText>
+                  </View>
                   <TouchableOpacity
                     style={styles.removeButton}
-                    onPress={() => handleRemoveApp(app.packageName)}
-                    activeOpacity={0.7}
+                    onPress={async () => {
+                      await triggerSelectionFeedback();
+                      await clearProtectedApps();
+                      updateSettings({ iosFamilyActivitySelection: null });
+                    }}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.removeButtonText}>Remove</Text>
+                    <AppText variant="caption" color="accent">Clear</AppText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <GlassCard intensity="light">
+                <AppText variant="body" color="secondary" align="center">
+                  No iPhone apps selected yet. Add a Family Controls selection to start.
+                </AppText>
+              </GlassCard>
+            )
+          ) : settings.selectedApps.length > 0 ? (
+            <View style={styles.list}>
+              {settings.selectedApps.map((app) => (
+                <View key={app.packageName} style={styles.appItem}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="heading">{app.label}</AppText>
+                    <AppText variant="caption" color="secondary">A pause appears before this app opens.</AppText>
+                  </View>
+                  <TouchableOpacity style={styles.removeButton} onPress={() => handleRemoveApp(app.packageName)} activeOpacity={0.8}>
+                    <AppText variant="caption" color="accent">Remove</AppText>
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>
-              No apps protected yet. Add some apps to get started.
-            </Text>
+            <GlassCard intensity="light">
+              <AppText variant="body" color="secondary" align="center">
+                No apps protected yet. Add a few apps to start shaping a gentler routine.
+              </AppText>
+            </GlassCard>
           )}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddApps}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.addButtonText}>+ Add Apps</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddApps} activeOpacity={0.82}>
+            <Ionicons name="add" size={18} color={colors.textInverse} />
+            <AppText variant="button" color="inverse">
+              {isIOSFamilyControlsFlow
+                ? iosSelection
+                  ? "Edit Family Controls Selection"
+                  : "Choose Apps"
+                : hasReachedFreeAppLimit
+                  ? "Upgrade for More Apps"
+                  : "Add Apps"}
+            </AppText>
           </TouchableOpacity>
+          {!settings.premium && !isIOSFamilyControlsFlow && (
+            <AppText variant="caption" color="secondary" align="center">
+              Free plan: up to {FREE_PROTECTED_APPS_LIMIT} protected apps.
+            </AppText>
+          )}
+          {!settings.premium && isIOSFamilyControlsFlow && (
+            <AppText variant="caption" color="secondary" align="center">
+              Free plan: up to {FREE_PROTECTED_APPS_LIMIT} iPhone apps. Categories and websites require Premium.
+            </AppText>
+          )}
         </Animated.View>
 
-        {/* Pause Duration */}
         <Animated.View style={[styles.section, pauseDurationAnimation]}>
-          <Text style={styles.sectionTitle}>Pause Duration</Text>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleChangePauseDuration}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingLabel}>Breathing pause length</Text>
-            <Text style={styles.settingValue}>
-              {settings.pauseDurationSec}s
-            </Text>
-            <Text style={styles.settingArrow}>›</Text>
+          <AppText variant="eyebrow" color="secondary">Pacing</AppText>
+          <TouchableOpacity style={styles.settingItem} onPress={handleChangePauseDuration} activeOpacity={0.82}>
+            <View style={styles.settingMain}>
+              <AppText variant="heading">Pause duration</AppText>
+              <AppText variant="caption" color="secondary">How long the breathing pause lasts before the app opens.</AppText>
+            </View>
+            <View style={styles.valueWrap}>
+              <AppText variant="heading" color="primary">{settings.pauseDurationSec}s</AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleOpenCooldownPicker} activeOpacity={0.82}>
+            <View style={styles.settingMain}>
+              <AppText variant="heading">Cooldown</AppText>
+              <AppText variant="caption" color="secondary">The quiet window between two pauses.</AppText>
+            </View>
+            <View style={styles.valueWrap}>
+              <AppText variant="heading" color="primary">{formatCooldown(settings.cooldownMinutes || 15)}</AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Cooldown */}
-        <Animated.View style={[styles.section, pauseDurationAnimation]}>
-          <Text style={styles.sectionTitle}>Cooldown</Text>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleOpenCooldownPicker}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingLabel}>Time between pauses</Text>
-            <Text style={styles.settingValue}>
-              {formatCooldown(settings.cooldownMinutes || 15)}
-            </Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Prompt Frequency */}
         <Animated.View style={[styles.section, promptsAnimation]}>
-          <Text style={styles.sectionTitle}>Reflection Prompts</Text>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleChangePromptFrequency}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingLabel}>Show reflection questions</Text>
-            <Text style={styles.settingValue}>
-              {getPromptLabel(settings.promptFrequency)}
-            </Text>
-            <Text style={styles.settingArrow}>›</Text>
+          <AppText variant="eyebrow" color="secondary">Prompts</AppText>
+          <TouchableOpacity style={styles.settingItem} onPress={handleChangePromptFrequency} activeOpacity={0.82}>
+            <View style={styles.settingMain}>
+              <AppText variant="heading">Reflection prompts</AppText>
+              <AppText variant="caption" color="secondary">Short questions that bring intention back into the moment.</AppText>
+            </View>
+            <View style={styles.valueWrap}>
+              <AppText variant="heading" color="primary">{getPromptLabel(settings.promptFrequency)}</AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Premium */}
         <Animated.View style={[styles.section, premiumAnimation]}>
-          <Text style={styles.sectionTitle}>Subscription</Text>
-          <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>Current plan</Text>
-            <Text style={styles.settingValue}>
-              {settings.premium ? "Premium" : "Free"}
-            </Text>
+          <AppText variant="eyebrow" color="secondary">Plan</AppText>
+          <View style={styles.list}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Current plan</AppText>
+                <AppText variant="caption" color="secondary">
+                  {settings.premium
+                    ? "Unlimited protected apps and AI Companion access."
+                    : `Free includes ${FREE_PROTECTED_APPS_LIMIT} protected apps and no AI Companion.`}
+                </AppText>
+              </View>
+              <AppText variant="heading" color="primary">{settings.premium ? "Premium" : "Free"}</AppText>
+            </View>
+            {!settings.premium && (
+              <TouchableOpacity
+                style={[styles.settingItem, styles.settingItemAccent]}
+                onPress={() => router.push("/paywall")}
+                activeOpacity={0.82}
+              >
+                <View style={styles.settingMain}>
+                  <AppText variant="heading">Upgrade to Premium</AppText>
+                  <AppText variant="caption" color="secondary">
+                    Unlimited apps, AI Companion, and deeper guidance from {PRICING.monthly}.
+                  </AppText>
+                </View>
+                <Ionicons name="sparkles-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            {settings.premium && billingAvailable && (
+              <TouchableOpacity
+                style={[styles.settingItem, styles.settingItemAccent]}
+                onPress={handleManageSubscription}
+                activeOpacity={0.82}
+              >
+                <View style={styles.settingMain}>
+                  <AppText variant="heading">Manage plan</AppText>
+                  <AppText variant="caption" color="secondary">
+                    Review your billing, renewal, and premium access details.
+                  </AppText>
+                </View>
+                <Ionicons name="card-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
-          {!settings.premium && (
-            <TouchableOpacity
-              style={[styles.settingItem, styles.settingItemActive]}
-              onPress={() => {
-                Alert.alert(
-                  "Premium",
-                  "Premium features coming soon! Stay tuned."
-                );
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.settingLabel, { color: colors.primary }]}>
-                Upgrade to Premium
-              </Text>
-            </TouchableOpacity>
-          )}
         </Animated.View>
 
-        {/* Complete Profile - only show if user did Quick Setup */}
         {!hasCompletedPersonalization && (
           <Animated.View style={[styles.section, privacyAnimation]}>
-            <Text style={styles.sectionTitle}>Personalization</Text>
-            <Text style={[styles.settingLabel, { marginBottom: spacing.md, color: colors.textSecondary }]}>
-              Complete your profile to get personalized insights and AI coaching tailored to your goals.
-            </Text>
-            <TouchableOpacity
-              style={[styles.settingItem, styles.settingItemActive]}
-              onPress={handleCompleteProfile}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.settingLabel, { color: colors.primary }]}>
-                Complete Profile Setup
-              </Text>
-              <Text style={styles.settingArrow}>›</Text>
+            <AppText variant="eyebrow" color="secondary">Personalization</AppText>
+            <TouchableOpacity style={[styles.settingItem, styles.settingItemAccent]} onPress={handleCompleteProfile} activeOpacity={0.82}>
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Complete your profile</AppText>
+                <AppText variant="caption" color="secondary">
+                  Add goals and emotional context for more tailored insights and AI support.
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
             </TouchableOpacity>
           </Animated.View>
         )}
 
-        {/* Privacy & Data */}
         <Animated.View style={[styles.section, privacyAnimation]}>
-          <Text style={styles.sectionTitle}>Privacy & Data</Text>
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => {
-              Alert.alert(
-                "Privacy Promise",
-                "Your data never leaves your device. We don't collect, store, or share any personal information. All your mindfulness data stays completely private on your phone."
-              );
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingLabel}>Privacy policy</Text>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingItem, styles.dangerButton]}
-            onPress={handleResetOnboarding}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.settingLabel, styles.dangerText]}>
-              Reset onboarding & preferences
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              styles.dangerButton,
-              { borderColor: colors.error, borderWidth: 2 },
-            ]}
-            onPress={handleClearAllData}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.settingLabel, styles.dangerText]}>
-              Clear All Data & Start Fresh
-            </Text>
-          </TouchableOpacity>
+          <AppText variant="eyebrow" color="secondary">Privacy and data</AppText>
+          <View style={styles.list}>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => {
+                Alert.alert(
+                  "Privacy Promise",
+                  "Your data never leaves your device. We don't collect, store, or share your personal mindfulness data."
+                );
+              }}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Privacy promise</AppText>
+                <AppText variant="caption" color="secondary">All your pause and reflection data stays on-device.</AppText>
+              </View>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.secondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.settingItem} onPress={handleResetOnboarding} activeOpacity={0.82}>
+              <View style={styles.settingMain}>
+                <AppText variant="heading" color="accent">Reset onboarding</AppText>
+                <AppText variant="caption" color="secondary">Start setup again without wiping your entire history.</AppText>
+              </View>
+              <Ionicons name="refresh-outline" size={20} color={colors.accent} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.settingItem} onPress={handleClearAllData} activeOpacity={0.82}>
+              <View style={styles.settingMain}>
+                <AppText variant="heading" color="accent">Clear all data</AppText>
+                <AppText variant="caption" color="secondary">Delete history, settings, and protected apps.</AppText>
+              </View>
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
-        <Text style={styles.versionText}>GentleWait v1.0.0</Text>
+        <AppText variant="caption" color="tertiary" align="center">GentleWait v1.0.0</AppText>
       </ScrollView>
 
       <Modal
@@ -615,28 +593,19 @@ export default function SettingsScreen() {
         onRequestClose={() => setCooldownModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.bg }]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Time between pauses
-            </Text>
+          <View style={styles.modalContent}>
+            <View style={{ gap: 4 }}>
+              <AppText variant="sectionTitle">Time between pauses</AppText>
+              <AppText variant="body" color="secondary">Choose how much breathing room you want after each interruption.</AppText>
+            </View>
             <WheelPicker
               items={COOLDOWN_OPTIONS}
               selectedValue={pendingCooldown}
               onValueChange={setPendingCooldown}
             />
             <View style={styles.modalButtons}>
-              <Button
-                label="Cancel"
-                onPress={() => setCooldownModalVisible(false)}
-                variant="ghost"
-              />
-              <Button
-                label="Done"
-                onPress={handleConfirmCooldown}
-                variant="primary"
-              />
+              <Button label="Cancel" onPress={() => setCooldownModalVisible(false)} variant="ghost" />
+              <Button label="Done" onPress={handleConfirmCooldown} variant="primary" />
             </View>
           </View>
         </View>
