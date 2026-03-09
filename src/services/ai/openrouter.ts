@@ -13,8 +13,26 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 let currentUserContext: UserContext | null = null;
 
+function getAiApiOrigin() {
+  return Constants.expoConfig?.extra?.apiOrigin as string | undefined;
+}
+
+export function getAiConfigurationError() {
+  if (Platform.OS === "web") {
+    return null;
+  }
+
+  return getAiApiOrigin()
+    ? null
+    : "AI Companion is not configured for this build yet.";
+}
+
+export function isAiConfigured() {
+  return getAiConfigurationError() === null;
+}
+
 function getAiApiUrl() {
-  const apiOrigin = Constants.expoConfig?.extra?.apiOrigin as string | undefined;
+  const apiOrigin = getAiApiOrigin();
   if (Platform.OS === "web") {
     return AI_API_PATH;
   }
@@ -47,6 +65,15 @@ export async function sendMessage(
       success: false,
       message: "",
       error: "Please enter a message first.",
+    };
+  }
+
+  const configurationError = getAiConfigurationError();
+  if (configurationError) {
+    return {
+      success: false,
+      message: "",
+      error: configurationError,
     };
   }
 

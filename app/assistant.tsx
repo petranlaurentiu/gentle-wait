@@ -16,6 +16,7 @@ import {
 } from "@/src/services/ai/usage";
 import {
   ChatMessage,
+  getAiConfigurationError,
   sendMessage,
   setUserContext,
   UserContext,
@@ -71,6 +72,9 @@ export default function AssistantScreen() {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const settings = useAppStore((state) => state.settings);
+  const aiConfigurationError = settings.premium
+    ? getAiConfigurationError()
+    : null;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -82,7 +86,7 @@ export default function AssistantScreen() {
 
   // Load user context and set welcome message on mount
   useEffect(() => {
-    if (!settings.premium) {
+    if (!settings.premium || aiConfigurationError) {
       return;
     }
 
@@ -133,7 +137,7 @@ export default function AssistantScreen() {
     }
 
     loadContext();
-  }, [settings]);
+  }, [aiConfigurationError, settings]);
 
   const handleSend = async (text?: string) => {
     const messageText = (text || inputText).trim().slice(0, MAX_USER_MESSAGE_CHARS);
@@ -565,6 +569,57 @@ export default function AssistantScreen() {
 	      </SafeAreaView>
 	    );
 	  }
+
+  if (aiConfigurationError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.title}>AI Companion</Text>
+          </View>
+        </View>
+
+        <View style={styles.lockedWrap}>
+          <View style={[styles.messageBubble, styles.assistantBubble, styles.lockedCard]}>
+            <View style={styles.lockedIconWrap}>
+              <Ionicons name="cloud-offline-outline" size={28} color={colors.primary} />
+            </View>
+
+            <View style={styles.lockedTextGroup}>
+              <Text style={styles.lockedTitle}>AI setup incomplete</Text>
+              <Text style={styles.lockedDescription}>
+                {aiConfigurationError} Add a production API origin before shipping
+                premium AI on Android.
+              </Text>
+            </View>
+
+            <View style={styles.lockedFeatureList}>
+              <View style={styles.lockedFeatureRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+                <Text style={styles.lockedFeatureText}>
+                  The rest of GentleWait can still work without the AI backend.
+                </Text>
+              </View>
+              <View style={styles.lockedFeatureRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+                <Text style={styles.lockedFeatureText}>
+                  Set `EXPO_PUBLIC_API_ORIGIN` for native builds to enable this screen.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Button label="Back" onPress={() => router.back()} variant="ghost" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

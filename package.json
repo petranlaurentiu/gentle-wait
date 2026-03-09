@@ -8,6 +8,7 @@
     "android": "NODE_OPTIONS='--no-warnings' expo run:android",
     "ios": "NODE_OPTIONS='--no-warnings' expo run:ios",
     "web": "NODE_OPTIONS='--no-warnings' expo start --web",
+    "export:web": "NODE_OPTIONS='--no-warnings' expo export --platform web",
     "lint": "expo lint",
     "setup-ios": "PATH=\"/opt/homebrew/lib/ruby/gems/3.4.0/bin:$PATH\" ./scripts/setup-ios-native.sh",
     "prebuild:ios": "PATH=\"/opt/homebrew/lib/ruby/gems/3.4.0/bin:$PATH\" npx expo prebuild --platform ios --clean",
@@ -16,7 +17,9 @@
     "build:preview:android": "eas build --profile preview --platform android",
     "build:prod:ios": "eas build --profile production --platform ios",
     "build:prod:android": "eas build --profile production --platform android",
-    "build:prod:all": "eas build --profile production --platform all"
+    "build:prod:all": "eas build --profile production --platform all",
+    "deploy:hosting:preview": "eas deploy --environment preview",
+    "deploy:hosting:prod": "eas deploy --environment production"
   },
   "dependencies": {
     "@expo-google-fonts/outfit": "^0.4.3",

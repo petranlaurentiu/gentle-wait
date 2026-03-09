@@ -16,6 +16,7 @@ import {
   getUpgradePitch,
 } from "@/src/constants/monetization";
 import { getDailyAffirmation, getDailyQuote } from "@/src/data/mindfulness";
+import { getAiConfigurationError } from "@/src/services/ai/openrouter";
 import { useAppStore } from "@/src/services/storage";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { useTheme } from "@/src/theme/ThemeProvider";
@@ -380,6 +381,11 @@ export default function HomeScreen() {
             style={styles.assistantButton}
             onPress={() => {
               if (settings.premium) {
+                const aiConfigurationError = getAiConfigurationError();
+                if (aiConfigurationError) {
+                  Alert.alert("AI Companion unavailable", aiConfigurationError);
+                  return;
+                }
                 router.push("/assistant");
                 return;
               }

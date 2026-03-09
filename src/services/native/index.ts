@@ -371,6 +371,29 @@ export async function setSelectedApps(apps: SelectedApp[]): Promise<void> {
   }
 }
 
+export async function getInstalledAndroidApps(): Promise<SelectedApp[]> {
+  if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
+    return [];
+  }
+
+  try {
+    const apps = await GentleWaitModule.getInstalledApps();
+    if (!Array.isArray(apps)) {
+      return [];
+    }
+
+    return apps.filter(
+      (app): app is SelectedApp =>
+        Boolean(app) &&
+        typeof app.packageName === "string" &&
+        typeof app.label === "string",
+    );
+  } catch (error) {
+    console.error("[NativeService] Error getting installed apps:", error);
+    return [];
+  }
+}
+
 export async function getSelectedApps(): Promise<SelectedApp[]> {
   if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return [];

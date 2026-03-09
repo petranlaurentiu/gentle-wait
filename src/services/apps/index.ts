@@ -1,10 +1,9 @@
 /**
  * App detection service
- * Fetches list of installed apps with categories
- *
- * TODO: Replace mock with native module using expo-modules for PackageManager
+ * Fetches installed apps and assigns lightweight categories for onboarding.
  */
 import { SelectedApp } from "@/src/domain/models";
+import { getInstalledAndroidApps } from "@/src/services/native";
 
 export type AppCategory =
   | "social"
@@ -78,10 +77,6 @@ export const APP_CATEGORIES: AppCategoryInfo[] = [
   },
 ];
 
-/**
- * Mock list of popular apps for development
- * In production, this will query PackageManager via native module
- */
 const MOCK_INSTALLED_APPS: CategorizedApp[] = [
   // Social Media
   {
@@ -163,16 +158,97 @@ const MOCK_INSTALLED_APPS: CategorizedApp[] = [
   { packageName: "com.bumble.app", label: "Bumble", category: "other" },
 ];
 
-/**
- * Get list of installed apps with categories
- * Currently returns mock list for development
- * Will be replaced with native PackageManager call
- */
-export async function getInstalledApps(): Promise<CategorizedApp[]> {
-  // TODO: Call native module via NativeModules or expo-modules
-  // For now, return mock data sorted by category
-  return MOCK_INSTALLED_APPS.sort((a, b) => {
-    // Sort by category order, then by label
+const CATEGORY_KEYWORDS: Record<AppCategory, string[]> = {
+  social: [
+    "instagram",
+    "facebook",
+    "snapchat",
+    "linkedin",
+    "pinterest",
+    "bereal",
+    "threads",
+    "mastodon",
+    "wechat",
+    "weibo",
+    "social",
+  ],
+  video: [
+    "youtube",
+    "netflix",
+    "twitch",
+    "hulu",
+    "disney",
+    "prime video",
+    "spotify",
+    "music",
+    "video",
+    "stream",
+    "podcast",
+  ],
+  messaging: [
+    "whatsapp",
+    "messenger",
+    "telegram",
+    "discord",
+    "slack",
+    "zoom",
+    "teams",
+    "chat",
+    "message",
+    "signal",
+    "line",
+  ],
+  news: [
+    "reddit",
+    "twitter",
+    "x.com",
+    "news",
+    "medium",
+    "flipboard",
+    "feedly",
+    "newspaper",
+    "reader",
+  ],
+  shopping: [
+    "amazon",
+    "ebay",
+    "etsy",
+    "shop",
+    "store",
+    "shopping",
+    "shein",
+    "temu",
+    "aliexpress",
+  ],
+  games: [
+    "game",
+    "play games",
+    "clash",
+    "candy crush",
+    "minecraft",
+    "roblox",
+    "pubg",
+    "brawl",
+  ],
+  productivity: [
+    "chrome",
+    "gmail",
+    "mail",
+    "calendar",
+    "docs",
+    "drive",
+    "maps",
+    "notion",
+    "todo",
+    "task",
+    "browser",
+    "productivity",
+  ],
+  other: [],
+};
+
+function sortApps(apps: CategorizedApp[]) {
+  return [...apps].sort((a, b) => {
     const categoryOrder = APP_CATEGORIES.findIndex((c) => c.id === a.category);
     const categoryOrderB = APP_CATEGORIES.findIndex((c) => c.id === b.category);
     if (categoryOrder !== categoryOrderB) {
@@ -180,6 +256,42 @@ export async function getInstalledApps(): Promise<CategorizedApp[]> {
     }
     return a.label.localeCompare(b.label);
   });
+}
+
+function categorizeApp(app: SelectedApp): AppCategory {
+  const haystack = `${app.label} ${app.packageName}`.toLowerCase();
+
+  for (const category of APP_CATEGORIES.map((item) => item.id)) {
+    if (category === "other") {
+      continue;
+    }
+
+    if (CATEGORY_KEYWORDS[category].some((keyword) => haystack.includes(keyword))) {
+      return category;
+    }
+  }
+
+  return "other";
+}
+
+function toCategorizedApps(apps: SelectedApp[]): CategorizedApp[] {
+  return apps.map((app) => ({
+    ...app,
+    category: categorizeApp(app),
+  }));
+}
+
+/**
+ * Get list of installed apps with categories
+ */
+export async function getInstalledApps(): Promise<CategorizedApp[]> {
+  const installedApps = await getInstalledAndroidApps();
+
+  if (installedApps.length > 0) {
+    return sortApps(toCategorizedApps(installedApps));
+  }
+
+  return sortApps(MOCK_INSTALLED_APPS);
 }
 
 /**

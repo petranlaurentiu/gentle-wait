@@ -19,7 +19,8 @@ export default {
       appleTeamId,
       bundleIdentifier: "com.petran-laurentiu.gentlewait",
       infoPlist: {
-        NSFamilyControlsUsageDescription: "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",
+        NSFamilyControlsUsageDescription:
+          "This app needs access to Family Controls to monitor app usage and help you maintain focus by pausing distracting apps.",
       },
       entitlements: {
         "com.apple.security.application-groups": [iosAppGroup],
@@ -32,11 +33,6 @@ export default {
       predictiveBackGestureEnabled: false,
       package: "com.petran_laurentiu.gentlewait",
       versionCode: 1,
-      permissions: [
-        "android.permission.BIND_ACCESSIBILITY_SERVICE",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.PACKAGE_USAGE_STATS",
-      ],
     },
     web: {
       output: "server",
@@ -86,7 +82,7 @@ export default {
         origin: apiOrigin || undefined,
       },
       eas: {
-        projectId: "5518f02a-19c1-4d4a-b78a-2ed3c162d4c1",
+        projectId: "69df8842-0da4-4247-aeb8-aeae6770af56",
       },
       revenueCatAppleApiKey:
         process.env.REVENUECAT_APPLE_PUBLIC_SDK_KEY ||

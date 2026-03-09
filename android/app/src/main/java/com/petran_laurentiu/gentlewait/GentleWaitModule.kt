@@ -3,6 +3,7 @@ package com.petran_laurentiu.gentlewait
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Settings
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
@@ -23,8 +24,63 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
       "com.petran_laurentiu.gentlewait.accessibility.PauseAccessibilityService",
     )
   }
+  private val ignoredSelectablePackages = setOf(
+    "com.google.android.permissioncontroller",
+    "com.google.android.packageinstaller",
+    "com.android.packageinstaller",
+  )
 
   override fun getName(): String = "GentleWaitModule"
+
+  @ReactMethod
+  fun getInstalledApps(promise: Promise) {
+    try {
+      val packageManager = reactApplicationContext.packageManager
+      val launcherIntent =
+        Intent(Intent.ACTION_MAIN).apply {
+          addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+      val homePackage = getDefaultLauncherPackage(packageManager)
+      val apps = Arguments.createArray()
+      val seenPackages = linkedSetOf<String>()
+
+      packageManager.queryIntentActivities(launcherIntent, 0)
+        .asSequence()
+        .mapNotNull { resolveInfo ->
+          val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
+          val packageName = activityInfo.packageName?.trim().orEmpty()
+          if (
+            packageName.isBlank() ||
+            packageName == reactApplicationContext.packageName ||
+            packageName == homePackage ||
+            ignoredSelectablePackages.contains(packageName) ||
+            !seenPackages.add(packageName)
+          ) {
+            return@mapNotNull null
+          }
+
+          val label = resolveInfo.loadLabel(packageManager)?.toString()?.trim().orEmpty()
+          if (label.isBlank()) {
+            return@mapNotNull null
+          }
+
+          packageName to label
+        }
+        .sortedBy { (_, label) -> label.lowercase() }
+        .forEach { (packageName, label) ->
+          val map =
+            Arguments.createMap().apply {
+              putString("packageName", packageName)
+              putString("label", label)
+            }
+          apps.pushMap(map)
+        }
+
+      promise.resolve(apps)
+    } catch (e: Exception) {
+      promise.reject("GET_INSTALLED_APPS_FAILED", e)
+    }
+  }
 
   @ReactMethod
   fun isAccessibilityServiceEnabled(promise: Promise) {
@@ -198,5 +254,19 @@ class GentleWaitModule(reactContext: ReactApplicationContext) :
     private const val MIN_COOLDOWN_MS = 15_000L
 
     fun handledKey(packageName: String): String = "handled_$packageName"
+  }
+
+  private fun getDefaultLauncherPackage(packageManager: PackageManager): String? {
+    val launchIntent =
+      Intent(Intent.ACTION_MAIN).apply {
+        addCategory(Intent.CATEGORY_HOME)
+      }
+
+    val resolveInfo = packageManager.resolveActivity(
+      launchIntent,
+      PackageManager.MATCH_DEFAULT_ONLY,
+    )
+
+    return resolveInfo?.activityInfo?.packageName
   }
 }
