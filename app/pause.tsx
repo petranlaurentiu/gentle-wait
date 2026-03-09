@@ -163,15 +163,20 @@ export default function PauseScreen() {
   };
 
   const handleAlternative = (
-    type: "breathe" | "reflect" | "grounding" | "exercise" | "prayer"
+    type:
+      | "breathe"
+      | "reflect"
+      | "grounding"
+      | "prayer"
+      | "move"
+      | "eye-reset",
   ) => {
-    if (type === "exercise") {
+    if (type === "move" || type === "eye-reset") {
       router.push({
         pathname: "/exercise",
-        params: { sessionId, appPackage, appLabel },
+        params: { sessionId, appPackage, appLabel, entry: type },
       });
     } else {
-      // All other alternatives (breathe, reflect, grounding, prayer) go to /alternatives
       router.push({
         pathname: "/alternatives",
         params: {
@@ -473,10 +478,16 @@ export default function PauseScreen() {
             iconName="leaf-outline"
           />
           <Button
-            label="Quick Movement Break"
-            onPress={() => handleAlternative("exercise")}
+            label="Move"
+            onPress={() => handleAlternative("move")}
             variant="secondary"
             iconName="fitness-outline"
+          />
+          <Button
+            label="Eye Reset"
+            onPress={() => handleAlternative("eye-reset")}
+            variant="secondary"
+            iconName="eye-outline"
           />
           <Button
             label="Journal This Moment"

@@ -11,8 +11,10 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  useWindowDimensions,
+  LayoutChangeEvent,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -28,11 +30,25 @@ import { insertEvent } from "@/src/services/storage/sqlite";
 import { useAppStore } from "@/src/services/storage";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
+import { LumiIllustration } from "@/src/components/LumiIllustration";
 import {
-  getRandomExercise,
+  DEFAULT_EYE_RESET_EXERCISE_PREFERENCE,
+  DEFAULT_MOVE_EXERCISE_PREFERENCE,
+  EXERCISE_ENTRY_METADATA,
+  EXERCISE_CATEGORY_METADATA,
+  getCategoryMeta,
+  getExerciseById,
   getExercisesByCategory,
+  getEyeResetExercisePool,
+  getMoveExercisePool,
+  getRandomExercise,
 } from "@/src/data/exercises";
-import { Exercise, ExerciseCategory } from "@/src/domain/models";
+import { getLumiAssetForExercise } from "@/src/data/lumi";
+import {
+  Exercise,
+  ExerciseCategory,
+  ExerciseEntryPoint,
+} from "@/src/domain/models";
 
 const { width } = Dimensions.get("window");
 
@@ -41,64 +57,42 @@ const generateId = () =>
 
 type ScreenPhase = "select" | "exercise" | "complete";
 
-const CATEGORIES: {
-  id: ExerciseCategory;
-  label: string;
-  iconName: React.ComponentProps<typeof Ionicons>["name"];
-  description: string;
-  color: string;
-}[] = [
-  {
-    id: "desk-stretch",
-    label: "Desk Stretches",
-    iconName: "body-outline",
-    description: "Quick stretches you can do sitting down",
-    color: "rgba(0, 212, 255, 0.15)",
-  },
-  {
-    id: "standing",
-    label: "Standing",
-    iconName: "walk-outline",
-    description: "Get up and move your body",
-    color: "rgba(168, 85, 247, 0.15)",
-  },
-  {
-    id: "energy",
-    label: "Energy Boost",
-    iconName: "flash-outline",
-    description: "Quick exercises to wake you up",
-    color: "rgba(255, 107, 157, 0.15)",
-  },
-  {
-    id: "eye-posture",
-    label: "Eyes & Posture",
-    iconName: "eye-outline",
-    description: "Reduce screen strain and fix posture",
-    color: "rgba(16, 185, 129, 0.15)",
-  },
-];
+const CATEGORIES = EXERCISE_CATEGORY_METADATA;
 
 export default function ExerciseScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const params = useLocalSearchParams();
   const settings = useAppStore((state) => state.settings);
+  const { height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
+  const entryParam = params.entry as ExerciseEntryPoint | undefined;
   const categoryParam = params.category as ExerciseCategory | undefined;
 
   // Get pause duration from settings
   const pauseDuration = settings.pauseDurationSec || 15;
+  const movePreference =
+    settings.moveExercisePreference || DEFAULT_MOVE_EXERCISE_PREFERENCE;
+  const eyeResetPreference =
+    settings.eyeResetExercisePreference ||
+    DEFAULT_EYE_RESET_EXERCISE_PREFERENCE;
 
   const [phase, setPhase] = useState<ScreenPhase>("select");
   const [selectedCategory, setSelectedCategory] =
-    useState<ExerciseCategory | null>(categoryParam || null);
+    useState<ExerciseCategory | null>(null);
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [isPaused] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(0);
+  const isCompactScreen = screenHeight < 860;
+  const heroHeight = isCompactScreen ? 160 : 240;
+  const activeHeroHeight = isCompactScreen ? 170 : 250;
+  const completionHeroHeight = isCompactScreen ? 150 : 220;
 
   // Animation
   const progressWidth = useSharedValue(0);
@@ -135,28 +129,57 @@ export default function ExerciseScreen() {
     };
   }, [pauseDuration]);
 
-  // Auto-select category and start exercise if category param is provided
-  useEffect(() => {
-    if (categoryParam && phase === "select" && !selectedCategory) {
-      const category = categoryParam as ExerciseCategory;
-      setSelectedCategory(category);
-      const exercises = getExercisesByCategory(category);
-      const suitableExercises = exercises.filter(
-        (ex) => ex.durationSec <= pauseDuration
-      );
-      const exercisesToChooseFrom =
-        suitableExercises.length > 0 ? suitableExercises : exercises;
-      const randomExercise =
-        exercisesToChooseFrom[
-          Math.floor(Math.random() * exercisesToChooseFrom.length)
-        ];
-      const adjustedExercise = adjustExerciseForDuration(randomExercise);
-      setExercise(adjustedExercise);
-      setTimeLeft(adjustedExercise.durationSec);
-      setStartTime(Date.now());
-      setPhase("exercise");
+  const startExercise = useCallback((nextExercise: Exercise) => {
+    const adjustedExercise = adjustExerciseForDuration(nextExercise);
+    setExercise(adjustedExercise);
+    setSelectedCategory(adjustedExercise.category);
+    setTimeLeft(adjustedExercise.durationSec);
+    setStartTime(Date.now());
+    setPhase("exercise");
+  }, [adjustExerciseForDuration]);
+
+  const pickRandomExerciseFromPool = useCallback((pool: Exercise[]) => {
+    if (pool.length === 0) {
+      return null;
     }
-  }, [categoryParam, phase, selectedCategory, pauseDuration, adjustExerciseForDuration]);
+
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, []);
+
+  const getInitialExercise = useCallback((): Exercise | null => {
+    if (categoryParam) {
+      return pickRandomExerciseFromPool(getExercisesByCategory(categoryParam));
+    }
+
+    if (entryParam === "eye-reset") {
+      return pickRandomExerciseFromPool(
+        getEyeResetExercisePool(eyeResetPreference),
+      );
+    }
+
+    if (entryParam === "move") {
+      return pickRandomExerciseFromPool(getMoveExercisePool(movePreference));
+    }
+
+    return null;
+  }, [
+    categoryParam,
+    entryParam,
+    eyeResetPreference,
+    movePreference,
+    pickRandomExerciseFromPool,
+  ]);
+
+  useEffect(() => {
+    if (phase !== "select" || exercise) {
+      return;
+    }
+
+    const nextExercise = getInitialExercise();
+    if (nextExercise) {
+      startExercise(nextExercise);
+    }
+  }, [exercise, getInitialExercise, phase, startExercise]);
 
   // Progress animation
   useEffect(() => {
@@ -170,51 +193,59 @@ export default function ExerciseScreen() {
   }, [timeLeft, phase, exercise, progressWidth]);
 
   const handleSelectCategory = (category: ExerciseCategory) => {
-    setSelectedCategory(category);
     const exercises = getExercisesByCategory(category);
-    // Filter exercises that fit within pause duration, or use closest match
     const suitableExercises = exercises.filter(
-      (ex) => ex.durationSec <= pauseDuration
+      (ex) => ex.durationSec <= pauseDuration,
     );
     const exercisesToChooseFrom =
       suitableExercises.length > 0 ? suitableExercises : exercises;
-    const randomExercise =
-      exercisesToChooseFrom[
-        Math.floor(Math.random() * exercisesToChooseFrom.length)
-      ];
-    const adjustedExercise = adjustExerciseForDuration(randomExercise);
-    setExercise(adjustedExercise);
-    setTimeLeft(adjustedExercise.durationSec);
-    setStartTime(Date.now());
-    setPhase("exercise");
+    const randomExercise = pickRandomExerciseFromPool(exercisesToChooseFrom);
+    if (randomExercise) {
+      startExercise(randomExercise);
+    }
   };
 
   const handleRandomExercise = () => {
-    const randomExercise = getRandomExercise();
-    const adjustedExercise = adjustExerciseForDuration(randomExercise);
-    setExercise(adjustedExercise);
-    setSelectedCategory(adjustedExercise.category as ExerciseCategory);
-    setTimeLeft(adjustedExercise.durationSec);
-    setStartTime(Date.now());
-    setPhase("exercise");
+    startExercise(getRandomExercise());
   };
 
   const handleGetNewExercise = () => {
+    if (entryParam === "eye-reset") {
+      const nextExercise = pickRandomExerciseFromPool(
+        getEyeResetExercisePool(eyeResetPreference),
+      );
+      if (nextExercise) {
+        startExercise(nextExercise);
+      }
+      return;
+    }
+
+    if (entryParam === "move") {
+      const nextExercise = pickRandomExerciseFromPool(
+        getMoveExercisePool(movePreference),
+      );
+      if (nextExercise) {
+        startExercise(nextExercise);
+      }
+      return;
+    }
+
     if (selectedCategory) {
       const exercises = getExercisesByCategory(selectedCategory);
       const suitableExercises = exercises.filter(
-        (ex) => ex.durationSec <= pauseDuration
+        (ex) => ex.durationSec <= pauseDuration,
       );
       const exercisesToChooseFrom =
         suitableExercises.length > 0 ? suitableExercises : exercises;
-      const randomExercise =
-        exercisesToChooseFrom[
-          Math.floor(Math.random() * exercisesToChooseFrom.length)
-        ];
-      const adjustedExercise = adjustExerciseForDuration(randomExercise);
-      setExercise(adjustedExercise);
-      setTimeLeft(adjustedExercise.durationSec);
-      setStartTime(Date.now());
+      const randomExercise = pickRandomExerciseFromPool(exercisesToChooseFrom);
+      if (randomExercise) {
+        startExercise(randomExercise);
+      }
+    } else if (entryParam === "eye-reset" && eyeResetPreference !== "random") {
+      const preferredExercise = getExerciseById(eyeResetPreference);
+      if (preferredExercise) {
+        startExercise(preferredExercise);
+      }
     }
   };
 
@@ -268,6 +299,19 @@ export default function ExerciseScreen() {
     width: `${progressWidth.value * 100}%`,
   }));
 
+  const footerSpacing = footerHeight + spacing.md;
+  const scrollContentStyle = [
+    styles.scrollContent,
+    { paddingBottom: footerSpacing },
+  ];
+
+  const handleFooterLayout = (event: LayoutChangeEvent) => {
+    const nextHeight = Math.ceil(event.nativeEvent.layout.height);
+    if (nextHeight !== footerHeight) {
+      setFooterHeight(nextHeight);
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -275,9 +319,10 @@ export default function ExerciseScreen() {
     },
     scrollContent: {
       flexGrow: 1,
+      justifyContent: "center",
     },
     header: {
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     title: {
       fontFamily: fonts.light,
@@ -294,10 +339,10 @@ export default function ExerciseScreen() {
     },
     categoriesGrid: {
       gap: spacing.md,
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     categoryCard: {
-      padding: spacing.lg,
+      padding: isCompactScreen ? spacing.md : spacing.lg,
       borderRadius: radius.glass,
       borderWidth: 1,
       borderColor: "rgba(255, 255, 255, 0.1)",
@@ -330,7 +375,7 @@ export default function ExerciseScreen() {
     // Exercise phase
     exerciseHeader: {
       alignItems: "center",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
     },
     exerciseCategory: {
       fontFamily: fonts.semiBold,
@@ -338,36 +383,40 @@ export default function ExerciseScreen() {
       color: colors.primary,
       textTransform: "uppercase",
       letterSpacing: 1.5,
-      marginBottom: spacing.sm,
+      marginBottom: isCompactScreen ? spacing.xs : spacing.sm,
     },
     exerciseName: {
       fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
     },
     timerContainer: {
       alignItems: "center",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
     },
     timerCircle: {
-      width: width * 0.5,
-      height: width * 0.5,
-      borderRadius: width * 0.25,
+      width: isCompactScreen ? width * 0.28 : width * 0.35,
+      height: isCompactScreen ? width * 0.28 : width * 0.35,
+      borderRadius: isCompactScreen ? width * 0.14 : width * 0.175,
       borderWidth: 3,
       borderColor: "rgba(255, 255, 255, 0.1)",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: spacing.lg,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
     },
     timerText: {
       fontFamily: fonts.thin,
-      fontSize: 72,
+      fontSize: isCompactScreen ? 38 : 48,
       color: colors.text,
     },
     timerUnit: {
       fontFamily: fonts.regular,
-      fontSize: typography.heading.fontSize,
+      fontSize: isCompactScreen
+        ? typography.body.fontSize
+        : typography.heading.fontSize,
       color: colors.textSecondary,
     },
     progressBar: {
@@ -375,7 +424,7 @@ export default function ExerciseScreen() {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
       borderRadius: 2,
       overflow: "hidden",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
     },
     progressFill: {
       height: "100%",
@@ -383,20 +432,22 @@ export default function ExerciseScreen() {
       borderRadius: 2,
     },
     instructionsCard: {
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
     },
     instructionsText: {
       fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
+      fontSize: isCompactScreen
+        ? typography.caption.fontSize
+        : typography.body.fontSize,
       color: colors.textSecondary,
-      lineHeight: 26,
+      lineHeight: isCompactScreen ? 20 : 26,
       textAlign: "center",
     },
     detailsRow: {
       flexDirection: "row",
       justifyContent: "space-around",
-      marginTop: spacing.lg,
-      paddingTop: spacing.lg,
+      marginTop: isCompactScreen ? spacing.md : spacing.lg,
+      paddingTop: isCompactScreen ? spacing.md : spacing.lg,
       borderTopWidth: 1,
       borderTopColor: "rgba(255, 255, 255, 0.1)",
     },
@@ -442,19 +493,31 @@ export default function ExerciseScreen() {
     },
     buttonContainer: {
       gap: spacing.sm,
-      marginTop: "auto",
+      marginTop: isCompactScreen ? spacing.sm : "auto",
+      paddingBottom: Math.max(insets.bottom, spacing.xs),
     },
   });
 
   // Category selection phase
   if (phase === "select") {
+    const entryMeta = entryParam ? EXERCISE_ENTRY_METADATA[entryParam] : null;
+
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={scrollContentStyle}>
+          <LumiIllustration
+            source={getLumiAssetForExercise({ entry: entryParam })}
+            maxHeight={heroHeight}
+          />
+
           <View style={styles.header}>
-            <Text style={styles.title}>Movement Break</Text>
+            <Text style={styles.title}>
+              {entryMeta ? entryMeta.label : "Choose Your Reset"}
+            </Text>
             <Text style={styles.subtitle}>
-              Choose what feels right for your body right now
+              {entryMeta
+                ? entryMeta.description
+                : "Choose what feels right for your body right now"}
             </Text>
           </View>
 
@@ -489,7 +552,7 @@ export default function ExerciseScreen() {
           />
         </ScrollView>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
           <Button label="Back" onPress={handleSkip} variant="ghost" />
         </View>
       </SafeAreaView>
@@ -498,13 +561,19 @@ export default function ExerciseScreen() {
 
   // Exercise in progress
   if (phase === "exercise" && exercise) {
-    const categoryLabel =
-      CATEGORIES.find((c) => c.id === exercise.category)?.label ||
-      exercise.category;
+    const categoryLabel = getCategoryMeta(exercise.category)?.label || exercise.category;
 
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={scrollContentStyle}>
+          <LumiIllustration
+            source={getLumiAssetForExercise({
+              entry: entryParam,
+              category: exercise.category,
+            })}
+            maxHeight={activeHeroHeight}
+          />
+
           <View style={styles.exerciseHeader}>
             <Text style={styles.exerciseCategory}>{categoryLabel}</Text>
             <Text style={styles.exerciseName}>{exercise.name}</Text>
@@ -543,7 +612,7 @@ export default function ExerciseScreen() {
           </GlassCard>
         </ScrollView>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
           <Button
             label="Try Different Exercise"
             onPress={handleGetNewExercise}
@@ -556,26 +625,48 @@ export default function ExerciseScreen() {
   }
 
   // Complete phase
+  const completedEyeReset =
+    selectedCategory === "eye-posture" || entryParam === "eye-reset";
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.completeContainer}>
-        <Ionicons name="fitness-outline" size={64} color={colors.primary} style={{ marginBottom: spacing.lg }} />
-        <Text style={styles.completeTitle}>Great Job!</Text>
-        <Text style={styles.completeMessage}>
-          You just moved your body instead of scrolling.{"\n"}
-          That&apos;s a powerful choice.
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={scrollContentStyle}>
+        <View style={styles.completeContainer}>
+          <LumiIllustration
+            source={getLumiAssetForExercise({
+              entry: entryParam,
+              category: selectedCategory,
+              isComplete: true,
+            })}
+            maxHeight={completionHeroHeight}
+            scale={1.3}
+          />
+          <Text style={styles.completeTitle}>
+            {completedEyeReset ? "Eyes Reset!" : "Great Job!"}
+          </Text>
+          <Text style={styles.completeMessage}>
+            {completedEyeReset
+              ? "You gave your eyes and posture a real break instead of falling back into the scroll."
+              : "You just moved your body instead of scrolling.\nThat&apos;s a powerful choice."}
+          </Text>
+        </View>
+      </ScrollView>
 
-      <View style={styles.buttonContainer}>
+      <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
         <Button
-          label="I Feel Energized!"
+          label={completedEyeReset ? "I Feel Refreshed!" : "I Feel Energized!"}
           onPress={handleComplete}
           variant="primary"
         />
         <Button
-          label="Do Another Exercise"
-          onPress={() => setPhase("select")}
+          label={completedEyeReset ? "Try Another Eye Reset" : "Do Another Exercise"}
+          onPress={() => {
+            if (entryParam === "eye-reset" || entryParam === "move") {
+              handleGetNewExercise();
+              return;
+            }
+            setPhase("select");
+          }}
           variant="secondary"
         />
         <Button label="Back" onPress={handleSkip} variant="ghost" />

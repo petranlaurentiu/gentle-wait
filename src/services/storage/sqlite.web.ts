@@ -144,3 +144,68 @@ export async function deleteAllEvents(): Promise<void> {
     console.error('Error deleting all events:', error);
   }
 }
+
+// ==================== JOURNAL ENTRIES (Web stubs) ====================
+
+export interface JournalEntry {
+  id: string;
+  ts: number;
+  content: string;
+  prompt?: string;
+  appPackage?: string;
+  appLabel?: string;
+}
+
+export async function insertJournalEntry(entry: JournalEntry): Promise<void> {
+  try {
+    const entries = mmkvStorage.getJSON('journal_entries') || [];
+    entries.push(entry);
+    mmkvStorage.setJSON('journal_entries', entries);
+  } catch (error) {
+    console.error('Error inserting journal entry:', error);
+  }
+}
+
+export async function getRecentJournalEntries(
+  limit: number = 10
+): Promise<JournalEntry[]> {
+  try {
+    const entries: JournalEntry[] = mmkvStorage.getJSON('journal_entries') || [];
+    return entries.sort((a, b) => b.ts - a.ts).slice(0, limit);
+  } catch (error) {
+    console.error('Error getting journal entries:', error);
+    return [];
+  }
+}
+
+export async function getJournalEntriesByDateRange(
+  startTs: number,
+  endTs: number
+): Promise<JournalEntry[]> {
+  try {
+    const entries: JournalEntry[] = mmkvStorage.getJSON('journal_entries') || [];
+    return entries
+      .filter((e) => e.ts >= startTs && e.ts <= endTs)
+      .sort((a, b) => b.ts - a.ts);
+  } catch (error) {
+    console.error('Error getting journal entries by date range:', error);
+    return [];
+  }
+}
+
+export async function deleteJournalEntry(id: string): Promise<void> {
+  try {
+    const entries: JournalEntry[] = mmkvStorage.getJSON('journal_entries') || [];
+    mmkvStorage.setJSON('journal_entries', entries.filter((e) => e.id !== id));
+  } catch (error) {
+    console.error('Error deleting journal entry:', error);
+  }
+}
+
+export async function deleteAllJournalEntries(): Promise<void> {
+  try {
+    mmkvStorage.delete('journal_entries');
+  } catch (error) {
+    console.error('Error deleting journal entries:', error);
+  }
+}

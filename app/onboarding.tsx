@@ -1403,71 +1403,176 @@ export default function OnboardingScreen() {
       color: colors.primary,
     },
     // Analysis styles
+    analysisIntro: {
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    analysisBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    analysisBadgeText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
     analysisTitle: {
       fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
+      lineHeight: typography.title.lineHeight,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.md,
+    },
+    analysisHighlight: {
+      fontFamily: fonts.semiBold,
+      color: colors.primary,
     },
     analysisSubtitle: {
       fontFamily: fonts.regular,
       fontSize: typography.body.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
-      lineHeight: 26,
-      marginBottom: spacing.md,
+      lineHeight: typography.body.lineHeight,
+      maxWidth: 320,
     },
-    analysisHighlight: {
-      fontFamily: fonts.semiBold,
-      color: colors.error,
-    },
-    chartContainer: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "flex-end",
-      gap: spacing.xl * 2,
-      marginTop: spacing.lg,
-      marginBottom: spacing.md,
-    },
-    chartBar: {
-      alignItems: "center",
-      width: 96,
-    },
-    chartBarFill: {
-      width: 86,
-      borderRadius: 12,
-      justifyContent: "flex-start",
-      alignItems: "center",
-      paddingTop: spacing.md,
+    analysisHeroCard: {
       overflow: "hidden",
-      minHeight: 60,
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
     },
-    chartBarValue: {
-      fontFamily: fonts.bold,
+    analysisHeroGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.9,
+    },
+    analysisOverline: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+    },
+    analysisValue: {
+      fontFamily: fonts.thin,
+      fontSize: typography.display.fontSize,
+      color: colors.text,
+      letterSpacing: typography.display.letterSpacing,
+      textAlign: "center",
+    },
+    analysisValueLabel: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.bodyLarge.fontSize,
+      color: colors.primary,
+      textAlign: "center",
+    },
+    analysisDescription: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: typography.body.lineHeight,
+      maxWidth: 290,
+    },
+    analysisStatsRow: {
+      flexDirection: "row",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    analysisStatCard: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.button,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    analysisStatValue: {
+      fontFamily: fonts.semiBold,
       fontSize: typography.heading.fontSize,
       color: colors.text,
+      textAlign: "center",
     },
-    chartBarLabel: {
+    analysisStatLabel: {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
-      color: colors.text,
-      marginTop: spacing.sm,
-    },
-    analysisComparison: {
-      fontFamily: fonts.light,
-      fontSize: typography.bodyLarge.fontSize,
-      color: colors.text,
+      color: colors.textMuted,
       textAlign: "center",
-      marginTop: spacing.md,
-      marginBottom: spacing.sm,
+    },
+    analysisInsightCard: {
+      gap: spacing.lg,
+    },
+    analysisInsightHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    analysisInsightTitleWrap: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    analysisInsightEyebrow: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    analysisInsightTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.heading.fontSize,
+      lineHeight: typography.heading.lineHeight,
+      color: colors.text,
+    },
+    analysisInsightChip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    analysisInsightChipText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.caption.fontSize,
+      color: colors.primary,
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+    },
+    analysisInsightList: {
+      gap: spacing.md,
+    },
+    analysisInsightRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    analysisInsightText: {
+      flex: 1,
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
     },
     analysisDisclaimer: {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
       color: colors.textMuted,
       textAlign: "center",
-      marginTop: spacing.sm,
+      marginTop: spacing.md,
       paddingBottom: spacing.lg,
     },
     // Projection styles
@@ -2562,103 +2667,130 @@ export default function OnboardingScreen() {
 
           {step === "analysis" &&
             (() => {
-              // Calculate a "dependence score" based on user inputs
               const baseScore = Math.min(dailyScreenTime * 8, 70);
               const emotionBonus = selectedEmotions.size * 5;
               const userScore = Math.min(baseScore + emotionBonus, 85);
               const averageScore = 33;
               const difference = userScore - averageScore;
-
-              // Calculate bar heights based on screen height (responsive)
-              const maxBarHeight = screenHeight * 0.45;
-              const userBarHeight = (userScore / 100) * maxBarHeight;
-              const averageBarHeight = (averageScore / 100) * maxBarHeight;
+              const scoreTone =
+                userScore >= 70
+                  ? "high pull"
+                  : userScore >= 50
+                    ? "strong pattern"
+                    : "noticeable pattern";
+              const analysisInsights = [
+                `Your current rhythm suggests your phone is pulling harder than average, especially when you feel ${primaryEmotion.toLowerCase()}.`,
+                `Right now, ${dailyScreenTime}h a day makes it harder to reach "${primaryGoal}" with consistency.`,
+                `GentleWait is designed to soften that pattern before it becomes another automatic scroll.`,
+              ];
 
               return (
                 <>
-                  <Text style={styles.analysisTitle}>
-                    It doesn&apos;t look good so far...
-                  </Text>
-                  <Text style={styles.analysisSubtitle}>
-                    Your responses suggest a strong{"\n"}
-                    <Text style={styles.analysisHighlight}>
-                      reliance on your phone
-                    </Text>{" "}
-                    that may be affecting your well-being
-                  </Text>
-
-                  {/* Bar chart */}
-                  <View style={styles.chartContainer}>
-                    <View style={styles.chartBar}>
-                      <View
-                        style={[styles.chartBarFill, { height: userBarHeight }]}
-                      >
-                        <LinearGradient
-                          colors={[
-                            "#FF9999",
-                            colors.error,
-                            "#FF4444",
-                            "#CC0000",
-                          ]}
-                          start={{ x: 0.5, y: 1 }}
-                          end={{ x: 0.5, y: 0 }}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            justifyContent: "flex-start",
-                            alignItems: "center",
-                            paddingTop: spacing.md,
-                            borderRadius: 12,
-                          }}
-                        >
-                          <Text style={styles.chartBarValue}>{userScore}%</Text>
-                        </LinearGradient>
-                      </View>
-                      <Text style={styles.chartBarLabel}>Your Result</Text>
+                  <View style={styles.analysisIntro}>
+                    <View style={styles.analysisBadge}>
+                      <Ionicons
+                        name="pulse-outline"
+                        size={14}
+                        color={colors.secondary}
+                      />
+                      <Text style={styles.analysisBadgeText}>
+                        Your attention pattern
+                      </Text>
                     </View>
-                    <View style={styles.chartBar}>
-                      <View
-                        style={[
-                          styles.chartBarFill,
-                          { height: averageBarHeight },
-                        ]}
-                      >
-                        <LinearGradient
-                          colors={[
-                            colors.primaryLight,
-                            colors.primary,
-                            "rgba(0, 212, 255, 0.6)",
-                            "rgba(0, 212, 255, 0.8)",
-                          ]}
-                          start={{ x: 0.5, y: 1 }}
-                          end={{ x: 0.5, y: 0 }}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            justifyContent: "flex-start",
-                            alignItems: "center",
-                            paddingTop: spacing.md,
-                            borderRadius: 12,
-                          }}
-                        >
-                          <Text style={styles.chartBarValue}>
-                            {averageScore}%
-                          </Text>
-                        </LinearGradient>
-                      </View>
-                      <Text style={styles.chartBarLabel}>Average</Text>
+                    <Text style={styles.analysisTitle}>
+                      Your current phone use shows a{" "}
+                      <Text style={styles.analysisHighlight}>{scoreTone}</Text>
+                    </Text>
+                    <Text style={styles.analysisSubtitle}>
+                      This is not about blame. It&apos;s a signal that your
+                      daily rhythm could use a gentler interruption.
+                    </Text>
+                  </View>
+
+                  <GlassCard glowColor="primary" style={styles.analysisHeroCard}>
+                    <LinearGradient
+                      colors={[
+                        colors.primaryLight,
+                        "rgba(126, 230, 198, 0.12)",
+                        "transparent",
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.analysisHeroGradient}
+                    />
+
+                    <Text style={styles.analysisOverline}>Your score</Text>
+                    <Text style={styles.analysisValue}>{userScore}%</Text>
+                    <Text style={styles.analysisValueLabel}>
+                      reliance on autopilot habits
+                    </Text>
+                    <Text style={styles.analysisDescription}>
+                      Based on your screen time and how scrolling tends to leave
+                      you feeling afterward.
+                    </Text>
+                  </GlassCard>
+
+                  <View style={styles.analysisStatsRow}>
+                    <View style={styles.analysisStatCard}>
+                      <Text style={styles.analysisStatValue}>
+                        +{difference}%
+                      </Text>
+                      <Text style={styles.analysisStatLabel}>
+                        above the average pattern
+                      </Text>
+                    </View>
+
+                    <View style={styles.analysisStatCard}>
+                      <Text style={styles.analysisStatValue}>
+                        {selectedEmotions.size}/2
+                      </Text>
+                      <Text style={styles.analysisStatLabel}>
+                        emotional signals linked to scrolling
+                      </Text>
                     </View>
                   </View>
 
-                  <Text style={styles.analysisComparison}>
-                    <Text style={styles.analysisHighlight}>
-                      {difference}% higher
-                    </Text>{" "}
-                    than the average!
-                  </Text>
+                  <GlassCard
+                    intensity="light"
+                    style={styles.analysisInsightCard}
+                  >
+                    <View style={styles.analysisInsightHeader}>
+                      <View style={styles.analysisInsightTitleWrap}>
+                        <Text style={styles.analysisInsightEyebrow}>
+                          What this means
+                        </Text>
+                        <Text style={styles.analysisInsightTitle}>
+                          A clearer picture before we build your reset
+                        </Text>
+                      </View>
+
+                      <View style={styles.analysisInsightChip}>
+                        <Text style={styles.analysisInsightChipText}>
+                          GentleWait
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.analysisInsightList}>
+                      {analysisInsights.map((item) => (
+                        <View key={item} style={styles.analysisInsightRow}>
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={18}
+                            color={colors.primary}
+                            style={{ marginTop: 2 }}
+                          />
+                          <Text style={styles.analysisInsightText}>
+                            {item}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </GlassCard>
 
                   <Text style={styles.analysisDisclaimer}>
-                    Based on your responses about screen time and how you feel
+                    Based on your responses about screen time, goals, and how
+                    scrolling tends to affect your mood.
                   </Text>
                 </>
               );

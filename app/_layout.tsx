@@ -300,6 +300,12 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="journal"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
                 name="exercise"
                 options={{
                   headerShown: false,

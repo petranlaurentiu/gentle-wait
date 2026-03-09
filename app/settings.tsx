@@ -44,6 +44,15 @@ import { useTheme } from "@/src/theme/ThemeProvider";
 import { radius, spacing } from "@/src/theme/theme";
 import { triggerSelectionFeedback } from "@/src/utils/haptics";
 import { useFadeInAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
+import {
+  DEFAULT_EYE_RESET_EXERCISE_PREFERENCE,
+  DEFAULT_MOVE_EXERCISE_PREFERENCE,
+  EYE_RESET_PREFERENCE_OPTIONS,
+  MOVE_EXERCISE_PREFERENCE_OPTIONS,
+  getEyeResetExercisePreferenceLabel,
+  getMoveExercisePreferenceLabel,
+} from "@/src/data/exercises";
+import type { ExerciseEntryPoint } from "@/src/domain/models";
 
 const PAUSE_DURATIONS = [8, 10, 15, 20, 30];
 const PROMPT_OPTIONS: ("off" | "sometimes" | "always")[] = ["off", "sometimes", "always"];
@@ -57,6 +66,8 @@ export default function SettingsScreen() {
   const billingAvailable = useAppStore((state) => state.billingAvailable);
   const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
   const [pendingCooldown, setPendingCooldown] = useState(settings.cooldownMinutes || 15);
+  const [exerciseModalTarget, setExerciseModalTarget] =
+    useState<ExerciseEntryPoint | null>(null);
   const [androidProtectionEnabled, setAndroidProtectionEnabled] = useState(false);
   const [showAllProtectedApps, setShowAllProtectedApps] = useState(false);
   const [appPendingRemoval, setAppPendingRemoval] = useState<{
@@ -83,6 +94,16 @@ export default function SettingsScreen() {
   const visibleProtectedApps = showAllProtectedApps
     ? settings.selectedApps
     : settings.selectedApps.slice(0, 3);
+  const movePreferenceLabel = getMoveExercisePreferenceLabel(
+    settings.moveExercisePreference || DEFAULT_MOVE_EXERCISE_PREFERENCE,
+  );
+  const eyeResetPreferenceLabel = getEyeResetExercisePreferenceLabel(
+    settings.eyeResetExercisePreference || DEFAULT_EYE_RESET_EXERCISE_PREFERENCE,
+  );
+  const exercisePreferenceOptions =
+    exerciseModalTarget === "move"
+      ? MOVE_EXERCISE_PREFERENCE_OPTIONS
+      : EYE_RESET_PREFERENCE_OPTIONS;
 
   useEffect(() => {
     if (Platform.OS !== "android") {
@@ -177,6 +198,31 @@ export default function SettingsScreen() {
   const handleConfirmCooldown = () => {
     updateSettings({ cooldownMinutes: pendingCooldown });
     setCooldownModalVisible(false);
+  };
+
+  const handleOpenExercisePreferences = async (
+    target: ExerciseEntryPoint,
+  ) => {
+    await triggerSelectionFeedback();
+    setExerciseModalTarget(target);
+  };
+
+  const handleSelectExercisePreference = async (value: string) => {
+    await triggerSelectionFeedback();
+
+    if (exerciseModalTarget === "move") {
+      updateSettings({
+        moveExercisePreference:
+          value as typeof settings.moveExercisePreference,
+      });
+    } else if (exerciseModalTarget === "eye-reset") {
+      updateSettings({
+        eyeResetExercisePreference:
+          value as typeof settings.eyeResetExercisePreference,
+      });
+    }
+
+    setExerciseModalTarget(null);
   };
 
   const handleChangePromptFrequency = async () => {
@@ -400,6 +446,28 @@ export default function SettingsScreen() {
       gap: spacing.md,
       justifyContent: "flex-end",
     },
+    modalOptionList: {
+      gap: spacing.sm,
+    },
+    modalOptionButton: {
+      borderRadius: radius.button,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.xs,
+    },
+    modalOptionButtonSelected: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
+    },
+    modalOptionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
     removeModalContent: {
       width: "100%",
       borderRadius: radius.card,
@@ -586,6 +654,57 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Animated.View>
 
+        <Animated.View style={[styles.section, promptsAnimation]}>
+          <AppText variant="eyebrow" color="secondary">Exercises</AppText>
+          <View style={styles.list}>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => handleOpenExercisePreferences("move")}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Move</AppText>
+                <AppText variant="caption" color="secondary">
+                  Choose which type of movement break opens from Pause and Home.
+                </AppText>
+              </View>
+              <View style={styles.valueWrap}>
+                <AppText variant="heading" color="primary">
+                  {movePreferenceLabel}
+                </AppText>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.textTertiary}
+                />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => handleOpenExercisePreferences("eye-reset")}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Eye Reset</AppText>
+                <AppText variant="caption" color="secondary">
+                  Choose which eye or posture reset opens from Pause and Home.
+                </AppText>
+              </View>
+              <View style={styles.valueWrap}>
+                <AppText variant="heading" color="primary">
+                  {eyeResetPreferenceLabel}
+                </AppText>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.textTertiary}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
         {Platform.OS === "android" && (
           <Animated.View style={[styles.section, promptsAnimation]}>
             <AppText variant="eyebrow" color="secondary">Android protection</AppText>
@@ -761,6 +880,86 @@ export default function SettingsScreen() {
             <View style={styles.modalButtons}>
               <Button label="Cancel" onPress={() => setCooldownModalVisible(false)} variant="ghost" />
               <Button label="Done" onPress={handleConfirmCooldown} variant="primary" />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(exerciseModalTarget)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExerciseModalTarget(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ gap: 4 }}>
+              <AppText variant="sectionTitle">
+                {exerciseModalTarget === "move"
+                  ? "Move preference"
+                  : "Eye Reset preference"}
+              </AppText>
+              <AppText variant="body" color="secondary">
+                {exerciseModalTarget === "move"
+                  ? "Choose what the Move action should open by default."
+                  : "Choose what the Eye Reset action should open by default."}
+              </AppText>
+            </View>
+
+            <ScrollView
+              style={{ maxHeight: 340 }}
+              contentContainerStyle={styles.modalOptionList}
+              showsVerticalScrollIndicator={false}
+            >
+              {exercisePreferenceOptions.map((option) => {
+                const isSelected =
+                  exerciseModalTarget === "move"
+                    ? option.id ===
+                      (settings.moveExercisePreference ||
+                        DEFAULT_MOVE_EXERCISE_PREFERENCE)
+                    : option.id ===
+                      (settings.eyeResetExercisePreference ||
+                        DEFAULT_EYE_RESET_EXERCISE_PREFERENCE);
+
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.modalOptionButton,
+                      isSelected && styles.modalOptionButtonSelected,
+                    ]}
+                    onPress={() => handleSelectExercisePreference(option.id)}
+                    activeOpacity={0.82}
+                  >
+                    <View style={styles.modalOptionHeader}>
+                      <AppText
+                        variant="heading"
+                        color={isSelected ? "primary" : "default"}
+                      >
+                        {option.label}
+                      </AppText>
+                      {isSelected ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color={colors.primary}
+                        />
+                      ) : null}
+                    </View>
+                    <AppText variant="caption" color="secondary">
+                      {option.description}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <Button
+                label="Close"
+                onPress={() => setExerciseModalTarget(null)}
+                variant="ghost"
+              />
             </View>
           </View>
         </View>

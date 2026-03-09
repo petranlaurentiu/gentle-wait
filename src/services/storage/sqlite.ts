@@ -295,6 +295,14 @@ export async function getJournalEntriesByDateRange(
 }
 
 /**
+ * Delete a single journal entry by id
+ */
+export async function deleteJournalEntry(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM journal_entries WHERE id = ?`, [id]);
+}
+
+/**
  * Delete all journal entries
  */
 export async function deleteAllJournalEntries(): Promise<void> {

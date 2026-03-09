@@ -120,7 +120,7 @@ function getAvailableOfferingIdentifiers(
 }
 
 function mapPackage(
-  pkg: Awaited<ReturnType<PurchasesModule["getOfferings"]>>["current"]["availablePackages"][number],
+  pkg: NonNullable<Awaited<ReturnType<PurchasesModule["getOfferings"]>>["current"]>["availablePackages"][number],
 ): BillingPackage {
   const introPrice = pkg.product.introPrice;
 

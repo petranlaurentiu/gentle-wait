@@ -240,7 +240,7 @@ export async function configureIOSProtection(
   });
 
   blockSelection(
-    { familyActivitySelectionId: IOS_SELECTION_ID },
+    { activitySelectionId: IOS_SELECTION_ID },
     "configureIOSProtection",
   );
   await startIOSMainMonitoring();

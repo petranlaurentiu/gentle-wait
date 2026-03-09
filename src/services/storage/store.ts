@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   premium: false,
   iosFamilyActivitySelection: null,
+  moveExercisePreference: 'random',
+  eyeResetExercisePreference: 'random',
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
@@ -49,7 +51,12 @@ export const useAppStore = create<AppStore>((set) => ({
 
   loadSettings: () => {
     const stored = mmkvStorage.getJSON<UserSettings>(SETTINGS_KEY);
-    const settings = stored || DEFAULT_SETTINGS;
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      ...stored,
+      selectedApps: stored?.selectedApps || [],
+      iosFamilyActivitySelection: stored?.iosFamilyActivitySelection ?? null,
+    };
 
     nativeService.setSelectedApps(settings.selectedApps).catch((e) => {
       console.error('Error syncing selected apps on load:', e);

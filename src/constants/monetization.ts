@@ -1,4 +1,4 @@
-export const FREE_PROTECTED_APPS_LIMIT = 3;
+export const FREE_PROTECTED_APPS_LIMIT = 1;
 export const PREMIUM_ENTITLEMENT_ID = "GentleWait Pro";
 
 export const PRICING = {

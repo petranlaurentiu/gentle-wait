@@ -17,6 +17,20 @@ export interface IOSFamilyActivitySelection {
   updatedAt: number;
 }
 
+export type ExerciseEntryPoint = "move" | "eye-reset";
+export type MoveExercisePreference =
+  | "random"
+  | "desk-stretch"
+  | "standing"
+  | "energy";
+export type EyeResetExercisePreference =
+  | "random"
+  | "eye-posture-1"
+  | "eye-posture-2"
+  | "eye-posture-3"
+  | "eye-posture-4"
+  | "eye-posture-5";
+
 export interface UserSettings {
   id: string; // singleton
   userName?: string;
@@ -36,6 +50,8 @@ export interface UserSettings {
   targetScreenTimeHours?: number; // Target daily screen time
   ageRange?: string; // e.g., "18-24", "25-34"
   onboardingCompleted?: boolean;
+  moveExercisePreference?: MoveExercisePreference;
+  eyeResetExercisePreference?: EyeResetExercisePreference;
 }
 
 export type InterceptionAction =

@@ -2,48 +2,46 @@
  * Alternatives screen - Breathing, Journaling, and Grounding exercises
  * Liquid Glass Design System
  */
-import { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TextInput,
-  ScrollView,
-  Platform,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-} from "react-native-reanimated";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { launchApp } from "@/src/services/native";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { insertEvent, insertJournalEntry } from "@/src/services/storage/sqlite";
-import { useAppStore } from "@/src/services/storage";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
+import { LumiIllustration } from "@/src/components/LumiIllustration";
+import { getLumiAssetForAlternative } from "@/src/data/lumi";
 import {
   getBreathingExerciseForDuration,
   getGroundingExerciseForDuration,
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
-
-const { width } = Dimensions.get("window");
-const CIRCLE_SIZE = width * 0.5;
-const GLOW_SIZE = width * 0.4;
-
+import { launchApp } from "@/src/services/native";
+import { useAppStore } from "@/src/services/storage";
+import {
+  getRecentJournalEntries,
+  insertEvent,
+  insertJournalEntry,
+  JournalEntry,
+} from "@/src/services/storage/sqlite";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -55,6 +53,7 @@ export default function AlternativesScreen() {
   const { colors } = useTheme();
   const params = useLocalSearchParams();
   const settings = useAppStore((state) => state.settings);
+  const { height: screenHeight } = useWindowDimensions();
 
   const type = (params.type as AlternativeType) || "breathe";
   const sessionId = (params.sessionId as string) || "";
@@ -63,11 +62,16 @@ export default function AlternativesScreen() {
 
   const [startTime] = useState(Date.now());
   const [isComplete, setIsComplete] = useState(false);
+  const isCompactScreen = screenHeight < 860;
+  const heroHeight = isCompactScreen ? 150 : 220;
+  const breatheHeroHeight = isCompactScreen ? 165 : 250;
+  const groundingHeroHeight = isCompactScreen ? 155 : 230;
+  const prayerHeroHeight = isCompactScreen ? 165 : 240;
 
   // Breathing state - use pause duration from settings
   const pauseDuration = settings.pauseDurationSec || 15;
   const [breathingExercise] = useState(() =>
-    getBreathingExerciseForDuration(pauseDuration)
+    getBreathingExerciseForDuration(pauseDuration),
   );
   const [currentCycle, setCurrentCycle] = useState(1);
   const currentCycleRef = useRef(1); // Ref for synchronous access
@@ -76,16 +80,29 @@ export default function AlternativesScreen() {
 
   // Grounding state - use pause duration from settings
   const [groundingExercise] = useState(() =>
-    getGroundingExerciseForDuration(pauseDuration)
+    getGroundingExerciseForDuration(pauseDuration),
   );
   const [groundingTimeLeft, setGroundingTimeLeft] = useState(
-    groundingExercise.durationSec
+    groundingExercise.durationSec,
   );
   const [groundingStep, setGroundingStep] = useState(0); // For 5-4-3-2-1
 
   // Journaling state
   const [journalPrompt] = useState(() => getRandomJournalingPrompt());
   const [journalEntry, setJournalEntry] = useState("");
+  const [previousEntries, setPreviousEntries] = useState<JournalEntry[]>([]);
+  const [savedJournalEntry, setSavedJournalEntry] = useState<JournalEntry | null>(
+    null,
+  );
+  const [journalSaveError, setJournalSaveError] = useState<string | null>(null);
+
+  // Load previous journal entries
+  useEffect(() => {
+    if (type !== "reflect") return;
+    getRecentJournalEntries(10)
+      .then(setPreviousEntries)
+      .catch((err) => console.error("[Alternatives] Failed to load journal entries:", err));
+  }, [type]);
 
   // Prayer state
   const [prayer] = useState<Prayer>(() => getPrayerForDuration(pauseDuration));
@@ -245,10 +262,6 @@ export default function AlternativesScreen() {
     transform: [{ scale: breathScale.value }],
   }));
 
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   const handleComplete = async () => {
     try {
       const actionMap: Record<AlternativeType, string> = {
@@ -270,38 +283,50 @@ export default function AlternativesScreen() {
 
       // Save journal entry if this was a reflection exercise
       if (type === "reflect" && journalEntry.trim().length > 0) {
-        await insertJournalEntry({
+        const entry = {
           id: generateId(),
           ts: Date.now(),
           content: journalEntry.trim(),
           prompt: journalPrompt,
           appPackage,
           appLabel,
-        });
-        console.log("[Alternatives] Saved journal entry");
-      }
-      
-      // Navigate directly to home using replace to avoid navigation stack issues
-      router.replace("/home");
+        };
 
-      // Launch the app after a brief delay (pending interception already cleared)
-      if (Platform.OS === "android" && appPackage) {
-        setTimeout(async () => {
-          try {
-            const launched = await launchApp(appPackage);
-            if (launched) {
-              console.log("[Alternatives] Launched app:", appPackage);
-            } else {
-              console.warn("[Alternatives] Could not relaunch app:", appPackage);
-            }
-          } catch (error) {
-            console.error("[Alternatives] Failed to launch app:", error);
-          }
-        }, 800);
+        await insertJournalEntry(entry);
+        setPreviousEntries((entries) => [entry, ...entries].slice(0, 10));
+        setSavedJournalEntry(entry);
+        setJournalSaveError(null);
+        setJournalEntry("");
+        return;
       }
+
+      exitToHome();
     } catch (error) {
       console.error("[Alternatives] Error completing exercise:", error);
-      router.replace("/home");
+      if (type === "reflect") {
+        setJournalSaveError("Your reflection could not be saved. Please try again.");
+        return;
+      }
+      exitToHome();
+    }
+  };
+
+  const exitToHome = () => {
+    router.replace("/home");
+
+    if (Platform.OS === "android" && appPackage) {
+      setTimeout(async () => {
+        try {
+          const launched = await launchApp(appPackage);
+          if (launched) {
+            console.log("[Alternatives] Launched app:", appPackage);
+          } else {
+            console.warn("[Alternatives] Could not relaunch app:", appPackage);
+          }
+        } catch (error) {
+          console.error("[Alternatives] Failed to launch app:", error);
+        }
+      }, 800);
     }
   };
 
@@ -345,54 +370,29 @@ export default function AlternativesScreen() {
     },
     header: {
       alignItems: "center",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     exerciseName: {
       fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.sm,
+      marginBottom: isCompactScreen ? spacing.xs : spacing.sm,
     },
     exerciseDescription: {
       fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
+      fontSize: isCompactScreen
+        ? typography.caption.fontSize
+        : typography.body.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
+      lineHeight: isCompactScreen ? 20 : typography.body.lineHeight,
     },
-    circleContainer: {
-      width: CIRCLE_SIZE + 60,
-      height: CIRCLE_SIZE + 60,
+    breathStatusCard: {
       alignItems: "center",
-      justifyContent: "center",
-      alignSelf: "center",
-      marginBottom: spacing.xl,
-    },
-    glowOuter: {
-      position: "absolute",
-      width: CIRCLE_SIZE + 60,
-      height: CIRCLE_SIZE + 60,
-      borderRadius: (CIRCLE_SIZE + 60) / 2,
-    },
-    breathingCircle: {
-      width: CIRCLE_SIZE,
-      height: CIRCLE_SIZE,
-      borderRadius: CIRCLE_SIZE / 2,
-      overflow: "hidden",
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.2)",
-    },
-    circleBlur: {
-      width: "100%",
-      height: "100%",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    circleGradient: {
-      width: "100%",
-      height: "100%",
-      alignItems: "center",
-      justifyContent: "center",
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     phaseText: {
       fontFamily: fonts.medium,
@@ -404,16 +404,16 @@ export default function AlternativesScreen() {
     },
     timerText: {
       fontFamily: fonts.thin,
-      fontSize: typography.display.fontSize,
+      fontSize: isCompactScreen ? 42 : typography.display.fontSize,
       color: colors.text,
-      marginTop: spacing.sm,
+      marginTop: isCompactScreen ? spacing.xs : spacing.sm,
     },
     cycleInfo: {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
-      marginBottom: spacing.lg,
+      marginBottom: isCompactScreen ? spacing.md : spacing.lg,
     },
     // Grounding styles
     groundingContainer: {
@@ -422,20 +422,20 @@ export default function AlternativesScreen() {
     },
     groundingTimer: {
       fontFamily: fonts.thin,
-      fontSize: 64,
+      fontSize: isCompactScreen ? 48 : 64,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     groundingStepContainer: {
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     groundingStepNumber: {
       fontFamily: fonts.thin,
-      fontSize: 120,
+      fontSize: isCompactScreen ? 82 : 120,
       color: colors.primary,
       textAlign: "center",
-      lineHeight: 130,
+      lineHeight: isCompactScreen ? 92 : 130,
     },
     groundingSense: {
       fontFamily: fonts.semiBold,
@@ -444,20 +444,22 @@ export default function AlternativesScreen() {
       textAlign: "center",
       textTransform: "uppercase",
       letterSpacing: 3,
-      marginBottom: spacing.sm,
+      marginBottom: isCompactScreen ? spacing.xs : spacing.sm,
     },
     groundingPrompt: {
       fontFamily: fonts.light,
-      fontSize: typography.bodyLarge.fontSize,
+      fontSize: isCompactScreen
+        ? typography.body.fontSize
+        : typography.bodyLarge.fontSize,
       color: colors.text,
       textAlign: "center",
-      lineHeight: 28,
+      lineHeight: isCompactScreen ? 22 : 28,
     },
     groundingDots: {
       flexDirection: "row",
       justifyContent: "center",
       gap: spacing.sm,
-      marginTop: spacing.xl,
+      marginTop: isCompactScreen ? spacing.md : spacing.xl,
     },
     groundingDot: {
       width: 10,
@@ -475,26 +477,78 @@ export default function AlternativesScreen() {
     journalContainer: {
       flex: 1,
     },
-    journalPromptText: {
+    journalSavedCard: {
+      marginTop: isCompactScreen ? spacing.md : spacing.lg,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
+    },
+    journalSavedEyebrow: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.secondary,
+      textTransform: "uppercase",
+      letterSpacing: 1.6,
+      textAlign: "center",
+      marginBottom: spacing.sm,
+    },
+    journalSavedTitle: {
       fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.xl,
-      lineHeight: 36,
+      marginBottom: spacing.sm,
+    },
+    journalSavedBody: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: isCompactScreen ? 22 : 24,
+      marginBottom: spacing.lg,
+    },
+    journalSavedPreview: {
+      backgroundColor: "rgba(255, 255, 255, 0.06)",
+      borderRadius: radius.glass,
+      padding: isCompactScreen ? spacing.md : spacing.lg,
+    },
+    journalSavedPrompt: {
+      fontFamily: fonts.light,
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center",
+      fontStyle: "italic",
+      marginBottom: spacing.sm,
+    },
+    journalSavedContent: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      color: colors.text,
+      lineHeight: isCompactScreen ? 22 : 24,
+      textAlign: "center",
+    },
+    journalPromptText: {
+      fontFamily: fonts.light,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
+      color: colors.text,
+      textAlign: "center",
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
+      lineHeight: isCompactScreen ? 30 : 36,
     },
     journalInput: {
       backgroundColor: "rgba(255, 255, 255, 0.08)",
       borderWidth: 1,
       borderColor: "rgba(255, 255, 255, 0.1)",
       borderRadius: radius.glass,
-      padding: spacing.lg,
+      padding: isCompactScreen ? spacing.md : spacing.lg,
       fontFamily: fonts.regular,
       fontSize: typography.body.fontSize,
       color: colors.text,
-      minHeight: 200,
+      minHeight: isCompactScreen ? 150 : 200,
       textAlignVertical: "top",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     journalHint: {
       fontFamily: fonts.regular,
@@ -503,6 +557,32 @@ export default function AlternativesScreen() {
       textAlign: "center",
       fontStyle: "italic",
     },
+    journalMetaCard: {
+      marginTop: isCompactScreen ? spacing.md : spacing.lg,
+      padding: isCompactScreen ? spacing.md : spacing.lg,
+    },
+    previousEntriesTitle: {
+      fontFamily: fonts.medium,
+      fontSize: typography.label.fontSize,
+      color: colors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+      marginBottom: spacing.xs,
+      textAlign: "center",
+    },
+    previousEntryDate: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    journalError: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.accent,
+      textAlign: "center",
+      marginTop: spacing.sm,
+    },
     // Prayer styles
     prayerContainer: {
       flex: 1,
@@ -510,7 +590,9 @@ export default function AlternativesScreen() {
     },
     prayerName: {
       fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
       marginBottom: spacing.xs,
@@ -522,35 +604,25 @@ export default function AlternativesScreen() {
       textAlign: "center",
       fontStyle: "italic",
     },
-    prayerGlowContainer: {
-      width: GLOW_SIZE + 40,
-      height: GLOW_SIZE + 40,
-      alignItems: "center",
-      justifyContent: "center",
-      alignSelf: "center",
-      marginVertical: spacing.xl,
-    },
-    prayerIcon: {
-      fontSize: 64,
-      textAlign: "center",
-    },
     prayerTimer: {
       fontFamily: fonts.thin,
-      fontSize: 48,
+      fontSize: isCompactScreen ? 38 : 48,
       color: colors.textSecondary,
       textAlign: "center",
-      marginBottom: spacing.lg,
+      marginBottom: isCompactScreen ? spacing.md : spacing.lg,
     },
     prayerTextCard: {
-      padding: spacing.lg,
+      padding: isCompactScreen ? spacing.md : spacing.lg,
     },
     prayerText: {
       fontFamily: fonts.regular,
-      fontSize: typography.bodyLarge.fontSize,
+      fontSize: isCompactScreen
+        ? typography.body.fontSize
+        : typography.bodyLarge.fontSize,
       color: colors.text,
       textAlign: "center",
-      lineHeight: 28,
-      marginBottom: spacing.md,
+      lineHeight: isCompactScreen ? 22 : 28,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.md,
     },
     categoryText: {
       fontFamily: fonts.medium,
@@ -563,14 +635,16 @@ export default function AlternativesScreen() {
     // Buttons
     buttonContainer: {
       gap: spacing.sm,
-      marginTop: spacing.lg,
+      marginTop: isCompactScreen ? spacing.md : spacing.lg,
     },
     completeMessage: {
       fontFamily: fonts.light,
-      fontSize: typography.bodyLarge.fontSize,
+      fontSize: isCompactScreen
+        ? typography.body.fontSize
+        : typography.bodyLarge.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.xl,
+      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
     },
     completeEmoji: {
       fontSize: 48,
@@ -584,7 +658,11 @@ export default function AlternativesScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.scrollContent}>
-          <Ionicons name="sparkles-outline" size={48} color={colors.primary} style={{ marginBottom: spacing.lg }} />
+          <LumiIllustration
+            source={getLumiAssetForAlternative(type, true)}
+            maxHeight={heroHeight}
+            scale={1.8}
+          />
           <Text style={styles.exerciseName}>Well Done!</Text>
           <Text style={styles.completeMessage}>
             You just gave yourself a moment of calm.{"\n"}That&apos;s something
@@ -610,55 +688,25 @@ export default function AlternativesScreen() {
         {/* BREATHING EXERCISE */}
         {type === "breathe" && (
           <>
+            <LumiIllustration
+              source={getLumiAssetForAlternative("breathe")}
+              maxHeight={breatheHeroHeight}
+            />
             <View style={styles.header}>
-              <Text style={styles.exerciseName}>
-                {breathingExercise.name}
-              </Text>
+              <Text style={styles.exerciseName}>{breathingExercise.name}</Text>
               <Text style={styles.exerciseDescription}>
                 {breathingExercise.description}
               </Text>
             </View>
 
-            <View style={styles.circleContainer}>
-              <Animated.View style={[styles.glowOuter, glowAnimatedStyle]}>
-                <LinearGradient
-                  colors={[
-                    "rgba(0, 212, 255, 0.4)",
-                    "rgba(168, 85, 247, 0.2)",
-                    "transparent",
-                  ]}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: (CIRCLE_SIZE + 60) / 2,
-                  }}
-                  start={{ x: 0.5, y: 0.5 }}
-                  end={{ x: 1, y: 1 }}
-                />
-              </Animated.View>
-
-              <Animated.View
-                style={[styles.breathingCircle, circleAnimatedStyle]}
-              >
-                <BlurView intensity={40} style={styles.circleBlur} tint="dark">
-                  <LinearGradient
-                    colors={[
-                      "rgba(0, 212, 255, 0.15)",
-                      "rgba(168, 85, 247, 0.1)",
-                      "rgba(255, 107, 157, 0.05)",
-                    ]}
-                    style={styles.circleGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.phaseText}>
-                      {getBreathPhaseLabel(breathPhase)}
-                    </Text>
-                    <Text style={styles.timerText}>{phaseTimeLeft}</Text>
-                  </LinearGradient>
-                </BlurView>
-              </Animated.View>
-            </View>
+            <Animated.View style={circleAnimatedStyle}>
+              <GlassCard glowColor="primary" style={styles.breathStatusCard}>
+                <Text style={styles.phaseText}>
+                  {getBreathPhaseLabel(breathPhase)}
+                </Text>
+                <Text style={styles.timerText}>{phaseTimeLeft}</Text>
+              </GlassCard>
+            </Animated.View>
 
             <Text style={styles.cycleInfo}>
               Cycle {currentCycle} of {breathingExercise.cycles}
@@ -669,6 +717,10 @@ export default function AlternativesScreen() {
         {/* GROUNDING EXERCISE - 5-4-3-2-1 */}
         {type === "grounding" && groundingExercise.id === "5-4-3-2-1" && (
           <View style={styles.groundingContainer}>
+            <LumiIllustration
+              source={getLumiAssetForAlternative("grounding")}
+              maxHeight={groundingHeroHeight}
+            />
             <View style={styles.groundingStepContainer}>
               <Text style={styles.groundingStepNumber}>
                 {groundingSteps[groundingStep].count}
@@ -716,12 +768,14 @@ export default function AlternativesScreen() {
         {/* OTHER GROUNDING EXERCISES */}
         {type === "grounding" && groundingExercise.id !== "5-4-3-2-1" && (
           <View style={styles.groundingContainer}>
+            <LumiIllustration
+              source={getLumiAssetForAlternative("grounding")}
+              maxHeight={groundingHeroHeight}
+            />
             <Text style={styles.groundingTimer}>{groundingTimeLeft}</Text>
 
             <GlassCard glowColor="secondary">
-              <Text style={styles.exerciseName}>
-                {groundingExercise.name}
-              </Text>
+              <Text style={styles.exerciseName}>{groundingExercise.name}</Text>
               <Text
                 style={[
                   styles.exerciseDescription,
@@ -746,65 +800,116 @@ export default function AlternativesScreen() {
         {/* JOURNALING */}
         {type === "reflect" && (
           <View style={styles.journalContainer}>
-            <Text style={styles.journalPromptText}>
-              &ldquo;{journalPrompt}&rdquo;
-            </Text>
-
-            <TextInput
-              style={styles.journalInput}
-              placeholder="Take a moment to reflect..."
-              placeholderTextColor={colors.textMuted}
-              value={journalEntry}
-              onChangeText={setJournalEntry}
-              multiline
-              autoFocus
+            <LumiIllustration
+              source={getLumiAssetForAlternative("reflect")}
+              maxHeight={heroHeight}
             />
+            {savedJournalEntry ? (
+              <>
+                <GlassCard glowColor="secondary" style={styles.journalSavedCard}>
+                  <Text style={styles.journalSavedEyebrow}>Saved</Text>
+                  <Text style={styles.journalSavedTitle}>
+                    Your reflection is in your journal
+                  </Text>
+                  <Text style={styles.journalSavedBody}>
+                    You can come back to it anytime without losing your place.
+                  </Text>
+                  <View style={styles.journalSavedPreview}>
+                    <Text style={styles.journalSavedPrompt}>
+                      &ldquo;{savedJournalEntry.prompt}&rdquo;
+                    </Text>
+                    <Text style={styles.journalSavedContent}>
+                      {savedJournalEntry.content}
+                    </Text>
+                  </View>
+                </GlassCard>
 
-            <Text style={styles.journalHint}>
-              This is just for you. No one else will see it.
-            </Text>
+                <View style={styles.buttonContainer}>
+                  <Button
+                    label="View Journal"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/journal",
+                        params: { highlightId: savedJournalEntry.id },
+                      })
+                    }
+                    variant="primary"
+                  />
+                  <Button label="Back Home" onPress={exitToHome} variant="ghost" />
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.journalPromptText}>
+                  &ldquo;{journalPrompt}&rdquo;
+                </Text>
 
-            <View style={styles.buttonContainer}>
-              <Button
-                label="Save & Close"
-                onPress={handleComplete}
-                variant="primary"
-                disabled={journalEntry.trim().length === 0}
-              />
-              <Button label="Skip" onPress={handleSkip} variant="ghost" />
-            </View>
+                <TextInput
+                  style={styles.journalInput}
+                  placeholder="Take a moment to reflect..."
+                  placeholderTextColor={colors.textMuted}
+                  value={journalEntry}
+                  onChangeText={(value) => {
+                    setJournalEntry(value);
+                    if (journalSaveError) setJournalSaveError(null);
+                  }}
+                  multiline
+                  autoFocus
+                />
+
+                <Text style={styles.journalHint}>
+                  This is just for you. No one else will see it.
+                </Text>
+                {journalSaveError && (
+                  <Text style={styles.journalError}>{journalSaveError}</Text>
+                )}
+
+                <GlassCard style={styles.journalMetaCard}>
+                  <Text style={styles.previousEntriesTitle}>Journal History</Text>
+                  <Text style={styles.previousEntryDate}>
+                    {previousEntries.length === 0
+                      ? "Your first saved reflection will appear here."
+                      : `${previousEntries.length} recent reflection${
+                          previousEntries.length === 1 ? "" : "s"
+                        } saved on this device.`}
+                  </Text>
+                </GlassCard>
+
+                <View style={styles.buttonContainer}>
+                  <Button
+                    label="Save Reflection"
+                    onPress={handleComplete}
+                    variant="primary"
+                    disabled={journalEntry.trim().length === 0}
+                  />
+                  {previousEntries.length > 0 && (
+                    <Button
+                      label="View Journal History"
+                      onPress={() => router.push("/journal")}
+                      variant="secondary"
+                    />
+                  )}
+                  <Button label="Skip" onPress={handleSkip} variant="ghost" />
+                </View>
+              </>
+            )}
           </View>
         )}
 
         {/* PRAYER */}
         {type === "prayer" && (
           <View style={styles.prayerContainer}>
+            <LumiIllustration
+              source={getLumiAssetForAlternative("prayer")}
+              maxHeight={prayerHeroHeight}
+            />
             <View style={styles.header}>
-              <Text style={styles.prayerName}>
-                {prayer.name}
-              </Text>
+              <Text style={styles.prayerName}>{prayer.name}</Text>
               {prayer.attribution && (
                 <Text style={styles.prayerAttribution}>
                   {prayer.attribution}
                 </Text>
               )}
-            </View>
-
-            <View style={styles.prayerGlowContainer}>
-              <Animated.View
-                style={[styles.glowOuter, glowAnimatedStyle]}
-              >
-                <LinearGradient
-                  colors={[
-                    colors.primary + "00",
-                    colors.primary + "40",
-                    colors.primary + "00",
-                  ]}
-                  style={styles.glowOuter}
-                />
-              </Animated.View>
-
-              <MaterialCommunityIcons name={"cross-bolnisi" as any} size={64} color={colors.primary} />
             </View>
 
             <Text style={styles.prayerTimer}>{prayerTimeLeft}s</Text>
