@@ -9,11 +9,18 @@ import {
 } from "@/src/data/mindfulness";
 import { PRICING } from "@/src/constants/monetization";
 import {
+  type AiQuotaSnapshot,
+  getAiQuotaSnapshot,
+  recordAiRequestAttempt,
+  recordAiResponseSuccess,
+} from "@/src/services/ai/usage";
+import {
   ChatMessage,
   sendMessage,
   setUserContext,
   UserContext,
 } from "@/src/services/ai/openrouter";
+import { MAX_USER_MESSAGE_CHARS } from "@/src/services/ai/shared";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { useAppStore } from "@/src/services/storage";
 import { getRecentJournalEntries } from "@/src/services/storage/sqlite";
@@ -49,6 +56,16 @@ const SUGGESTED_PROMPTS = [
   "How can I break my scrolling habit?",
 ];
 
+function buildWelcomeMessage(userName?: string): Message {
+  return {
+    id: "welcome",
+    role: "assistant",
+    content: userName
+      ? `Hello, ${userName}! I'm your mindful companion. I know your goals and progress. Ask me anything about building healthier digital habits, or try one of the prompts below.`
+      : "Hello! I'm your mindful companion. I'm here to help you build a healthier relationship with technology.\n\nYou can ask me anything about digital wellbeing, or try one of the suggested prompts below.",
+  };
+}
+
 export default function AssistantScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -58,6 +75,10 @@ export default function AssistantScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showClearPrompt, setShowClearPrompt] = useState(false);
+  const [quotaSnapshot, setQuotaSnapshot] = useState<AiQuotaSnapshot>(() =>
+    getAiQuotaSnapshot(),
+  );
 
   // Load user context and set welcome message on mount
   useEffect(() => {
@@ -90,39 +111,24 @@ export default function AssistantScreen() {
           weeklyMindfulMinutes: weeklyStats.totalMindfulMinutes,
           weeklyOpenedAnyway: weeklyStats.openedAnyway,
           weeklyChoseCalm:
+            weeklyStats.closedCount +
             weeklyStats.alternativeBreathed +
             weeklyStats.alternativeReflected +
             weeklyStats.alternativeGrounded +
-            weeklyStats.alternativePrayed +
-            weeklyStats.closedCount,
+            weeklyStats.alternativeExercise +
+            weeklyStats.alternativePrayed,
           recentJournalEntries:
             recentJournalEntries.length > 0 ? recentJournalEntries : undefined,
         };
 
         // Set context for AI
         setUserContext(context);
-
-        // Personalized welcome message
-        const userName = settings.userName;
-        const welcomeMessage: Message = {
-          id: "welcome",
-          role: "assistant",
-          content: userName
-            ? `Hello${
-                userName ? `, ${userName}` : ""
-              }! 👋 I'm your mindful companion. I know your goals and progress—ask me anything about building healthier digital habits, or try one of the prompts below.`
-            : `Hello! 👋 I'm your mindful companion. I'm here to help you build a healthier relationship with technology.\n\nYou can ask me anything about digital wellbeing, or try one of the suggested prompts below.`,
-        };
-        setMessages([welcomeMessage]);
+        setMessages([buildWelcomeMessage(settings.userName)]);
+        setQuotaSnapshot(getAiQuotaSnapshot());
       } catch (error) {
         console.error("Failed to load user context:", error);
-        // Fallback welcome
-        const welcomeMessage: Message = {
-          id: "welcome",
-          role: "assistant",
-          content: `Hello! 👋 I'm your mindful companion. I'm here to help you build a healthier relationship with technology.\n\nYou can ask me anything about digital wellbeing, or try one of the suggested prompts below.`,
-        };
-        setMessages([welcomeMessage]);
+        setMessages([buildWelcomeMessage(settings.userName)]);
+        setQuotaSnapshot(getAiQuotaSnapshot());
       }
     }
 
@@ -130,8 +136,14 @@ export default function AssistantScreen() {
   }, [settings]);
 
   const handleSend = async (text?: string) => {
-    const messageText = text || inputText.trim();
+    const messageText = (text || inputText).trim().slice(0, MAX_USER_MESSAGE_CHARS);
     if (!messageText || isLoading) return;
+
+    const currentQuota = getAiQuotaSnapshot();
+    setQuotaSnapshot(currentQuota);
+    if (!currentQuota.canSend) {
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -142,6 +154,7 @@ export default function AssistantScreen() {
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
+    setQuotaSnapshot(recordAiRequestAttempt());
 
     // Scroll to bottom
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -155,6 +168,9 @@ export default function AssistantScreen() {
       }));
 
     const response = await sendMessage(messageText, conversationHistory);
+    const nextQuota = response.success
+      ? recordAiResponseSuccess()
+      : getAiQuotaSnapshot();
 
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -166,6 +182,7 @@ export default function AssistantScreen() {
 
     setMessages((prev) => [...prev, assistantMessage]);
     setIsLoading(false);
+    setQuotaSnapshot(nextQuota);
 
     // Scroll to bottom
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -193,13 +210,18 @@ export default function AssistantScreen() {
   };
 
   const handleClearChat = () => {
-    const welcomeMessage: Message = {
-      id: "welcome",
-      role: "assistant",
-      content: `Hello! 👋 I'm your mindful companion. I'm here to help you build a healthier relationship with technology.\n\nYou can ask me anything about digital wellbeing, or try one of the suggested prompts below.`,
-    };
-    setMessages([welcomeMessage]);
+    setShowClearPrompt(true);
   };
+
+  const confirmClearChat = () => {
+    setMessages([buildWelcomeMessage(settings.userName)]);
+    setInputText("");
+    setShowClearPrompt(false);
+  };
+
+  const showFallbackTools =
+    messages.length <= 1 || quotaSnapshot.limitedReason === "daily_limit" || quotaSnapshot.limitedReason === "monthly_limit";
+  const canSubmit = Boolean(inputText.trim()) && !isLoading && quotaSnapshot.canSend;
 
   const styles = StyleSheet.create({
     container: {
@@ -429,11 +451,64 @@ export default function AssistantScreen() {
       color: colors.primary,
       textAlign: "center",
     },
+    modalOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.overlay,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: spacing.lg,
+      zIndex: 20,
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 360,
+      borderRadius: radius.card,
+      padding: spacing.lg,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.12)",
+      gap: spacing.md,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.18,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 12,
+    },
+    modalIconWrap: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primaryLight,
+      alignSelf: "center",
+    },
+    modalTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.sectionTitle.fontSize,
+      lineHeight: typography.sectionTitle.lineHeight,
+      color: colors.text,
+      textAlign: "center",
+    },
+    modalText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    modalAction: {
+      flex: 1,
+    },
   });
 
   if (!settings.premium) {
     return (
-      <SafeAreaView style={styles.container}>
+	      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity
@@ -487,9 +562,9 @@ export default function AssistantScreen() {
           />
           <Button label="Back" onPress={() => router.back()} variant="ghost" />
         </View>
-      </SafeAreaView>
-    );
-  }
+	      </SafeAreaView>
+	    );
+	  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -553,7 +628,7 @@ export default function AssistantScreen() {
       </ScrollView>
 
       {/* Quick actions */}
-      {messages.length <= 1 && (
+      {showFallbackTools && (
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity
             style={styles.quickAction}
@@ -571,7 +646,7 @@ export default function AssistantScreen() {
       )}
 
       {/* Suggested prompts */}
-      {messages.length <= 1 && (
+      {messages.length <= 1 && quotaSnapshot.canSend && (
         <View style={styles.suggestedPromptsContainer}>
           <Text style={styles.suggestedLabel}>Try asking:</Text>
           <ScrollView
@@ -601,25 +676,61 @@ export default function AssistantScreen() {
           <TextInput
             style={styles.textInput}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={(value) => setInputText(value.slice(0, MAX_USER_MESSAGE_CHARS))}
             placeholder="Ask me anything..."
             placeholderTextColor={colors.textMuted}
             multiline
             returnKeyType="send"
             onSubmitEditing={() => handleSend()}
+            maxLength={MAX_USER_MESSAGE_CHARS}
           />
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!inputText.trim() || isLoading) && styles.sendButtonDisabled,
+              !canSubmit && styles.sendButtonDisabled,
             ]}
             onPress={() => handleSend()}
-            disabled={!inputText.trim() || isLoading}
+            disabled={!canSubmit}
           >
             <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {showClearPrompt && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={24}
+                color={colors.primary}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Clear conversation?</Text>
+            <Text style={styles.modalText}>
+              This removes the current chat and starts fresh, while keeping your
+              personalized assistant.
+            </Text>
+            <View style={styles.modalActions}>
+              <View style={styles.modalAction}>
+                <Button
+                  label="Cancel"
+                  onPress={() => setShowClearPrompt(false)}
+                  variant="ghost"
+                />
+              </View>
+              <View style={styles.modalAction}>
+                <Button
+                  label="Clear"
+                  onPress={confirmClearChat}
+                  variant="primary"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

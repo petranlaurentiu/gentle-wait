@@ -94,6 +94,7 @@ export interface WeeklyStats {
   alternativeBreathed: number;
   alternativeReflected: number;
   alternativeGrounded: number;
+  alternativeExercise: number;
   alternativePrayed: number;
   totalMindfulMinutes: number;
 }

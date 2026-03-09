@@ -58,6 +58,11 @@ export default function SettingsScreen() {
   const [cooldownModalVisible, setCooldownModalVisible] = useState(false);
   const [pendingCooldown, setPendingCooldown] = useState(settings.cooldownMinutes || 15);
   const [androidProtectionEnabled, setAndroidProtectionEnabled] = useState(false);
+  const [showAllProtectedApps, setShowAllProtectedApps] = useState(false);
+  const [appPendingRemoval, setAppPendingRemoval] = useState<{
+    packageName: string;
+    label: string;
+  } | null>(null);
 
   const headerAnimation = useFadeInAnimation();
   const protectedAppsAnimation = useStaggeredFadeIn(0, 5);
@@ -74,6 +79,10 @@ export default function SettingsScreen() {
   const hasReachedFreeAppLimit =
     !settings.premium &&
     settings.selectedApps.length >= FREE_PROTECTED_APPS_LIMIT;
+  const hiddenProtectedAppsCount = Math.max(settings.selectedApps.length - 3, 0);
+  const visibleProtectedApps = showAllProtectedApps
+    ? settings.selectedApps
+    : settings.selectedApps.slice(0, 3);
 
   useEffect(() => {
     if (Platform.OS !== "android") {
@@ -102,32 +111,35 @@ export default function SettingsScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (settings.selectedApps.length <= 3 && showAllProtectedApps) {
+      setShowAllProtectedApps(false);
+    }
+  }, [settings.selectedApps.length, showAllProtectedApps]);
+
   const handleRemoveApp = async (packageName: string) => {
     const appToRemove = settings.selectedApps.find((app) => app.packageName === packageName);
     const appName = appToRemove?.label || "this app";
+    setAppPendingRemoval({ packageName, label: appName });
+  };
 
-    Alert.alert(
-      "Remove App",
-      `Remove ${appName} from protected apps? GentleWait will no longer pause when you open it.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            await triggerSelectionFeedback();
-            const updatedApps = settings.selectedApps.filter((app) => app.packageName !== packageName);
-            updateSettings({ selectedApps: updatedApps });
+  const confirmRemoveApp = async () => {
+    if (!appPendingRemoval) {
+      return;
+    }
 
-            try {
-              await syncSelectedAppsToNative(updatedApps);
-            } catch (error) {
-              console.error("[Settings] Failed to sync apps to native:", error);
-            }
-          },
-        },
-      ]
+    await triggerSelectionFeedback();
+    const updatedApps = settings.selectedApps.filter(
+      (app) => app.packageName !== appPendingRemoval.packageName,
     );
+    updateSettings({ selectedApps: updatedApps });
+    setAppPendingRemoval(null);
+
+    try {
+      await syncSelectedAppsToNative(updatedApps);
+    } catch (error) {
+      console.error("[Settings] Failed to sync apps to native:", error);
+    }
   };
 
   const handleAddApps = () => {
@@ -320,6 +332,19 @@ export default function SettingsScreen() {
       borderWidth: 1,
       borderColor: "rgba(242, 166, 160, 0.28)",
     },
+    listToggleButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pills,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      alignSelf: "center",
+      paddingHorizontal: spacing.md,
+    },
     addButton: {
       flexDirection: "row",
       alignItems: "center",
@@ -374,6 +399,38 @@ export default function SettingsScreen() {
       flexDirection: "row",
       gap: spacing.md,
       justifyContent: "flex-end",
+    },
+    removeModalContent: {
+      width: "100%",
+      borderRadius: radius.card,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      backgroundColor: colors.bgElevated,
+      gap: spacing.md,
+      maxWidth: 380,
+    },
+    removeModalIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+      backgroundColor: "rgba(242, 166, 160, 0.14)",
+      borderWidth: 1,
+      borderColor: "rgba(242, 166, 160, 0.24)",
+    },
+    removeModalTextWrap: {
+      gap: spacing.xs,
+      alignItems: "center",
+    },
+    removeModalButtons: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    removeModalButton: {
+      flex: 1,
     },
   });
 
@@ -443,7 +500,7 @@ export default function SettingsScreen() {
             )
           ) : settings.selectedApps.length > 0 ? (
             <View style={styles.list}>
-              {settings.selectedApps.map((app) => (
+              {visibleProtectedApps.map((app) => (
                 <View key={app.packageName} style={styles.appItem}>
                   <View style={{ flex: 1 }}>
                     <AppText variant="heading">{app.label}</AppText>
@@ -454,6 +511,24 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
+              {settings.selectedApps.length > 3 && (
+                <TouchableOpacity
+                  style={styles.listToggleButton}
+                  onPress={() => setShowAllProtectedApps((current) => !current)}
+                  activeOpacity={0.82}
+                >
+                  <AppText variant="caption" color="primary">
+                    {showAllProtectedApps
+                      ? "Show less"
+                      : `Show ${hiddenProtectedAppsCount} more`}
+                  </AppText>
+                  <Ionicons
+                    name={showAllProtectedApps ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <GlassCard intensity="light">
@@ -686,6 +761,44 @@ export default function SettingsScreen() {
             <View style={styles.modalButtons}>
               <Button label="Cancel" onPress={() => setCooldownModalVisible(false)} variant="ghost" />
               <Button label="Done" onPress={handleConfirmCooldown} variant="primary" />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(appPendingRemoval)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAppPendingRemoval(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.removeModalContent}>
+            <View style={styles.removeModalIcon}>
+              <Ionicons name="trash-outline" size={24} color={colors.accent} />
+            </View>
+            <View style={styles.removeModalTextWrap}>
+              <AppText variant="sectionTitle" align="center">Remove protected app?</AppText>
+              <AppText variant="body" color="secondary" align="center">
+                Remove {appPendingRemoval?.label} from your protected apps.
+                GentleWait will stop showing a pause before it opens.
+              </AppText>
+            </View>
+            <View style={styles.removeModalButtons}>
+              <View style={styles.removeModalButton}>
+                <Button
+                  label="Cancel"
+                  onPress={() => setAppPendingRemoval(null)}
+                  variant="ghost"
+                />
+              </View>
+              <View style={styles.removeModalButton}>
+                <Button
+                  label="Remove"
+                  onPress={confirmRemoveApp}
+                  variant="primary"
+                />
+              </View>
             </View>
           </View>
         </View>

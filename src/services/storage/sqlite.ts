@@ -183,6 +183,26 @@ export async function getTopTriggers(
 }
 
 /**
+ * Get top apps by interception count for a date range
+ */
+export async function getTopApps(
+  startTs: number,
+  endTs: number,
+  limit: number = 5
+): Promise<{ appLabel: string; count: number }[]> {
+  const database = await getDb();
+  const results = await database.getAllAsync<{ appLabel: string; count: number }>(
+    `SELECT appLabel, COUNT(*) as count FROM interception_events
+     WHERE ts >= ? AND ts <= ?
+     GROUP BY appLabel
+     ORDER BY count DESC, appLabel ASC
+     LIMIT ?`,
+    [startTs, endTs, limit]
+  );
+  return results;
+}
+
+/**
  * Get total time spent in alternatives (in milliseconds)
  */
 export async function getTotalMindfulTime(

@@ -67,6 +67,7 @@ export default function PaywallScreen() {
   const [packages, setPackages] = useState<BillingPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -121,9 +122,7 @@ export default function PaywallScreen() {
 
     if (result.purchased || result.restored) {
       updateSettings({ premium: true });
-      Alert.alert("Premium unlocked", "Your GentleWait Pro access is active.", [
-        { text: "Continue", onPress: () => router.back() },
-      ]);
+      setSuccessMessage("Your GentleWait Pro access is active.");
     }
   };
 
@@ -146,9 +145,7 @@ export default function PaywallScreen() {
     }
 
     updateSettings({ premium: true });
-    Alert.alert("Restored", "Your GentleWait Pro access has been restored.", [
-      { text: "Continue", onPress: () => router.back() },
-    ]);
+    setSuccessMessage("Your GentleWait Pro access has been restored.");
   };
 
   const styles = StyleSheet.create({
@@ -236,10 +233,70 @@ export default function PaywallScreen() {
       justifyContent: "center",
       gap: spacing.md,
     },
+    successOverlay: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "rgba(5, 10, 20, 0.44)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.lg,
+      zIndex: 20,
+      elevation: 8,
+    },
+    successCard: {
+      width: "100%",
+      maxWidth: 420,
+      gap: spacing.lg,
+      alignItems: "center",
+    },
+    successIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    successTextGroup: {
+      gap: spacing.sm,
+      alignItems: "center",
+    },
   });
 
   return (
     <SafeAreaView style={styles.container}>
+      {successMessage && (
+        <View style={styles.successOverlay}>
+          <GlassCard glowColor="primary" style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={34}
+                color={colors.primary}
+              />
+            </View>
+            <View style={styles.successTextGroup}>
+              <AppText variant="title" align="center">
+                Premium unlocked
+              </AppText>
+              <AppText variant="bodyLarge" color="secondary" align="center">
+                {successMessage}
+              </AppText>
+            </View>
+            <Button
+              label="Continue"
+              onPress={() => {
+                setSuccessMessage(null);
+                router.back();
+              }}
+              variant="primary"
+            />
+          </GlassCard>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View>
           <AppText variant="eyebrow" color="secondary">

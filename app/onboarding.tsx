@@ -5,14 +5,13 @@
 import { Button } from "@/src/components/Button";
 import { Checkbox } from "@/src/components/Checkbox";
 import { GlassCard } from "@/src/components/GlassCard";
+import { COOLDOWN_OPTIONS, WheelPicker } from "@/src/components/WheelPicker";
 import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
+  PRICING,
 } from "@/src/constants/monetization";
-import {
-  COOLDOWN_OPTIONS,
-  WheelPicker,
-} from "@/src/components/WheelPicker";
+import type { IOSFamilyActivitySelection } from "@/src/domain/models";
 import {
   APP_CATEGORIES,
   AppCategory,
@@ -22,10 +21,6 @@ import {
   getInstalledApps,
   getSuggestedApps,
 } from "@/src/services/apps";
-import type { IOSFamilyActivitySelection } from "@/src/domain/models";
-import {
-  DeviceActivitySelectionView,
-} from "react-native-device-activity";
 import {
   clearIOSFamilyControlsSelection,
   configureIOSProtection,
@@ -58,6 +53,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { DeviceActivitySelectionView } from "react-native-device-activity";
 import ReanimatedAnimated, {
   Easing,
   interpolate,
@@ -74,17 +70,17 @@ const PROGRAM_PREVIEW_STEPS = [
   {
     label: "Breathe",
     icon: "flower-outline",
-    description: "Interrupt the impulse with one calm inhale and a softer exhale.",
+    description: "Pause the urge with one calm inhale and a softer exhale.",
   },
   {
     label: "Reflect",
     icon: "pencil-outline",
-    description: "Notice what you need before habit takes over the moment.",
+    description: "Notice what you need before habit takes over.",
   },
   {
     label: "Grow",
     icon: "leaf-outline",
-    description: "Build a steadier relationship with your time, focus, and energy.",
+    description: "Return with a steadier sense of time, focus, and energy.",
   },
 ] as const;
 
@@ -110,28 +106,6 @@ type OnboardingStep =
   | "cooldown"
   | "done";
 
-// Testimonials data
-const TESTIMONIALS = [
-  {
-    name: "Sarah M.",
-    rating: 5,
-    comment:
-      "This app changed my relationship with my phone. I finally feel in control of my screen time.",
-  },
-  {
-    name: "Daniel B.",
-    rating: 5,
-    comment:
-      "It's a very good app; I really recommend it if you want to reduce your screen time and exercise more.",
-  },
-  {
-    name: "Emily K.",
-    rating: 5,
-    comment:
-      "The gentle pause feature is brilliant. No guilt, just awareness. Exactly what I needed.",
-  },
-];
-
 // Age ranges
 const AGE_RANGES = [
   { id: "under-18", label: "Under 18" },
@@ -142,21 +116,10 @@ const AGE_RANGES = [
   { id: "55+", label: "55+" },
 ];
 
-// Research quotes
-const RESEARCH_QUOTES = [
-  {
-    title: "Did You Know?",
-    text: "Breaking the habit of mindless scrolling can improve focus, sleep quality, and overall well-being.",
-    source: "",
-  },
-  {
-    title: "The Goal",
-    text: "Small pauses before opening apps help build awareness and give you back control of your time.",
-    source: "",
-  },
-];
-
-const getStepOrder = (setupPath: SetupPath, isCompleteProfileMode: boolean = false): OnboardingStep[] => {
+const getStepOrder = (
+  setupPath: SetupPath,
+  isCompleteProfileMode: boolean = false,
+): OnboardingStep[] => {
   // Complete profile mode - only personalization questions, no app selection
   if (isCompleteProfileMode) {
     return [
@@ -200,7 +163,14 @@ const getStepOrder = (setupPath: SetupPath, isCompleteProfileMode: boolean = fal
   }
 
   // Quick setup path - skip all personalized questions
-  return [...baseSteps, "select-apps", "permissions", "duration", "cooldown", "done"];
+  return [
+    ...baseSteps,
+    "select-apps",
+    "permissions",
+    "duration",
+    "cooldown",
+    "done",
+  ];
 };
 
 export default function OnboardingScreen() {
@@ -209,14 +179,17 @@ export default function OnboardingScreen() {
   const { colors } = useTheme();
   const { width, height: screenHeight } = useWindowDimensions();
   const isNarrowPreviewLayout = width < 420;
+  const isCompactPreviewViewport = width < 420 || screenHeight < 880;
 
   // Check if we should skip to a specific step (e.g., from settings)
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
   const mode = params.mode as string | undefined; // "complete-profile" for adding personalization later
   const isCompleteProfileMode = mode === "complete-profile";
-  
+
   // For complete-profile mode, start at goals step
-  const initialStep = isCompleteProfileMode ? "goals" : (skipToStep || "welcome-hero");
+  const initialStep = isCompleteProfileMode
+    ? "goals"
+    : skipToStep || "welcome-hero";
 
   const [step, setStep] = useState<OnboardingStep>(initialStep);
   const [setupPath, setSetupPath] = useState<SetupPath>(
@@ -231,32 +204,38 @@ export default function OnboardingScreen() {
   >("suggested");
   const [pauseDuration, setPauseDuration] = useState(15);
   const [cooldownMinutes, setCooldownMinutes] = useState(15);
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null,
+  );
+  const [upgradePromptMessage, setUpgradePromptMessage] = useState<
+    string | null
+  >(null);
   const updateSettings = useAppStore((state) => state.updateSettings);
   const currentSettings = useAppStore((state) => state.settings);
   const [stepKey, setStepKey] = useState(0);
 
   // Onboarding state - initialize from current settings if in complete-profile mode
   const [userName, setUserName] = useState(
-    isCompleteProfileMode ? (currentSettings.userName || "") : ""
+    isCompleteProfileMode ? currentSettings.userName || "" : "",
   );
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(
     isCompleteProfileMode && currentSettings.goals?.length
       ? new Set(currentSettings.goals)
-      : new Set()
+      : new Set(),
   );
   const [selectedEmotions, setSelectedEmotions] = useState<Set<string>>(
     isCompleteProfileMode && currentSettings.emotions?.length
       ? new Set(currentSettings.emotions)
-      : new Set()
+      : new Set(),
   );
   const [dailyScreenTime, setDailyScreenTime] = useState(
-    isCompleteProfileMode ? (currentSettings.dailyScreenTimeHours || 4) : 4
+    isCompleteProfileMode ? currentSettings.dailyScreenTimeHours || 4 : 4,
   );
   const [targetScreenTime, setTargetScreenTime] = useState(
-    isCompleteProfileMode ? (currentSettings.targetScreenTimeHours || 2) : 2
+    isCompleteProfileMode ? currentSettings.targetScreenTimeHours || 2 : 2,
   );
   const [selectedAge, setSelectedAge] = useState<string | null>(
-    isCompleteProfileMode ? (currentSettings.ageRange || null) : null
+    isCompleteProfileMode ? currentSettings.ageRange || null : null,
   );
   const [permissionEnabled, setPermissionEnabled] = useState(false);
   const [iosFamilyActivitySelection, setIOSFamilyActivitySelection] =
@@ -270,19 +249,55 @@ export default function OnboardingScreen() {
 
   // Animation hooks
   const stepAnimation = useFadeInAnimation();
+  const toastOpacity = useSharedValue(0);
+  const toastTranslateY = useSharedValue(12);
 
   // Reset animation key when step changes
   useEffect(() => {
     setStepKey((prev) => prev + 1);
+    setValidationMessage(null);
+    setUpgradePromptMessage(null);
   }, [step]);
+
+  useEffect(() => {
+    if (!validationMessage) {
+      toastOpacity.value = withTiming(0, { duration: 180 });
+      toastTranslateY.value = withTiming(12, { duration: 180 });
+      return;
+    }
+
+    toastOpacity.value = 0;
+    toastTranslateY.value = 12;
+    toastOpacity.value = withTiming(1, { duration: 180 });
+    toastTranslateY.value = withTiming(0, { duration: 220 });
+
+    const fadeTimeoutId = setTimeout(() => {
+      toastOpacity.value = withTiming(0, { duration: 220 });
+      toastTranslateY.value = withTiming(8, { duration: 220 });
+    }, 1600);
+
+    const clearTimeoutId = setTimeout(() => {
+      setValidationMessage(null);
+    }, 2000);
+
+    return () => {
+      clearTimeout(fadeTimeoutId);
+      clearTimeout(clearTimeoutId);
+    };
+  }, [toastOpacity, toastTranslateY, validationMessage]);
 
   // Load available apps on mount
   useEffect(() => {
     (async () => {
       try {
         if (isIOSFamilyControlsFlow) {
-          if (skipToStep === "select-apps" && currentSettings.iosFamilyActivitySelection) {
-            setIOSFamilyActivitySelection(currentSettings.iosFamilyActivitySelection);
+          if (
+            skipToStep === "select-apps" &&
+            currentSettings.iosFamilyActivitySelection
+          ) {
+            setIOSFamilyActivitySelection(
+              currentSettings.iosFamilyActivitySelection,
+            );
           }
           return;
         }
@@ -353,13 +368,9 @@ export default function OnboardingScreen() {
         !currentSettings.premium &&
         selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT
       ) {
-        Alert.alert(
-          "Free plan limit",
+        setValidationMessage(null);
+        setUpgradePromptMessage(
           `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
-          [
-            { text: "Not now", style: "cancel" },
-            { text: "View Premium", onPress: () => router.push("/paywall") },
-          ],
         );
         return;
       }
@@ -388,6 +399,34 @@ export default function OnboardingScreen() {
   };
 
   const displayedApps = getDisplayedApps();
+  const selectedGoalList = Array.from(selectedGoals);
+  const selectedEmotionList = Array.from(selectedEmotions);
+  const primaryGoal = selectedGoalList[0] || "Reduce my screen time";
+  const primaryEmotion = selectedEmotionList[0] || "Mentally drained";
+  const secondaryEmotion = selectedEmotionList[1] || null;
+  const currentStateStats = [
+    {
+      label: "Current screen time",
+      value: `${dailyScreenTime}h / day`,
+      icon: "phone-portrait-outline" as const,
+    },
+    {
+      label: "Target rhythm",
+      value: `${targetScreenTime}h / day`,
+      icon: "flag-outline" as const,
+    },
+    {
+      label: "Primary goal",
+      value: primaryGoal,
+      icon: "sparkles-outline" as const,
+    },
+  ];
+  const gentleWaitSupports = [
+    `Interrupt the urge when you feel ${primaryEmotion.toLowerCase()}.`,
+    `Turn "${primaryGoal}" into a small daily ritual instead of a vague intention.`,
+    `Use ${pauseDuration} second pauses to create space before autopilot takes over.`,
+  ];
+  const dailyHoursBack = Math.max(dailyScreenTime - targetScreenTime, 0);
 
   // Check if all displayed apps are selected
   const allDisplayedSelected =
@@ -408,13 +447,9 @@ export default function OnboardingScreen() {
         );
 
         if (remainingSlots === 0) {
-          Alert.alert(
-            "Free plan limit",
+          setValidationMessage(null);
+          setUpgradePromptMessage(
             `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
-            [
-              { text: "Not now", style: "cancel" },
-              { text: "View Premium", onPress: () => router.push("/paywall") },
-            ],
           );
           return;
         }
@@ -428,15 +463,11 @@ export default function OnboardingScreen() {
         });
 
         if (appsToAdd.length > remainingSlots) {
-          Alert.alert(
-            "Free plan limit",
+          setValidationMessage(null);
+          setUpgradePromptMessage(
             `Only ${remainingSlots} more ${
               remainingSlots === 1 ? "app fits" : "apps fit"
             } on the free plan.\n\n${getUpgradePitch()}`,
-            [
-              { text: "Not now", style: "cancel" },
-              { text: "View Premium", onPress: () => router.push("/paywall") },
-            ],
           );
         }
 
@@ -461,13 +492,9 @@ export default function OnboardingScreen() {
         FREE_PROTECTED_APPS_LIMIT,
       )
     ) {
-      Alert.alert(
-        "Premium required",
+      setValidationMessage(null);
+      setUpgradePromptMessage(
         `On iPhone, the free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} individual apps. Categories, websites, and larger selections are part of Premium.`,
-        [
-          { text: "Not now", style: "cancel" },
-          { text: "View Premium", onPress: () => router.push("/paywall") },
-        ],
       );
       return false;
     }
@@ -491,17 +518,15 @@ export default function OnboardingScreen() {
     }
 
     if (step === "goals" && selectedGoals.size === 0) {
-      Alert.alert(
-        "Select Goals",
-        "Please select at least one goal to continue.",
+      setValidationMessage(
+        "Choose at least one goal to shape your GentleWait journey.",
       );
       return;
     }
 
     if (step === "emotional" && selectedEmotions.size === 0) {
-      Alert.alert(
-        "Select Emotions",
-        "Please select at least one emotion to continue.",
+      setValidationMessage(
+        "Choose at least one emotion so GentleWait can respond with the right tone.",
       );
       return;
     }
@@ -544,7 +569,9 @@ export default function OnboardingScreen() {
     }
 
     if (step === "age" && !selectedAge) {
-      Alert.alert("Select Age Range", "Please select your age range.");
+      setValidationMessage(
+        "Choose your age range so we can tailor the experience.",
+      );
       return;
     }
 
@@ -686,6 +713,11 @@ export default function OnboardingScreen() {
     transform: [{ scale: interpolate(glowProgress.value, [0, 1], [1, 1.1]) }],
   }));
 
+  const toastStyle = useAnimatedStyle(() => ({
+    opacity: toastOpacity.value,
+    transform: [{ translateY: toastTranslateY.value }],
+  }));
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -697,7 +729,11 @@ export default function OnboardingScreen() {
     contentContainer: {
       flexGrow: 1,
       justifyContent: "center",
-      paddingBottom: spacing.lg,
+      paddingBottom: spacing.xxl * 4,
+    },
+    previewContentContainer: {
+      justifyContent: "flex-start",
+      paddingBottom: spacing.xl,
     },
     // Hero styles
     heroContainer: {
@@ -732,7 +768,7 @@ export default function OnboardingScreen() {
       fontFamily: typography.screenTitle.fontFamily,
       fontSize: typography.screenTitle.fontSize,
       color: colors.text,
-      marginBottom: spacing.lg,
+      marginBottom: spacing.xs,
       textAlign: "center",
       letterSpacing: typography.screenTitle.letterSpacing,
       lineHeight: typography.screenTitle.lineHeight,
@@ -880,6 +916,9 @@ export default function OnboardingScreen() {
     appList: {
       marginBottom: spacing.lg,
     },
+    emotionalAppList: {
+      paddingBottom: spacing.md,
+    },
     permissionContainer: {
       backgroundColor: colors.glassFill,
       borderRadius: radius.button,
@@ -930,6 +969,9 @@ export default function OnboardingScreen() {
       color: colors.textSecondary,
       marginTop: spacing.md,
       textAlign: "center",
+    },
+    emotionalSelectedCount: {
+      marginTop: spacing.xl,
     },
     setupChoiceContainer: {
       gap: spacing.md,
@@ -998,6 +1040,7 @@ export default function OnboardingScreen() {
       flexWrap: "wrap",
       justifyContent: "center",
       gap: spacing.sm,
+      marginBottom: spacing.xl,
     },
     timeButton: {
       paddingVertical: spacing.md,
@@ -1039,83 +1082,102 @@ export default function OnboardingScreen() {
       fontFamily: fonts.semiBold,
       color: colors.primary,
     },
-    // Summary / Testimonials styles
-    laurelContainer: {
+    // Summary styles
+    summaryIntro: {
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    summaryBadge: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
-      marginBottom: spacing.xl,
-    },
-    laurelLeft: {
-      fontSize: 40,
-      transform: [{ scaleX: -1 }],
-    },
-    laurelRight: {
-      fontSize: 40,
-    },
-    laurelContent: {
-      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
     },
-    laurelTitle: {
+    summaryBadgeText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    summaryTitle: {
       fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
+      lineHeight: typography.title.lineHeight,
     },
-    laurelHighlight: {
+    summaryHighlight: {
       fontFamily: fonts.semiBold,
       color: colors.primary,
     },
-    laurelSubtitle: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      color: colors.textSecondary,
+    summaryHeroCard: {
+      overflow: "hidden",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+      alignItems: "center",
+    },
+    summaryHeroGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.9,
+    },
+    summaryHeroTop: {
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    summaryValue: {
+      fontFamily: fonts.thin,
+      fontSize: typography.display.fontSize,
+      color: colors.text,
+      letterSpacing: typography.display.letterSpacing,
       textAlign: "center",
     },
-    selectedGoalsContainer: {
+    summaryValueLabel: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.bodyLarge.fontSize,
+      color: colors.primary,
+      textAlign: "center",
+    },
+    summaryHeroText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+      maxWidth: 280,
+    },
+    summaryGoalsRow: {
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: "center",
       gap: spacing.sm,
-      marginBottom: spacing.xl,
     },
-    goalPill: {
-      backgroundColor: colors.primaryLight,
+    summaryGoalPill: {
+      backgroundColor: colors.glassFill,
       borderRadius: radius.pills,
-      paddingVertical: spacing.sm + 2,
-      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: colors.glassStroke,
     },
-    goalPillText: {
+    summaryGoalText: {
       fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.primary,
-    },
-    testimonialCard: {
-      marginBottom: spacing.md,
-    },
-    testimonialHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: spacing.sm,
-    },
-    testimonialName: {
-      fontFamily: fonts.semiBold,
-      fontSize: typography.body.fontSize,
+      fontSize: typography.caption.fontSize,
       color: colors.text,
     },
-    testimonialStars: {
-      fontSize: 14,
-    },
-    testimonialComment: {
-      fontFamily: fonts.light,
+    summaryClosingText: {
+      fontFamily: fonts.regular,
       fontSize: typography.body.fontSize,
-      color: colors.text,
-      fontStyle: "italic",
-      lineHeight: 24,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+      maxWidth: 300,
     },
     // Age selection styles
     ageContainer: {
@@ -1144,86 +1206,174 @@ export default function OnboardingScreen() {
       color: colors.primary,
     },
     // Current State styles
-    stateTitle: {
-      fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
-      color: colors.primary,
-      textAlign: "center",
-      marginBottom: spacing.xl,
-    },
-    stateAppIcon: {
-      width: 60,
-      height: 60,
-      borderRadius: 16,
-      backgroundColor: colors.accentLight,
+    currentStateIntro: {
       alignItems: "center",
-      justifyContent: "center",
-      alignSelf: "center",
+      gap: spacing.md,
       marginBottom: spacing.lg,
     },
-    stateAppIconText: {
-      fontSize: 32,
-    },
-    stateEmotionPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      alignSelf: "center",
-      paddingVertical: spacing.sm + 2,
-      paddingHorizontal: spacing.lg,
-      backgroundColor: colors.accentLight,
-      borderRadius: radius.pills,
-      borderWidth: 1,
-      borderColor: colors.accent,
-      gap: spacing.sm,
-      marginBottom: spacing.xl,
-    },
-    stateEmotionPillPositive: {
-      backgroundColor: colors.primaryLight,
-      borderColor: colors.primary,
-    },
-    stateEmotionIcon: {
-      fontSize: 20,
-    },
-    stateEmotionText: {
-      fontFamily: fonts.medium,
-      fontSize: typography.body.fontSize,
-      color: colors.accent,
-    },
-    stateEmotionTextPositive: {
-      color: colors.primary,
-    },
-    stateDivider: {
-      height: 1,
-      backgroundColor: colors.glassStroke,
-      marginVertical: spacing.xl,
-      width: "80%",
-      alignSelf: "center",
-    },
-    stateWithApp: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: spacing.lg,
-    },
-    stateWithText: {
-      fontFamily: fonts.light,
-      fontSize: typography.title.fontSize,
-      color: colors.text,
-    },
-    stateLogoContainer: {
+    currentStateBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
     },
-    stateLogoIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 8,
-    },
-    stateLogoText: {
+    currentStateBadgeText: {
       fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+    },
+    currentStateHeroCard: {
+      overflow: "hidden",
+      marginBottom: spacing.lg,
+      gap: spacing.lg,
+    },
+    currentStateHeroGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.8,
+    },
+    currentStateHeader: {
+      gap: spacing.md,
+    },
+    currentStateTitle: {
+      fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
+      lineHeight: typography.title.lineHeight,
+      color: colors.text,
+      textAlign: "center",
+    },
+    currentStateSubtitle: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    currentStateEmotionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: spacing.sm,
+    },
+    currentStateEmotionPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    currentStateEmotionText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.text,
+    },
+    currentStateStatsGrid: {
+      gap: spacing.xs,
+    },
+    currentStateStatCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.button,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      marginTop: spacing.sm,
+    },
+    currentStateStatIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    currentStateStatMeta: {
+      flex: 1,
+      gap: 2,
+    },
+    currentStateStatLabel: {
+      fontFamily: fonts.regular,
+      fontSize: typography.small.fontSize,
+      color: colors.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+    },
+    currentStateStatValue: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
+      color: colors.text,
+    },
+    currentStateSupportCard: {
+      gap: spacing.lg,
+    },
+    currentStateSupportHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    currentStateSupportTitleWrap: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    currentStateSupportEyebrow: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    currentStateSupportTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.heading.fontSize,
+      lineHeight: typography.heading.lineHeight,
+      color: colors.text,
+    },
+    currentStateLogoChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    currentStateLogoText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.caption.fontSize,
       color: colors.primary,
+    },
+    currentStateSupportList: {
+      gap: spacing.md,
+    },
+    currentStateSupportRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "flex-start",
+    },
+    currentStateSupportText: {
+      flex: 1,
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
     },
     researchCard: {
       marginTop: spacing.xl,
@@ -1321,40 +1471,105 @@ export default function OnboardingScreen() {
       paddingBottom: spacing.lg,
     },
     // Projection styles
+    projectionIntro: {
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    projectionBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    projectionBadgeText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
     projectionTitle: {
       fontFamily: fonts.light,
       fontSize: typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
-      lineHeight: 36,
-      marginBottom: spacing.xl,
+      lineHeight: typography.title.lineHeight,
     },
     projectionHighlight: {
       fontFamily: fonts.semiBold,
-      color: colors.error,
+      color: colors.primary,
     },
-    projectionSubtitle: {
+    projectionHeroCard: {
+      overflow: "hidden",
+      alignItems: "center",
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    projectionHeroGradient: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.9,
+    },
+    projectionOverline: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+    },
+    projectionValue: {
+      fontFamily: fonts.thin,
+      fontSize: typography.display.fontSize,
+      color: colors.text,
+      letterSpacing: typography.display.letterSpacing,
+      textAlign: "center",
+    },
+    projectionValueLabel: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.bodyLarge.fontSize,
+      color: colors.primary,
+      textAlign: "center",
+    },
+    projectionDescription: {
       fontFamily: fonts.regular,
       fontSize: typography.body.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
-      marginBottom: spacing.lg,
+      lineHeight: typography.body.lineHeight,
+      maxWidth: 280,
     },
-    projectionYears: {
-      fontFamily: fonts.thin,
-      fontSize: typography.display.fontSize,
-      color: colors.error,
-      textAlign: "center",
-      letterSpacing: typography.display.letterSpacing,
-      marginBottom: spacing.md,
+    projectionStatsRow: {
+      flexDirection: "row",
+      gap: spacing.md,
     },
-    projectionDescription: {
-      fontFamily: fonts.light,
-      fontSize: typography.bodyLarge.fontSize,
-      color: colors.textSecondary,
+    projectionStatCard: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.button,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    projectionStatValue: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.heading.fontSize,
+      color: colors.text,
       textAlign: "center",
-      lineHeight: 28,
-      marginBottom: spacing.xl * 2,
+    },
+    projectionStatLabel: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      textAlign: "center",
+      lineHeight: typography.caption.lineHeight,
     },
     projectionDisclaimer: {
       fontFamily: fonts.regular,
@@ -1362,11 +1577,12 @@ export default function OnboardingScreen() {
       color: colors.textMuted,
       textAlign: "center",
       lineHeight: 18,
+      marginTop: spacing.md,
     },
     previewIntro: {
       alignItems: "center",
-      marginBottom: spacing.lg,
-      gap: spacing.md,
+      marginBottom: spacing.md,
+      gap: spacing.sm,
     },
     previewBadge: {
       flexDirection: "row",
@@ -1387,7 +1603,7 @@ export default function OnboardingScreen() {
       textTransform: "uppercase",
     },
     previewHeroCard: {
-      marginVertical: spacing.xl,
+      marginVertical: spacing.md,
       overflow: "hidden",
     },
     previewHeroGradient: {
@@ -1396,12 +1612,16 @@ export default function OnboardingScreen() {
     },
     previewHeroTop: {
       alignItems: "center",
-      gap: spacing.lg,
-      marginBottom: spacing.xl,
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    previewHeroTopCompact: {
+      flexDirection: "row",
+      alignItems: "center",
     },
     previewSpotlight: {
-      width: isNarrowPreviewLayout ? 110 : 132,
-      height: isNarrowPreviewLayout ? 110 : 132,
+      width: isCompactPreviewViewport ? 72 : isNarrowPreviewLayout ? 96 : 120,
+      height: isCompactPreviewViewport ? 72 : isNarrowPreviewLayout ? 96 : 120,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -1409,11 +1629,11 @@ export default function OnboardingScreen() {
       width: "100%",
       height: "100%",
       borderRadius: 999,
-      padding: isNarrowPreviewLayout ? 12 : 14,
+      padding: isCompactPreviewViewport ? 10 : isNarrowPreviewLayout ? 12 : 14,
       shadowColor: colors.primary,
       shadowOpacity: 0.22,
-      shadowRadius: 26,
-      shadowOffset: { width: 0, height: 10 },
+      shadowRadius: isCompactPreviewViewport ? 18 : 26,
+      shadowOffset: { width: 0, height: isCompactPreviewViewport ? 6 : 10 },
     },
     previewSpotlightCore: {
       flex: 1,
@@ -1424,32 +1644,46 @@ export default function OnboardingScreen() {
     },
     previewHeroCopy: {
       alignItems: "center",
-      gap: spacing.sm,
+      gap: spacing.xs,
+    },
+    previewHeroCopyCompact: {
+      flex: 1,
+      alignItems: "flex-start",
     },
     previewHeroTitle: {
       fontFamily: fonts.semiBold,
-      fontSize: isNarrowPreviewLayout ? typography.title.fontSize : 30,
-      lineHeight: isNarrowPreviewLayout ? typography.title.lineHeight : 36,
+      fontSize: isCompactPreviewViewport
+        ? typography.heading.fontSize
+        : isNarrowPreviewLayout
+          ? typography.title.fontSize
+          : 30,
+      lineHeight: isCompactPreviewViewport
+        ? typography.heading.lineHeight
+        : isNarrowPreviewLayout
+          ? typography.title.lineHeight
+          : 36,
       letterSpacing: -0.4,
       color: colors.text,
-      textAlign: "center",
-      maxWidth: 320,
+      textAlign: isCompactPreviewViewport ? "left" : "center",
+      maxWidth: isCompactPreviewViewport ? undefined : 320,
     },
     previewHeroDescription: {
       fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      fontSize: isCompactPreviewViewport
+        ? typography.caption.fontSize
+        : typography.body.fontSize,
+      lineHeight: isCompactPreviewViewport ? 20 : typography.body.lineHeight,
       color: colors.textSecondary,
-      textAlign: "center",
-      maxWidth: 320,
+      textAlign: isCompactPreviewViewport ? "left" : "center",
+      maxWidth: isCompactPreviewViewport ? undefined : 320,
     },
     previewMetricsRow: {
       flexDirection: "row",
       alignItems: "stretch",
       justifyContent: "center",
-      gap: spacing.md,
-      marginBottom: spacing.xl,
-      paddingVertical: spacing.sm,
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+      paddingVertical: spacing.xs,
       paddingHorizontal: isNarrowPreviewLayout ? spacing.sm : spacing.md,
       borderRadius: radius.card,
       backgroundColor: "rgba(255, 255, 255, 0.04)",
@@ -1461,12 +1695,12 @@ export default function OnboardingScreen() {
       alignItems: "center",
       justifyContent: "center",
       gap: 2,
-      minHeight: 60,
+      minHeight: isCompactPreviewViewport ? 44 : 60,
     },
     previewMetricValue: {
       fontFamily: fonts.thin,
-      fontSize: 34,
-      lineHeight: 36,
+      fontSize: isCompactPreviewViewport ? 28 : 34,
+      lineHeight: isCompactPreviewViewport ? 30 : 36,
       letterSpacing: -1.2,
       color: colors.text,
     },
@@ -1483,35 +1717,43 @@ export default function OnboardingScreen() {
     },
     programDays: {
       flexDirection: "column",
-      gap: spacing.sm,
+      gap: spacing.xs,
     },
     programDay: {
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: spacing.md,
-      paddingVertical: spacing.md + 2,
-      paddingHorizontal: isNarrowPreviewLayout ? spacing.md : spacing.lg,
+      gap: spacing.sm,
+      paddingVertical: isCompactPreviewViewport ? spacing.sm : spacing.md,
+      paddingHorizontal: isCompactPreviewViewport
+        ? spacing.sm + 2
+        : isNarrowPreviewLayout
+          ? spacing.md
+          : spacing.lg,
       backgroundColor: "rgba(255, 255, 255, 0.045)",
       borderRadius: radius.card,
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
     programDayIndex: {
-      width: 34,
-      paddingTop: 2,
+      width: isCompactPreviewViewport ? 28 : 34,
+      paddingTop: 1,
       alignItems: "center",
       flexShrink: 0,
     },
     programDayIndexText: {
       fontFamily: fonts.semiBold,
-      fontSize: typography.small.fontSize,
+      fontSize: typography.caption.fontSize,
       color: colors.textMuted,
       letterSpacing: 1,
     },
     programDayIconWrap: {
-      width: isNarrowPreviewLayout ? 46 : 52,
-      height: isNarrowPreviewLayout ? 46 : 52,
-      borderRadius: isNarrowPreviewLayout ? 18 : 20,
+      width: isCompactPreviewViewport ? 38 : isNarrowPreviewLayout ? 42 : 48,
+      height: isCompactPreviewViewport ? 38 : isNarrowPreviewLayout ? 42 : 48,
+      borderRadius: isCompactPreviewViewport
+        ? 14
+        : isNarrowPreviewLayout
+          ? 16
+          : 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -1521,42 +1763,34 @@ export default function OnboardingScreen() {
     },
     programDayContent: {
       flex: 1,
-      gap: spacing.xs,
-      paddingTop: 2,
+      gap: 2,
+      paddingTop: 1,
     },
     programDayLabel: {
       fontFamily: fonts.semiBold,
-      fontSize: typography.heading.fontSize,
-      lineHeight: typography.heading.lineHeight,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
       color: colors.text,
     },
     programDayDescription: {
       fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      fontSize: typography.caption.fontSize,
+      lineHeight: 18,
       color: colors.textSecondary,
     },
     programConnector: {
       flexDirection: isNarrowPreviewLayout ? "column" : "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: spacing.sm,
+      gap: spacing.xs,
       opacity: 0.82,
-      paddingVertical: isNarrowPreviewLayout ? 0 : spacing.xs,
+      paddingVertical: isNarrowPreviewLayout ? 0 : 2,
       paddingHorizontal: isNarrowPreviewLayout ? 0 : spacing.lg,
     },
     programConnectorLine: {
       width: isNarrowPreviewLayout ? 1 : 44,
-      height: isNarrowPreviewLayout ? 18 : 1,
+      height: isNarrowPreviewLayout ? (isCompactPreviewViewport ? 10 : 14) : 1,
       backgroundColor: colors.glassStroke,
-    },
-    previewFooter: {
-      fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
-      color: colors.textSecondary,
-      textAlign: "center",
-      marginBottom: spacing.lg,
     },
     textInput: {
       marginVertical: spacing.lg,
@@ -1568,6 +1802,167 @@ export default function OnboardingScreen() {
       width: 52,
       height: 52,
       borderRadius: 12,
+    },
+    validationToastWrap: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+      alignItems: "center",
+      zIndex: 20,
+      elevation: 6,
+      pointerEvents: "none",
+    },
+    validationBanner: {
+      width: "100%",
+      maxWidth: 520,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: radius.glass,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: colors.bg,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+      shadowColor: colors.glassShadowSoft,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.12,
+      shadowRadius: 20,
+    },
+    validationBannerText: {
+      flex: 1,
+      fontFamily: fonts.medium,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.text,
+    },
+    upgradePromptWrap: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 21,
+      elevation: 7,
+      paddingHorizontal: spacing.lg,
+      backgroundColor: "rgba(5, 10, 20, 0.42)",
+    },
+    upgradePromptCard: {
+      width: "100%",
+      maxWidth: 520,
+      borderRadius: radius.glass,
+      overflow: "hidden",
+      backgroundColor: "#122033",
+      borderWidth: 1,
+      borderColor: "rgba(143, 214, 255, 0.24)",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.24,
+      shadowRadius: 36,
+      elevation: 10,
+    },
+    upgradePromptGradient: {
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    upgradePromptGlow: {
+      position: "absolute",
+      top: -28,
+      left: 24,
+      right: 24,
+      height: 88,
+      borderRadius: 999,
+      opacity: 0.9,
+    },
+    upgradePromptBadge: {
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.12)",
+    },
+    upgradePromptHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.md,
+    },
+    upgradePromptTitle: {
+      flex: 1,
+      fontFamily: fonts.light,
+      fontSize: typography.sectionTitle.fontSize,
+      lineHeight: typography.sectionTitle.lineHeight,
+      color: colors.text,
+    },
+    upgradePromptText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+    },
+    upgradePromptPriceRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    upgradePromptPriceChip: {
+      flex: 1,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.button,
+      backgroundColor: "rgba(255, 255, 255, 0.06)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.1)",
+      alignItems: "center",
+      gap: 2,
+    },
+    upgradePromptPriceValue: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.body.fontSize,
+      color: colors.text,
+    },
+    upgradePromptPriceLabel: {
+      fontFamily: fonts.regular,
+      fontSize: typography.small.fontSize,
+      color: colors.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.7,
+    },
+    upgradePromptActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    upgradePromptButton: {
+      flex: 1,
+      borderRadius: radius.button,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+    },
+    upgradePromptButtonGhost: {
+      backgroundColor: "rgba(255, 255, 255, 0.06)",
+      borderColor: "rgba(255, 255, 255, 0.12)",
+    },
+    upgradePromptButtonPrimary: {
+      backgroundColor: colors.primary,
+      borderColor: "rgba(255, 255, 255, 0.12)",
+    },
+    upgradePromptButtonText: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.caption.fontSize,
+    },
+    upgradePromptButtonTextGhost: {
+      color: colors.text,
+    },
+    upgradePromptButtonTextPrimary: {
+      color: colors.bg,
     },
   });
 
@@ -1588,7 +1983,10 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[
+          styles.contentContainer,
+          step === "program-preview" && styles.previewContentContainer,
+        ]}
         contentInsetAdjustmentBehavior="automatic"
       >
         <ReanimatedAnimated.View key={stepKey} style={stepAnimation}>
@@ -1633,8 +2031,8 @@ export default function OnboardingScreen() {
                 <Text style={styles.subtitleAccent}>Breathe.</Text>
               </Text>
               <Text style={styles.description}>
-                Before you scroll, we&apos;ll help you pause.{"\n"}
-                A gentle moment to{" "}
+                Before you scroll, we&apos;ll help you pause.{"\n"}A gentle
+                moment to{" "}
                 <Text style={styles.descriptionAccent}>choose mindfully</Text>
                 {"\n"}instead of reaching out of habit.
               </Text>
@@ -1650,17 +2048,14 @@ export default function OnboardingScreen() {
                     size={14}
                     color={colors.secondary}
                   />
-                  <Text style={styles.previewBadgeText}>A calmer ritual in 3 moves</Text>
+                  <Text style={styles.previewBadgeText}>
+                    A calmer ritual in 3 moves
+                  </Text>
                 </View>
 
                 <Text style={styles.title}>
                   Breathe. Reflect.{" "}
                   <Text style={styles.titleAccent}>Grow.</Text>
-                </Text>
-                <Text style={styles.description}>
-                  Instead of dropping you into another habit loop, GentleWait
-                  creates a short, beautiful pause that helps you come back to
-                  yourself.
                 </Text>
               </View>
 
@@ -1676,7 +2071,12 @@ export default function OnboardingScreen() {
                   style={styles.previewHeroGradient}
                 />
 
-                <View style={styles.previewHeroTop}>
+                <View
+                  style={[
+                    styles.previewHeroTop,
+                    isCompactPreviewViewport && styles.previewHeroTopCompact,
+                  ]}
+                >
                   <View style={styles.previewSpotlight}>
                     <LinearGradient
                       colors={[
@@ -1691,20 +2091,25 @@ export default function OnboardingScreen() {
                       <View style={styles.previewSpotlightCore}>
                         <Ionicons
                           name="leaf-outline"
-                          size={isNarrowPreviewLayout ? 30 : 36}
+                          size={isCompactPreviewViewport ? 24 : 32}
                           color={colors.bg}
                         />
                       </View>
                     </LinearGradient>
                   </View>
 
-                  <View style={styles.previewHeroCopy}>
+                  <View
+                    style={[
+                      styles.previewHeroCopy,
+                      isCompactPreviewViewport && styles.previewHeroCopyCompact,
+                    ]}
+                  >
                     <Text style={styles.previewHeroTitle}>
                       Every interruption becomes a gentle reset
                     </Text>
                     <Text style={styles.previewHeroDescription}>
-                      A short sequence designed to slow the urge, surface intent,
-                      and make the next choice feel lighter.
+                      Slow the urge, surface intent, and make the next choice
+                      feel lighter.
                     </Text>
                   </View>
                 </View>
@@ -1717,7 +2122,9 @@ export default function OnboardingScreen() {
                   <View style={styles.previewMetricDivider} />
                   <View style={styles.previewMetric}>
                     <Text style={styles.previewMetricValue}>1</Text>
-                    <Text style={styles.previewMetricLabel}>calmer response</Text>
+                    <Text style={styles.previewMetricLabel}>
+                      calmer response
+                    </Text>
                   </View>
                 </View>
 
@@ -1726,19 +2133,25 @@ export default function OnboardingScreen() {
                     <Fragment key={item.label}>
                       <View style={styles.programDay}>
                         <View style={styles.programDayIndex}>
-                          <Text style={styles.programDayIndexText}>0{index + 1}</Text>
+                          <Text style={styles.programDayIndexText}>
+                            0{index + 1}
+                          </Text>
                         </View>
 
                         <View style={styles.programDayIconWrap}>
                           <Ionicons
                             name={item.icon}
-                            size={isNarrowPreviewLayout ? 24 : 28}
-                            color={index === 1 ? colors.secondary : colors.primary}
+                            size={isCompactPreviewViewport ? 20 : 24}
+                            color={
+                              index === 1 ? colors.secondary : colors.primary
+                            }
                           />
                         </View>
 
                         <View style={styles.programDayContent}>
-                          <Text style={styles.programDayLabel}>{item.label}</Text>
+                          <Text style={styles.programDayLabel}>
+                            {item.label}
+                          </Text>
                           <Text style={styles.programDayDescription}>
                             {item.description}
                           </Text>
@@ -1764,14 +2177,6 @@ export default function OnboardingScreen() {
                   ))}
                 </View>
               </GlassCard>
-
-              <Text style={styles.previewFooter}>
-                Breathing space, reflection prompts, and steady encouragement.
-                {"\n"}
-                <Text style={styles.descriptionAccent}>
-                  No guilt. No pressure. Just a better rhythm.
-                </Text>
-              </Text>
             </>
           )}
 
@@ -1909,6 +2314,9 @@ export default function OnboardingScreen() {
                         newSet.add(goal);
                       }
                       setSelectedGoals(newSet);
+                      if (newSet.size > 0) {
+                        setValidationMessage(null);
+                      }
                     }}
                   />
                 ))}
@@ -1963,7 +2371,7 @@ export default function OnboardingScreen() {
                 feel... (pick up to 2)
               </Text>
 
-              <View style={styles.appList}>
+              <View style={[styles.appList, styles.emotionalAppList]}>
                 {[
                   "Guilty about wasted time",
                   "More anxious than before",
@@ -1989,7 +2397,9 @@ export default function OnboardingScreen() {
                 ))}
               </View>
 
-              <Text style={styles.selectedCount}>
+              <Text
+                style={[styles.selectedCount, styles.emotionalSelectedCount]}
+              >
                 {selectedEmotions.size} emotion
                 {selectedEmotions.size !== 1 ? "s" : ""} selected
               </Text>
@@ -1998,71 +2408,153 @@ export default function OnboardingScreen() {
 
           {step === "current-state" && (
             <>
-              {/* Current State Section */}
-              <Text style={styles.stateTitle}>Current State</Text>
-
-              {/* Show first selected goal as app icon placeholder */}
-              <View style={styles.stateAppIcon}>
-                <Ionicons name="phone-portrait-outline" size={32} color={colors.accent} />
-              </View>
-
-              {/* Current emotion pill */}
-              <View style={styles.stateEmotionPill}>
-                <Ionicons name="alert-circle-outline" size={20} color={colors.accent} />
-                <Text style={styles.stateEmotionText}>
-                  {selectedEmotions.size > 0
-                    ? Array.from(selectedEmotions)[0]
-                        .split(" ")
-                        .slice(1)
-                        .join(" ")
-                    : "Irritable"}
-                </Text>
-              </View>
-
-              {/* Divider */}
-              <View style={styles.stateDivider} />
-
-              {/* With GentleWait Section */}
-              <View style={styles.stateWithApp}>
-                <Text style={styles.stateWithText}>With </Text>
-                <View style={styles.stateLogoContainer}>
-                  <Image
-                    source={mainLogo}
-                    style={{ width: 24, height: 24 }}
-                    resizeMode="contain"
+              <View style={styles.currentStateIntro}>
+                <View style={styles.currentStateBadge}>
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={14}
+                    color={colors.secondary}
                   />
-                  <Text style={styles.stateLogoText}>GentleWait</Text>
+                  <Text style={styles.currentStateBadgeText}>
+                    Your pattern so far
+                  </Text>
                 </View>
-              </View>
-
-              {/* Target emotion pill */}
-              <View
-                style={[
-                  styles.stateEmotionPill,
-                  styles.stateEmotionPillPositive,
-                ]}
-              >
-                <Ionicons name="happy-outline" size={20} color={colors.primary} />
-                <Text
-                  style={[
-                    styles.stateEmotionText,
-                    styles.stateEmotionTextPositive,
-                  ]}
-                >
-                  Calm
+                <Text style={styles.currentStateTitle}>
+                  Here&apos;s what your current{" "}
+                  <Text style={styles.titleAccent}>digital state</Text> looks
+                  like
+                </Text>
+                <Text style={styles.currentStateSubtitle}>
+                  Based on what you told us, you&apos;re not looking for more
+                  screen time. You&apos;re looking for more calm, intention, and
+                  control.
                 </Text>
               </View>
 
-              {/* Research quote */}
+              <GlassCard
+                glowColor="primary"
+                style={styles.currentStateHeroCard}
+              >
+                <LinearGradient
+                  colors={[
+                    colors.primaryLight,
+                    "rgba(126, 230, 198, 0.14)",
+                    "transparent",
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.currentStateHeroGradient}
+                />
+
+                <View style={styles.currentStateHeader}>
+                  <Text style={styles.currentStateSubtitle}>
+                    Right now, your phone tends to pull you away when you feel{" "}
+                    <Text style={styles.descriptionAccent}>
+                      {primaryEmotion.toLowerCase()}
+                    </Text>
+                    {secondaryEmotion
+                      ? ` and ${secondaryEmotion.toLowerCase()}`
+                      : ""}
+                    .
+                  </Text>
+
+                  <View style={styles.currentStateEmotionRow}>
+                    {selectedEmotionList.map((emotion) => (
+                      <View
+                        key={emotion}
+                        style={styles.currentStateEmotionPill}
+                      >
+                        <Ionicons
+                          name="alert-circle-outline"
+                          size={16}
+                          color={colors.secondary}
+                        />
+                        <Text style={styles.currentStateEmotionText}>
+                          {emotion}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.currentStateStatsGrid}>
+                  {currentStateStats.map((item) => (
+                    <View key={item.label} style={styles.currentStateStatCard}>
+                      <View style={styles.currentStateStatIcon}>
+                        <Ionicons
+                          name={item.icon}
+                          size={18}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.currentStateStatMeta}>
+                        <Text style={styles.currentStateStatLabel}>
+                          {item.label}
+                        </Text>
+                        <Text style={styles.currentStateStatValue}>
+                          {item.value}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </GlassCard>
+
+              <GlassCard
+                intensity="light"
+                style={styles.currentStateSupportCard}
+              >
+                <View style={styles.currentStateSupportHeader}>
+                  <View style={styles.currentStateSupportTitleWrap}>
+                    <Text style={styles.currentStateSupportEyebrow}>
+                      What GentleWait will do
+                    </Text>
+                    <Text style={styles.currentStateSupportTitle}>
+                      A calmer path from where you are now
+                    </Text>
+                  </View>
+
+                  <View style={styles.currentStateLogoChip}>
+                    <Image
+                      source={mainLogo}
+                      style={{ width: 18, height: 18 }}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.currentStateLogoText}>GentleWait</Text>
+                  </View>
+                </View>
+
+                <View style={styles.currentStateSupportList}>
+                  {gentleWaitSupports.map((item) => (
+                    <View key={item} style={styles.currentStateSupportRow}>
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={18}
+                        color={colors.primary}
+                        style={{ marginTop: 2 }}
+                      />
+                      <Text style={styles.currentStateSupportText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              </GlassCard>
+
               <GlassCard style={styles.researchCard}>
                 <View style={styles.researchHeader}>
-                  <Ionicons name="flask-outline" size={20} color={colors.primary} />
+                  <Ionicons
+                    name="flask-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
                   <Text style={styles.researchTitle}>
-                    {RESEARCH_QUOTES[0].title}
+                    Small pause, better choice
                   </Text>
                 </View>
                 <Text style={styles.researchText}>
-                  {RESEARCH_QUOTES[0].text}
+                  GentleWait adds a short moment of reflection before the scroll
+                  begins, so{" "}
+                  <Text style={styles.researchSource}>{primaryGoal}</Text> can
+                  feel intentional instead of reactive.
                 </Text>
               </GlassCard>
             </>
@@ -2102,7 +2594,12 @@ export default function OnboardingScreen() {
                         style={[styles.chartBarFill, { height: userBarHeight }]}
                       >
                         <LinearGradient
-                          colors={["#FF9999", colors.error, "#FF4444", "#CC0000"]}
+                          colors={[
+                            "#FF9999",
+                            colors.error,
+                            "#FF4444",
+                            "#CC0000",
+                          ]}
                           start={{ x: 0.5, y: 1 }}
                           end={{ x: 0.5, y: 0 }}
                           style={{
@@ -2177,30 +2674,72 @@ export default function OnboardingScreen() {
 
               return (
                 <>
-                  <Text style={styles.projectionTitle}>
-                    Imagine what you could do with{"\n"}
-                    <Text style={styles.projectionHighlight}>
-                      {daysPerYear} extra days
-                    </Text>{" "}
-                    each year
-                  </Text>
+                  <View style={styles.projectionIntro}>
+                    <View style={styles.projectionBadge}>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={colors.secondary}
+                      />
+                      <Text style={styles.projectionBadgeText}>
+                        Time you can reclaim
+                      </Text>
+                    </View>
 
-                  <Text style={styles.projectionSubtitle}>
-                    That&apos;s how much time you could reclaim
-                  </Text>
+                    <Text style={styles.projectionTitle}>
+                      Less scrolling can give you back{" "}
+                      <Text style={styles.projectionHighlight}>
+                        real life time
+                      </Text>
+                    </Text>
+                  </View>
 
-                  <Text style={styles.projectionYears}>
-                    {yearsInLifetime} years
-                  </Text>
+                  <GlassCard
+                    glowColor="primary"
+                    style={styles.projectionHeroCard}
+                  >
+                    <LinearGradient
+                      colors={[
+                        colors.primaryLight,
+                        "rgba(126, 230, 198, 0.12)",
+                        "transparent",
+                      ]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.projectionHeroGradient}
+                    />
 
-                  <Text style={styles.projectionDescription}>
-                    of presence, creativity, and connection{"\n"}
-                    waiting to be unlocked.
-                  </Text>
+                    <Text style={styles.projectionOverline}>Every year</Text>
+                    <Text style={styles.projectionValue}>{daysPerYear}</Text>
+                    <Text style={styles.projectionValueLabel}>days back</Text>
+                    <Text style={styles.projectionDescription}>
+                      More room for calm, focus, sleep, and people you care
+                      about.
+                    </Text>
+                  </GlassCard>
+
+                  <View style={styles.projectionStatsRow}>
+                    <View style={styles.projectionStatCard}>
+                      <Text style={styles.projectionStatValue}>
+                        {yearsInLifetime}
+                      </Text>
+                      <Text style={styles.projectionStatLabel}>
+                        years reclaimed over a lifetime
+                      </Text>
+                    </View>
+
+                    <View style={styles.projectionStatCard}>
+                      <Text style={styles.projectionStatValue}>
+                        {dailyScreenTime - targetScreenTime}h
+                      </Text>
+                      <Text style={styles.projectionStatLabel}>
+                        saved each day if you reach your goal
+                      </Text>
+                    </View>
+                  </View>
 
                   <Text style={styles.projectionDisclaimer}>
-                    Based on your current screen time and mindful reduction
-                    goals.
+                    Based on your current screen time and target.
                   </Text>
                 </>
               );
@@ -2302,72 +2841,68 @@ export default function OnboardingScreen() {
 
           {step === "summary" && (
             <>
-              {/* Laurel wreath with stats */}
-              <View style={styles.laurelContainer}>
-                <Ionicons name="leaf-outline" size={40} color={colors.primary} style={{ transform: [{ scaleX: -1 }] }} />
-                <View style={styles.laurelContent}>
-                  <Text style={styles.laurelTitle}>
-                    Over{" "}
-                    <Text style={styles.laurelHighlight}>300,000 People</Text>
-                  </Text>
-                  <Text style={styles.laurelSubtitle}>
-                    started with the same goals!
-                  </Text>
+              <View style={styles.summaryIntro}>
+                <View style={styles.summaryBadge}>
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={14}
+                    color={colors.secondary}
+                  />
+                  <Text style={styles.summaryBadgeText}>Your reset plan</Text>
                 </View>
-                <Ionicons name="leaf-outline" size={40} color={colors.primary} />
+                <Text style={styles.summaryTitle}>
+                  A calmer routine is{" "}
+                  <Text style={styles.summaryHighlight}>taking shape</Text>
+                </Text>
               </View>
 
-              {/* User's selected goals */}
-              <View style={styles.selectedGoalsContainer}>
-                {Array.from(selectedGoals)
-                  .slice(0, 2)
-                  .map((goal, index) => (
-                    <View key={index} style={styles.goalPill}>
-                      <Text style={styles.goalPillText}>{goal}</Text>
+              <GlassCard glowColor="primary" style={styles.summaryHeroCard}>
+                <LinearGradient
+                  colors={[
+                    colors.primaryLight,
+                    "rgba(126, 230, 198, 0.12)",
+                    "transparent",
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.summaryHeroGradient}
+                />
+
+                <View style={styles.summaryHeroTop}>
+                  <Text style={styles.projectionOverline}>
+                    You&apos;re not alone
+                  </Text>
+                  <Text style={styles.summaryValue}>300,000+</Text>
+                  <Text style={styles.summaryValueLabel}>
+                    people started with the same intention
+                  </Text>
+                </View>
+
+                <View style={styles.summaryGoalsRow}>
+                  {selectedGoalList.slice(0, 3).map((goal) => (
+                    <View key={goal} style={styles.summaryGoalPill}>
+                      <Text style={styles.summaryGoalText}>{goal}</Text>
                     </View>
                   ))}
-                {selectedGoals.size === 0 && (
-                  <View style={styles.goalPill}>
-                    <Text style={styles.goalPillText}>
-                      Reduce Screen Time by{" "}
-                      {dailyScreenTime - targetScreenTime}h
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Testimonial */}
-              <GlassCard glowColor="primary" style={styles.testimonialCard}>
-                <View style={styles.testimonialHeader}>
-                  <Text style={styles.testimonialName}>
-                    {TESTIMONIALS[0].name}
-                  </Text>
-                  <View style={{ flexDirection: "row", gap: 2 }}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Ionicons key={i} name="star" size={14} color="#FFD700" />
-                    ))}
-                  </View>
+                  {selectedGoalList.length === 0 && (
+                    <View style={styles.summaryGoalPill}>
+                      <Text style={styles.summaryGoalText}>
+                        Reduce screen time
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.testimonialComment}>
-                  &ldquo;{TESTIMONIALS[0].comment}&rdquo;
+
+                <Text style={styles.summaryHeroText}>
+                  Your plan aims to give back about {dailyHoursBack}h each day,
+                  one gentle pause at a time.
                 </Text>
               </GlassCard>
 
-              <GlassCard intensity="light" style={styles.testimonialCard}>
-                <View style={styles.testimonialHeader}>
-                  <Text style={styles.testimonialName}>
-                    {TESTIMONIALS[1].name}
-                  </Text>
-                  <View style={{ flexDirection: "row", gap: 2 }}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Ionicons key={i} name="star" size={14} color="#FFD700" />
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.testimonialComment}>
-                  &ldquo;{TESTIMONIALS[1].comment}&rdquo;
-                </Text>
-              </GlassCard>
+              <Text style={styles.summaryClosingText}>
+                Next, we&apos;ll connect GentleWait to the apps you want help
+                with and turn this intention into a real habit.
+              </Text>
             </>
           )}
 
@@ -2387,14 +2922,35 @@ export default function OnboardingScreen() {
                     </Text>
                   )}
                   <View style={styles.permissionContainer}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                      <Ionicons name="phone-portrait-outline" size={18} color={colors.textSecondary} />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: spacing.sm,
+                      }}
+                    >
+                      <Ionicons
+                        name="phone-portrait-outline"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
                       <Text style={[styles.permissionText, { flex: 1 }]}>
-                        Apple shows the selector. GentleWait does not read your full installed app list.
+                        Apple shows the selector. GentleWait does not read your
+                        full installed app list.
                       </Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                      <Ionicons name="shield-checkmark-outline" size={18} color={colors.textSecondary} />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: spacing.sm,
+                      }}
+                    >
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
                       <Text style={[styles.permissionText, { flex: 1 }]}>
                         You can change this selection later from Settings.
                       </Text>
@@ -2427,7 +2983,8 @@ export default function OnboardingScreen() {
                       <DeviceActivitySelectionView
                         style={styles.iosSelectionView}
                         familyActivitySelection={
-                          iosFamilyActivitySelection?.familyActivitySelection || null
+                          iosFamilyActivitySelection?.familyActivitySelection ||
+                          null
                         }
                         headerText="Choose apps GentleWait should manage"
                         footerText="You can update this later in Settings."
@@ -2436,7 +2993,8 @@ export default function OnboardingScreen() {
                           setIOSFamilyActivitySelection({
                             familyActivitySelection:
                               nextSelection.familyActivitySelection || "",
-                            applicationCount: nextSelection.applicationCount || 0,
+                            applicationCount:
+                              nextSelection.applicationCount || 0,
                             categoryCount: nextSelection.categoryCount || 0,
                             webDomainCount: nextSelection.webDomainCount || 0,
                             includeEntireCategory:
@@ -2485,7 +3043,15 @@ export default function OnboardingScreen() {
                       ]}
                       onPress={() => setSelectedCategory("suggested")}
                     >
-                      <Ionicons name="star-outline" size={16} color={selectedCategory === "suggested" ? colors.primary : colors.textSecondary} />
+                      <Ionicons
+                        name="star-outline"
+                        size={16}
+                        color={
+                          selectedCategory === "suggested"
+                            ? colors.primary
+                            : colors.textSecondary
+                        }
+                      />
                       <Text
                         style={[
                           styles.categoryTabLabel,
@@ -2500,11 +3066,20 @@ export default function OnboardingScreen() {
                     <TouchableOpacity
                       style={[
                         styles.categoryTab,
-                        selectedCategory === "all" && styles.categoryTabSelected,
+                        selectedCategory === "all" &&
+                          styles.categoryTabSelected,
                       ]}
                       onPress={() => setSelectedCategory("all")}
                     >
-                      <Ionicons name="list-outline" size={16} color={selectedCategory === "all" ? colors.primary : colors.textSecondary} />
+                      <Ionicons
+                        name="list-outline"
+                        size={16}
+                        color={
+                          selectedCategory === "all"
+                            ? colors.primary
+                            : colors.textSecondary
+                        }
+                      />
                       <Text
                         style={[
                           styles.categoryTabLabel,
@@ -2526,7 +3101,15 @@ export default function OnboardingScreen() {
                         ]}
                         onPress={() => setSelectedCategory(category.id)}
                       >
-                        <Ionicons name={category.icon as any} size={16} color={selectedCategory === category.id ? colors.primary : colors.textSecondary} />
+                        <Ionicons
+                          name={category.icon as any}
+                          size={16}
+                          color={
+                            selectedCategory === category.id
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
                         <Text
                           style={[
                             styles.categoryTabLabel,
@@ -2577,13 +3160,13 @@ export default function OnboardingScreen() {
                   </View>
 
                   <Text style={styles.selectedCount}>
-                    {selectedAppSet.size} app{selectedAppSet.size !== 1 ? "s" : ""}{" "}
-                    selected
+                    {selectedAppSet.size} app
+                    {selectedAppSet.size !== 1 ? "s" : ""} selected
                   </Text>
                   {!currentSettings.premium && hasReachedFreeAppLimit && (
                     <Text style={styles.descriptionSmall}>
-                      You&apos;ve reached the free plan limit. Upgrade to protect more
-                      apps and unlock the AI Companion.
+                      You&apos;ve reached the free plan limit. Upgrade to
+                      protect more apps and unlock the AI Companion.
                     </Text>
                   )}
                 </>
@@ -2616,27 +3199,60 @@ export default function OnboardingScreen() {
                       <Text style={styles.descriptionAccent}>
                         accessibility access
                       </Text>{" "}
-                      to notice when one of your chosen apps opens and bring up the pause screen.
+                      to notice when one of your chosen apps opens and bring up
+                      the pause screen.
                     </>
                   )}
                 </Text>
               )}
 
               <View style={styles.permissionContainer}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                  <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>Your data never leaves your device</Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={[styles.permissionText, { flex: 1 }]}>
+                    Your data never leaves your device
+                  </Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                  <Ionicons name="eye-off-outline" size={18} color={colors.textSecondary} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <Ionicons
+                    name="eye-off-outline"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
                   <Text style={[styles.permissionText, { flex: 1 }]}>
                     {isIOSFamilyControlsFlow
                       ? "We never see what happens inside your apps."
                       : "We do not read what you type, message, or watch inside apps."}
                   </Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-                  <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                  }}
+                >
+                  <Ionicons
+                    name="settings-outline"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
                   <Text style={[styles.permissionText, { flex: 1 }]}>
                     {isIOSFamilyControlsFlow
                       ? "You&apos;re always in control"
@@ -2844,6 +3460,129 @@ export default function OnboardingScreen() {
           )}
         </ReanimatedAnimated.View>
       </ScrollView>
+
+      {upgradePromptMessage && (
+        <View style={styles.upgradePromptWrap}>
+          <View style={styles.upgradePromptCard}>
+            <LinearGradient
+              colors={[
+                "rgba(143, 214, 255, 0.22)",
+                "rgba(126, 230, 198, 0.16)",
+                "rgba(15, 23, 36, 0.98)",
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.upgradePromptGradient}
+            >
+              <LinearGradient
+                colors={[
+                  "rgba(143, 214, 255, 0.35)",
+                  "rgba(126, 230, 198, 0.24)",
+                  "transparent",
+                ]}
+                start={{ x: 0.2, y: 0 }}
+                end={{ x: 0.8, y: 1 }}
+                style={styles.upgradePromptGlow}
+              />
+
+              <View style={styles.upgradePromptBadge}>
+                <Ionicons
+                  name="sparkles-outline"
+                  size={14}
+                  color={colors.secondary}
+                />
+                <Text style={styles.currentStateBadgeText}>Go Pro</Text>
+              </View>
+
+              <View style={styles.upgradePromptHeader}>
+                <Ionicons
+                  name="diamond-outline"
+                  size={24}
+                  color={colors.primary}
+                  style={{ marginTop: 2 }}
+                />
+                <Text style={styles.upgradePromptTitle}>
+                  Unlock more protected apps and the AI Companion
+                </Text>
+              </View>
+
+              <Text style={styles.upgradePromptText}>
+                {upgradePromptMessage}
+              </Text>
+
+              <View style={styles.upgradePromptPriceRow}>
+                <View style={styles.upgradePromptPriceChip}>
+                  <Text style={styles.upgradePromptPriceValue}>
+                    {PRICING.monthly}
+                  </Text>
+                  <Text style={styles.upgradePromptPriceLabel}>Monthly</Text>
+                </View>
+                <View style={styles.upgradePromptPriceChip}>
+                  <Text style={styles.upgradePromptPriceValue}>
+                    {PRICING.yearly}
+                  </Text>
+                  <Text style={styles.upgradePromptPriceLabel}>Best value</Text>
+                </View>
+              </View>
+
+              <View style={styles.upgradePromptActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.upgradePromptButton,
+                    styles.upgradePromptButtonGhost,
+                  ]}
+                  onPress={() => setUpgradePromptMessage(null)}
+                >
+                  <Text
+                    style={[
+                      styles.upgradePromptButtonText,
+                      styles.upgradePromptButtonTextGhost,
+                    ]}
+                  >
+                    Not now
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.upgradePromptButton,
+                    styles.upgradePromptButtonPrimary,
+                  ]}
+                  onPress={() => {
+                    setUpgradePromptMessage(null);
+                    router.push("/paywall");
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.upgradePromptButtonText,
+                      styles.upgradePromptButtonTextPrimary,
+                    ]}
+                  >
+                    View Premium
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </View>
+      )}
+
+      {validationMessage && !upgradePromptMessage && (
+        <View pointerEvents="none" style={styles.validationToastWrap}>
+          <ReanimatedAnimated.View
+            style={[styles.validationBanner, toastStyle]}
+          >
+            <Ionicons
+              name="sparkles-outline"
+              size={18}
+              color={colors.primary}
+              style={{ marginTop: 2 }}
+            />
+            <Text style={styles.validationBannerText}>{validationMessage}</Text>
+          </ReanimatedAnimated.View>
+        </View>
+      )}
 
       <View style={styles.buttonContainer}>
         {(step !== "welcome-hero" &&

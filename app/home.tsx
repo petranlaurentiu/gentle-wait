@@ -70,9 +70,11 @@ export default function HomeScreen() {
           setWeeklyStats({
             pausesTotal: weekly.pausesTotal,
             choseCalmCount:
+              weekly.closedCount +
               weekly.alternativeBreathed +
               weekly.alternativeReflected +
               weekly.alternativeGrounded +
+              weekly.alternativeExercise +
               weekly.alternativePrayed,
             mindfulMinutes: weekly.totalMindfulMinutes,
           });

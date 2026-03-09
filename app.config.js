@@ -2,6 +2,7 @@ const appleTeamId = process.env.EXPO_PUBLIC_APPLE_TEAM_ID || "CNS3PJ66YR";
 const iosAppGroup =
   process.env.EXPO_PUBLIC_IOS_APP_GROUP ||
   "group.com.petran-laurentiu.gentlewait";
+const apiOrigin = process.env.EXPO_PUBLIC_API_ORIGIN || "";
 
 export default {
   expo: {
@@ -38,11 +39,16 @@ export default {
       ],
     },
     web: {
-      output: "static",
+      output: "server",
       favicon: "./assets/images/main_logo.png",
     },
     plugins: [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          origin: apiOrigin || undefined,
+        },
+      ],
       [
         "expo-build-properties",
         {
@@ -76,19 +82,23 @@ export default {
       reactCompiler: true,
     },
     extra: {
-      router: {},
+      router: {
+        origin: apiOrigin || undefined,
+      },
       eas: {
         projectId: "5518f02a-19c1-4d4a-b78a-2ed3c162d4c1",
       },
-      // EAS Secrets are automatically injected here during build
-      // Access via: Constants.expoConfig?.extra?.openRouterApiKey
-      openRouterApiKey: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || "",
       revenueCatAppleApiKey:
-        process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || "",
+        process.env.REVENUECAT_APPLE_PUBLIC_SDK_KEY ||
+        process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY ||
+        "",
       revenueCatGoogleApiKey:
-        process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || "",
+        process.env.REVENUECAT_GOOGLE_PUBLIC_SDK_KEY ||
+        process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY ||
+        "",
       appleTeamId,
       iosAppGroup,
+      apiOrigin,
     },
   },
 };

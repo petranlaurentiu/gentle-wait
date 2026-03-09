@@ -185,7 +185,7 @@ npm run build:prod:all     # Both platforms
 For production builds, use EAS secrets:
 ```bash
 eas secret:create --scope project \
-  --name EXPO_PUBLIC_OPENROUTER_API_KEY \
+  --name OPENROUTER_API_KEY \
   --value your_actual_key_here
 ```
 

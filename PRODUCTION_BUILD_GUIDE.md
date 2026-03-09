@@ -34,7 +34,9 @@ npm install
 
 Create `.env` file (if not exists):
 ```bash
-EXPO_PUBLIC_OPENROUTER_API_KEY=your_api_key_here
+OPENROUTER_API_KEY=your_api_key_here
+REVENUECAT_APPLE_PUBLIC_SDK_KEY=your_revenuecat_ios_public_sdk_key
+REVENUECAT_GOOGLE_PUBLIC_SDK_KEY=your_revenuecat_android_public_sdk_key
 ```
 
 ### 3. iOS Setup (One-Time)
@@ -237,14 +239,18 @@ Required information:
 
 ### Development (.env)
 ```bash
-EXPO_PUBLIC_OPENROUTER_API_KEY=your_key_here
+OPENROUTER_API_KEY=your_key_here
+REVENUECAT_APPLE_PUBLIC_SDK_KEY=your_revenuecat_ios_public_sdk_key
+REVENUECAT_GOOGLE_PUBLIC_SDK_KEY=your_revenuecat_android_public_sdk_key
 ```
 
 ### Production (EAS Secrets)
 
 Set secrets for EAS builds:
 ```bash
-eas secret:create --scope project --name EXPO_PUBLIC_OPENROUTER_API_KEY --value your_key_here
+eas secret:create --scope project --name OPENROUTER_API_KEY --value your_key_here
+eas secret:create --scope project --name REVENUECAT_APPLE_PUBLIC_SDK_KEY --value your_revenuecat_ios_public_sdk_key
+eas secret:create --scope project --name REVENUECAT_GOOGLE_PUBLIC_SDK_KEY --value your_revenuecat_android_public_sdk_key
 ```
 
 Verify secrets:

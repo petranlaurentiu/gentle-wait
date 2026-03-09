@@ -337,7 +337,7 @@ Quick reference for launch day:
 - Don't commit `.env` to git
 - Use EAS Secrets for builds:
   ```bash
-  eas secret:create --scope project --name EXPO_PUBLIC_OPENROUTER_API_KEY --value your_key
+  eas secret:create --scope project --name OPENROUTER_API_KEY --value your_key
   ```
 
 ---
