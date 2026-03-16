@@ -142,6 +142,8 @@ const getStepOrder = (
     "name",
   ];
 
+  const isIOS = Platform.OS === "ios";
+
   if (setupPath === "personalized") {
     return [
       ...baseSteps,
@@ -154,8 +156,10 @@ const getStepOrder = (
       "analysis",
       "projection",
       "summary",
-      "select-apps",
-      "permissions",
+      // iOS needs authorization before the picker can show real apps
+      ...(isIOS
+        ? (["permissions", "select-apps"] as const)
+        : (["select-apps", "permissions"] as const)),
       "duration",
       "cooldown",
       "done",
@@ -165,8 +169,9 @@ const getStepOrder = (
   // Quick setup path - skip all personalized questions
   return [
     ...baseSteps,
-    "select-apps",
-    "permissions",
+    ...(isIOS
+      ? (["permissions", "select-apps"] as const)
+      : (["select-apps", "permissions"] as const)),
     "duration",
     "cooldown",
     "done",
@@ -246,6 +251,7 @@ export default function OnboardingScreen() {
     !currentSettings.premium &&
     selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT;
   const isIOSFamilyControlsFlow = Platform.OS === "ios";
+  const isCompactCooldownViewport = width < 420 || screenHeight < 820;
 
   // Animation hooks
   const stepAnimation = useFadeInAnimation();
@@ -805,6 +811,39 @@ export default function OnboardingScreen() {
       fontFamily: fonts.medium,
       color: colors.secondary,
     },
+    cooldownSection: {
+      marginTop: spacing.lg,
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    cooldownIntro: {
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+    },
+    cooldownEyebrow: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 1.1,
+      textTransform: "uppercase",
+    },
+    cooldownHeadline: {
+      fontFamily: fonts.medium,
+      fontSize: typography.heading.fontSize,
+      lineHeight: typography.heading.lineHeight,
+      color: colors.text,
+      textAlign: "center",
+      maxWidth: 300,
+    },
+    cooldownHint: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+      textAlign: "center",
+      lineHeight: typography.caption.lineHeight,
+      maxWidth: 290,
+    },
     descriptionSmall: {
       fontFamily: fonts.light,
       fontSize: typography.caption.fontSize,
@@ -878,10 +917,9 @@ export default function OnboardingScreen() {
       color: colors.primary,
     },
     iosPickerCard: {
-      position: "relative",
       overflow: "hidden",
-      minHeight: 220,
-      marginBottom: spacing.md,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
       borderRadius: radius.card,
       backgroundColor: colors.glassFill,
       borderWidth: 1,
@@ -890,6 +928,12 @@ export default function OnboardingScreen() {
     iosPickerContent: {
       padding: spacing.lg,
       gap: spacing.sm,
+    },
+    iosSelectionSummaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.xs,
     },
     iosPickerEyebrow: {
       fontFamily: fonts.medium,
@@ -910,8 +954,8 @@ export default function OnboardingScreen() {
       lineHeight: 22,
     },
     iosSelectionView: {
-      ...StyleSheet.absoluteFillObject,
-      opacity: 0.02,
+      minHeight: 340,
+      width: "100%",
     },
     appList: {
       marginBottom: spacing.lg,
@@ -933,6 +977,49 @@ export default function OnboardingScreen() {
       fontSize: typography.body.fontSize,
       color: colors.textSecondary,
       lineHeight: 22,
+    },
+    permissionCard: {
+      backgroundColor: colors.glassFill,
+      borderRadius: radius.card,
+      padding: spacing.lg,
+      marginTop: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    permissionIconRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    permissionStatusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.textTertiary,
+    },
+    permissionStatusDotActive: {
+      backgroundColor: colors.secondary,
+    },
+    permissionStatusLabel: {
+      flex: 1,
+      fontFamily: fonts.medium,
+      fontSize: typography.body.fontSize,
+      color: colors.textPrimary,
+    },
+    permissionStatusValue: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.caption.fontSize,
+      color: colors.textTertiary,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    permissionFootnote: {
+      fontFamily: fonts.regular,
+      fontSize: typography.caption.fontSize,
+      color: colors.textTertiary,
+      lineHeight: 18,
+      marginTop: spacing.lg,
+      textAlign: "center",
     },
     durationContainer: {
       gap: spacing.md,
@@ -3044,73 +3131,12 @@ export default function OnboardingScreen() {
               {isIOSFamilyControlsFlow ? (
                 <>
                   <Text style={styles.description}>
-                    Choose the apps or categories you want GentleWait to manage
-                    from Apple&apos;s secure Family Controls picker.
+                    Select the apps you reach for most — we&apos;ll add a{" "}
+                    <Text style={styles.descriptionAccent}>gentle pause</Text>{" "}
+                    before they open.
                   </Text>
-                  {!currentSettings.premium && (
-                    <Text style={styles.selectedCount}>
-                      Free plan: up to {FREE_PROTECTED_APPS_LIMIT} individual
-                      iPhone apps. Categories and websites are Premium.
-                    </Text>
-                  )}
-                  <View style={styles.permissionContainer}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: spacing.sm,
-                      }}
-                    >
-                      <Ionicons
-                        name="phone-portrait-outline"
-                        size={18}
-                        color={colors.textSecondary}
-                      />
-                      <Text style={[styles.permissionText, { flex: 1 }]}>
-                        Apple shows the selector. GentleWait does not read your
-                        full installed app list.
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: spacing.sm,
-                      }}
-                    >
-                      <Ionicons
-                        name="shield-checkmark-outline"
-                        size={18}
-                        color={colors.textSecondary}
-                      />
-                      <Text style={[styles.permissionText, { flex: 1 }]}>
-                        You can change this selection later from Settings.
-                      </Text>
-                    </View>
-                  </View>
+
                   <View style={styles.iosPickerCard}>
-                    <View style={styles.iosPickerContent}>
-                      <Text style={styles.iosPickerEyebrow}>Apple picker</Text>
-                      <Text style={styles.iosPickerTitle}>
-                        Choose apps in Family Controls
-                      </Text>
-                      <Text style={styles.iosPickerDescription}>
-                        Tap anywhere below to open Apple&apos;s selector.
-                      </Text>
-                      <Text style={styles.selectedCount}>
-                        {getIOSSelectionSummary(iosFamilyActivitySelection)}
-                      </Text>
-                      {!currentSettings.premium &&
-                        exceedsFreeIOSSelectionLimit(
-                          iosFamilyActivitySelection,
-                          FREE_PROTECTED_APPS_LIMIT,
-                        ) && (
-                          <Text style={styles.descriptionSmall}>
-                            This selection is larger than the free iPhone plan.
-                            Upgrade to keep it.
-                          </Text>
-                        )}
-                    </View>
                     {isIOSFamilyControlsAvailable() ? (
                       <DeviceActivitySelectionView
                         style={styles.iosSelectionView}
@@ -3118,8 +3144,8 @@ export default function OnboardingScreen() {
                           iosFamilyActivitySelection?.familyActivitySelection ||
                           null
                         }
-                        headerText="Choose apps GentleWait should manage"
-                        footerText="You can update this later in Settings."
+                        headerText="Choose apps to pause before"
+                        footerText="You can change this anytime in Settings."
                         onSelectionChange={(event) => {
                           const nextSelection = event.nativeEvent;
                           setIOSFamilyActivitySelection({
@@ -3135,19 +3161,42 @@ export default function OnboardingScreen() {
                           });
                         }}
                       />
-                    ) : null}
+                    ) : (
+                      <View style={styles.iosPickerContent}>
+                        <Text style={styles.iosPickerDescription}>
+                          App selection is not available. Make sure you allowed
+                          access on the previous step.
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  {iosFamilyActivitySelection ? (
-                    <TouchableOpacity
-                      style={styles.selectAllButton}
-                      onPress={async () => {
-                        setIOSFamilyActivitySelection(null);
-                        await clearIOSFamilyControlsSelection();
-                      }}
-                    >
-                      <Text style={styles.selectAllText}>Clear selection</Text>
-                    </TouchableOpacity>
-                  ) : null}
+
+                  {iosFamilyActivitySelection && (
+                    <View style={styles.iosSelectionSummaryRow}>
+                      <Text style={styles.selectedCount}>
+                        {getIOSSelectionSummary(iosFamilyActivitySelection)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          setIOSFamilyActivitySelection(null);
+                          await clearIOSFamilyControlsSelection();
+                        }}
+                      >
+                        <Text style={styles.selectAllText}>Clear</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {!currentSettings.premium &&
+                    exceedsFreeIOSSelectionLimit(
+                      iosFamilyActivitySelection,
+                      FREE_PROTECTED_APPS_LIMIT,
+                    ) && (
+                      <Text style={styles.descriptionSmall}>
+                        Free plan: up to {FREE_PROTECTED_APPS_LIMIT} apps.
+                        Upgrade for categories and websites.
+                      </Text>
+                    )}
                 </>
               ) : (
                 <>
@@ -3308,209 +3357,77 @@ export default function OnboardingScreen() {
 
           {step === "permissions" && (
             <>
-              <Text style={styles.title}>One small step</Text>
-              {permissionEnabled ? (
-                <Text style={styles.description}>
-                  {isIOSFamilyControlsFlow
-                    ? "Family Controls is enabled. Your iPhone is ready for GentleWait protection."
-                    : "Great! Accessibility permission is enabled. GentleWait can now help you pause."}
-                </Text>
-              ) : (
-                <Text style={styles.description}>
-                  {isIOSFamilyControlsFlow ? (
-                    <>
-                      To manage selected apps on iPhone, GentleWait needs{" "}
-                      <Text style={styles.descriptionAccent}>
-                        Family Controls authorization
-                      </Text>
-                      .
-                    </>
-                  ) : (
-                    <>
-                      To create that pause moment, GentleWait needs{" "}
-                      <Text style={styles.descriptionAccent}>
-                        accessibility access
-                      </Text>{" "}
-                      to notice when one of your chosen apps opens and bring up
-                      the pause screen.
-                    </>
-                  )}
-                </Text>
-              )}
+              <Text style={styles.title}>
+                {permissionEnabled ? "You\u2019re all set" : "One small step"}
+              </Text>
+              <Text style={styles.description}>
+                {permissionEnabled
+                  ? "GentleWait can now create gentle pauses before your chosen apps."
+                  : isIOSFamilyControlsFlow
+                    ? "GentleWait needs permission to manage screen time for the apps you choose."
+                    : "GentleWait needs permission to notice when a chosen app opens."}
+              </Text>
 
-              <View style={styles.permissionContainer}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: spacing.sm,
-                  }}
-                >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>
-                    Your data never leaves your device
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: spacing.sm,
-                  }}
-                >
-                  <Ionicons
-                    name="eye-off-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>
-                    {isIOSFamilyControlsFlow
-                      ? "We never see what happens inside your apps."
-                      : "We do not read what you type, message, or watch inside apps."}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: spacing.sm,
-                  }}
-                >
-                  <Ionicons
-                    name="settings-outline"
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={[styles.permissionText, { flex: 1 }]}>
-                    {isIOSFamilyControlsFlow
-                      ? "You&apos;re always in control"
-                      : "You can turn this off anytime in Android Accessibility settings."}
-                  </Text>
-                </View>
-              </View>
-
-              {permissionEnabled ? (
-                <View
-                  style={[
-                    styles.permissionContainer,
-                    {
-                      backgroundColor: "rgba(141, 224, 186, 0.16)",
-                      borderColor: colors.success,
-                      borderWidth: 2,
-                      marginTop: spacing.lg,
-                    },
-                  ]}
-                >
-                  <Text
+              <View style={styles.permissionCard}>
+                <View style={styles.permissionIconRow}>
+                  <View
                     style={[
-                      styles.permissionText,
-                      {
-                        color: colors.success,
-                        fontFamily: fonts.semiBold,
-                        fontSize: typography.body.fontSize,
-                      },
+                      styles.permissionStatusDot,
+                      permissionEnabled && styles.permissionStatusDotActive,
                     ]}
-                  >
-                    Permission Enabled
-                  </Text>
+                  />
                   <Text
                     style={[
-                      styles.permissionText,
-                      {
-                        marginTop: spacing.xs,
-                        fontSize: typography.caption.fontSize,
-                      },
+                      styles.permissionStatusLabel,
+                      permissionEnabled && { color: colors.secondary },
                     ]}
                   >
                     {isIOSFamilyControlsFlow
-                      ? "GentleWait is ready to work with your Apple-managed selection."
-                      : "GentleWait is ready to help you pause!"}
+                      ? "App management"
+                      : "App detection"}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.permissionStatusValue,
+                      permissionEnabled && { color: colors.secondary },
+                    ]}
+                  >
+                    {permissionEnabled ? "On" : "Off"}
                   </Text>
                 </View>
-              ) : (
-                <Button
-                  label={
-                    Platform.OS === "ios"
-                      ? "Enable Family Controls"
-                      : "Review Accessibility Access"
-                  }
-                  onPress={async () => {
-                    if (Platform.OS === "android") {
+
+                {!permissionEnabled && (
+                  <Button
+                    label="Allow access"
+                    onPress={async () => {
                       try {
+                        if (
+                          isIOSFamilyControlsFlow &&
+                          !isIOSFamilyControlsAvailable()
+                        ) {
+                          Alert.alert(
+                            "Not available",
+                            "This permission requires a native iOS build. Please run the app on a real device.",
+                          );
+                          return;
+                        }
                         const granted = await requestServiceAuthorization();
                         if (granted) {
-                          Alert.alert(
-                            "Enable GentleWait",
-                            "Find 'GentleWait' in the list and turn it ON, then come back to the app.",
-                            [{ text: "OK" }],
-                          );
-                        } else {
-                          Alert.alert(
-                            "Error",
-                            "Native module not available. Make sure you're running on Android.",
-                          );
+                          setPermissionEnabled(true);
                         }
                       } catch (error) {
-                        console.error(
-                          "Error opening accessibility settings:",
-                          error,
-                        );
-                        Alert.alert(
-                          "Error",
-                          "Could not open accessibility settings. Please go to Settings > Accessibility manually.",
-                        );
+                        console.error("Permission request error:", error);
                       }
-                    } else if (Platform.OS === "ios") {
-                      try {
-                        if (!isIOSFamilyControlsAvailable()) {
-                          Alert.alert(
-                            "Not Available",
-                            "Family Controls is unavailable until the iOS native build includes the entitlement and extension targets.",
-                            [{ text: "OK" }],
-                          );
-                        } else {
-                          const granted = await requestServiceAuthorization();
-                          if (granted) {
-                            setPermissionEnabled(true);
-                            Alert.alert(
-                              "Success",
-                              "Family Controls authorized. You can now choose protected apps on iPhone.",
-                              [{ text: "OK" }],
-                            );
-                          } else {
-                            Alert.alert(
-                              "Permission Denied",
-                              "Family Controls permission is required for GentleWait to work on iPhone. You can enable it later in Settings.",
-                              [{ text: "OK" }],
-                            );
-                          }
-                        }
-                      } catch (error) {
-                        console.error(
-                          "Error requesting Family Controls:",
-                          error,
-                        );
-                        Alert.alert(
-                          "Error",
-                          "Could not request Family Controls permission. Please try again.",
-                          [{ text: "OK" }],
-                        );
-                      }
-                    } else {
-                      Alert.alert(
-                        "Not Supported",
-                        "App interception is only available on iOS and Android devices.",
-                      );
-                    }
-                  }}
-                  variant="primary"
-                  style={{ marginTop: spacing.lg }}
-                />
-              )}
+                    }}
+                    variant="primary"
+                    style={{ marginTop: spacing.md }}
+                  />
+                )}
+              </View>
+
+              <Text style={styles.permissionFootnote}>
+                Private by design — everything stays on your device. We never see your data.
+              </Text>
             </>
           )}
 
@@ -3563,12 +3480,29 @@ export default function OnboardingScreen() {
                 for the same app?
               </Text>
 
-              <View style={{ alignItems: "center", marginTop: spacing.lg }}>
+              <View style={styles.cooldownSection}>
+                <View style={styles.cooldownIntro}>
+                  <Text style={styles.cooldownEyebrow}>Reminder cadence</Text>
+                  <Text style={styles.cooldownHeadline}>
+                    Give yourself enough room to actually reset
+                  </Text>
+                </View>
+
                 <WheelPicker
                   items={COOLDOWN_OPTIONS}
                   selectedValue={cooldownMinutes}
                   onValueChange={setCooldownMinutes}
+                  itemHeight={isCompactCooldownViewport ? 44 : 50}
+                  visibleItems={3}
+                  showSelectionBadge={!isCompactCooldownViewport}
                 />
+
+                {!isCompactCooldownViewport && (
+                  <Text style={styles.cooldownHint}>
+                    Shorter times keep you accountable. Longer times feel gentler
+                    after a focused break.
+                  </Text>
+                )}
               </View>
             </>
           )}

@@ -304,7 +304,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?]) 
   }
 
   if let userInfo = contents["userInfo"] as? [String: Any] {
-    content.userInfo = userInfo
+    content.userInfo = replacePlaceholdersInObject(userInfo, with: placeholders)
   }
 
   if #available(iOS 15.0, *) {

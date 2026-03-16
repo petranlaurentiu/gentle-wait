@@ -1,4 +1,5 @@
 import { Button } from "@/src/components/Button";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { GlassCard } from "@/src/components/GlassCard";
 import { deleteJournalEntry, getRecentJournalEntries, JournalEntry } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
@@ -233,18 +234,21 @@ export default function JournalScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Loading your journal…</Text>
-        </View>
-      </SafeAreaView>
+      <BackgroundWrapper>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.loadingText}>Loading your journal…</Text>
+          </View>
+        </SafeAreaView>
+      </BackgroundWrapper>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Journal</Text>
           <Text style={styles.title}>Your reflections</Text>
@@ -301,40 +305,41 @@ export default function JournalScreen() {
           ))
         )}
 
-        <View style={styles.footer}>
-          <Button label="Back" onPress={() => router.back()} variant="ghost" />
-        </View>
-      </ScrollView>
+          <View style={styles.footer}>
+            <Button label="Back" onPress={() => router.back()} variant="ghost" />
+          </View>
+        </ScrollView>
 
-      <Modal
-        visible={entryToDelete !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEntryToDelete(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Delete Reflection</Text>
-            <Text style={styles.modalText}>
-              Are you sure you want to delete this entry? This cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setEntryToDelete(null)}
-                style={styles.modalCancelButton}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmDelete}
-                style={styles.modalDeleteButton}
-              >
-                <Text style={styles.modalDeleteText}>Delete</Text>
-              </Pressable>
+        <Modal
+          visible={entryToDelete !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setEntryToDelete(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Delete Reflection</Text>
+              <Text style={styles.modalText}>
+                Are you sure you want to delete this entry? This cannot be undone.
+              </Text>
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => setEntryToDelete(null)}
+                  style={styles.modalCancelButton}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={confirmDelete}
+                  style={styles.modalDeleteButton}
+                >
+                  <Text style={styles.modalDeleteText}>Delete</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

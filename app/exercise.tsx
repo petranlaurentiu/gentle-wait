@@ -23,11 +23,16 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { launchApp } from "@/src/services/native";
+import {
+  launchApp,
+  markAppHandled,
+  startIOSCooldownForSelection,
+} from "@/src/services/native";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing, typography, fonts, radius } from "@/src/theme/theme";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useAppStore } from "@/src/services/storage";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { LumiIllustration } from "@/src/components/LumiIllustration";
@@ -70,6 +75,8 @@ export default function ExerciseScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
+  const familyActivitySelectionId =
+    (params.familyActivitySelectionId as string) || "";
   const entryParam = params.entry as ExerciseEntryPoint | undefined;
   const categoryParam = params.category as ExerciseCategory | undefined;
 
@@ -89,9 +96,16 @@ export default function ExerciseScreen() {
   const [startTime, setStartTime] = useState(0);
   const [isPaused] = useState(false);
   const [footerHeight, setFooterHeight] = useState(0);
+  const isEyeResetFlow = entryParam === "eye-reset";
   const isCompactScreen = screenHeight < 860;
   const heroHeight = isCompactScreen ? 160 : 240;
-  const activeHeroHeight = isCompactScreen ? 170 : 250;
+  const activeHeroHeight = isEyeResetFlow
+    ? isCompactScreen
+      ? 108
+      : 148
+    : isCompactScreen
+      ? 170
+      : 250;
   const completionHeroHeight = isCompactScreen ? 150 : 220;
 
   // Animation
@@ -260,6 +274,13 @@ export default function ExerciseScreen() {
         durationMs: Date.now() - startTime,
         sessionId,
       });
+
+      if (Platform.OS === "ios" && familyActivitySelectionId) {
+        await startIOSCooldownForSelection(
+          familyActivitySelectionId,
+          settings.cooldownMinutes || 15,
+        );
+      }
       
       // Navigate directly to home using replace to avoid navigation stack issues
       router.replace("/home");
@@ -268,6 +289,7 @@ export default function ExerciseScreen() {
       if (Platform.OS === "android" && appPackage) {
         setTimeout(async () => {
           try {
+            await markAppHandled(appPackage);
             const launched = await launchApp(appPackage);
             if (launched) {
               console.log("[Exercise] Launched app:", appPackage);
@@ -299,12 +321,6 @@ export default function ExerciseScreen() {
     width: `${progressWidth.value * 100}%`,
   }));
 
-  const footerSpacing = footerHeight + spacing.md;
-  const scrollContentStyle = [
-    styles.scrollContent,
-    { paddingBottom: footerSpacing },
-  ];
-
   const handleFooterLayout = (event: LayoutChangeEvent) => {
     const nextHeight = Math.ceil(event.nativeEvent.layout.height);
     if (nextHeight !== footerHeight) {
@@ -320,6 +336,11 @@ export default function ExerciseScreen() {
     scrollContent: {
       flexGrow: 1,
       justifyContent: "center",
+    },
+    exerciseScrollContent: {
+      flexGrow: 1,
+      justifyContent: "flex-start",
+      paddingTop: isCompactScreen ? spacing.xs : spacing.sm,
     },
     header: {
       marginBottom: isCompactScreen ? spacing.md : spacing.xl,
@@ -375,7 +396,11 @@ export default function ExerciseScreen() {
     // Exercise phase
     exerciseHeader: {
       alignItems: "center",
-      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
+      marginBottom: isEyeResetFlow
+        ? spacing.xs
+        : isCompactScreen
+          ? spacing.sm
+          : spacing.lg,
     },
     exerciseCategory: {
       fontFamily: fonts.semiBold,
@@ -387,36 +412,68 @@ export default function ExerciseScreen() {
     },
     exerciseName: {
       fontFamily: fonts.light,
-      fontSize: isCompactScreen
-        ? typography.sectionTitle.fontSize
-        : typography.title.fontSize,
+      fontSize: isEyeResetFlow
+        ? isCompactScreen
+          ? typography.heading.fontSize
+          : typography.sectionTitle.fontSize
+        : isCompactScreen
+          ? typography.sectionTitle.fontSize
+          : typography.title.fontSize,
       color: colors.text,
       textAlign: "center",
     },
     timerContainer: {
       alignItems: "center",
-      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
+      marginBottom: isEyeResetFlow
+        ? spacing.xs
+        : isCompactScreen
+          ? spacing.sm
+          : spacing.lg,
     },
     timerCircle: {
-      width: isCompactScreen ? width * 0.28 : width * 0.35,
-      height: isCompactScreen ? width * 0.28 : width * 0.35,
-      borderRadius: isCompactScreen ? width * 0.14 : width * 0.175,
+      width: isEyeResetFlow
+        ? isCompactScreen
+          ? width * 0.22
+          : width * 0.26
+        : isCompactScreen
+          ? width * 0.28
+          : width * 0.35,
+      height: isEyeResetFlow
+        ? isCompactScreen
+          ? width * 0.22
+          : width * 0.26
+        : isCompactScreen
+          ? width * 0.28
+          : width * 0.35,
+      borderRadius: isEyeResetFlow
+        ? isCompactScreen
+          ? width * 0.11
+          : width * 0.13
+        : isCompactScreen
+          ? width * 0.14
+          : width * 0.175,
       borderWidth: 3,
       borderColor: "rgba(255, 255, 255, 0.1)",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
+      marginBottom: isEyeResetFlow
+        ? spacing.xs
+        : isCompactScreen
+          ? spacing.sm
+          : spacing.lg,
     },
     timerText: {
       fontFamily: fonts.thin,
-      fontSize: isCompactScreen ? 38 : 48,
+      fontSize: isEyeResetFlow ? (isCompactScreen ? 28 : 34) : isCompactScreen ? 38 : 48,
       color: colors.text,
     },
     timerUnit: {
       fontFamily: fonts.regular,
-      fontSize: isCompactScreen
-        ? typography.body.fontSize
-        : typography.heading.fontSize,
+      fontSize: isEyeResetFlow
+        ? typography.caption.fontSize
+        : isCompactScreen
+          ? typography.body.fontSize
+          : typography.heading.fontSize,
       color: colors.textSecondary,
     },
     progressBar: {
@@ -436,11 +493,13 @@ export default function ExerciseScreen() {
     },
     instructionsText: {
       fontFamily: fonts.regular,
-      fontSize: isCompactScreen
-        ? typography.caption.fontSize
-        : typography.body.fontSize,
+      fontSize: isEyeResetFlow
+        ? typography.body.fontSize
+        : isCompactScreen
+          ? typography.caption.fontSize
+          : typography.body.fontSize,
       color: colors.textSecondary,
-      lineHeight: isCompactScreen ? 20 : 26,
+      lineHeight: isEyeResetFlow ? 22 : isCompactScreen ? 20 : 26,
       textAlign: "center",
     },
     detailsRow: {
@@ -498,12 +557,19 @@ export default function ExerciseScreen() {
     },
   });
 
+  const footerSpacing = footerHeight + spacing.md;
+  const scrollContentStyle = [
+    phase === "exercise" ? styles.exerciseScrollContent : styles.scrollContent,
+    { paddingBottom: footerSpacing },
+  ];
+
   // Category selection phase
   if (phase === "select") {
     const entryMeta = entryParam ? EXERCISE_ENTRY_METADATA[entryParam] : null;
 
     return (
-      <SafeAreaView style={styles.container}>
+      <BackgroundWrapper>
+        <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={scrollContentStyle}>
           <LumiIllustration
             source={getLumiAssetForExercise({ entry: entryParam })}
@@ -552,10 +618,11 @@ export default function ExerciseScreen() {
           />
         </ScrollView>
 
-        <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
-          <Button label="Back" onPress={handleSkip} variant="ghost" />
-        </View>
-      </SafeAreaView>
+          <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
+            <Button label="Back" onPress={handleSkip} variant="ghost" />
+          </View>
+        </SafeAreaView>
+      </BackgroundWrapper>
     );
   }
 
@@ -564,7 +631,8 @@ export default function ExerciseScreen() {
     const categoryLabel = getCategoryMeta(exercise.category)?.label || exercise.category;
 
     return (
-      <SafeAreaView style={styles.container}>
+      <BackgroundWrapper>
+        <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={scrollContentStyle}>
           <LumiIllustration
             source={getLumiAssetForExercise({
@@ -612,15 +680,16 @@ export default function ExerciseScreen() {
           </GlassCard>
         </ScrollView>
 
-        <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
-          <Button
-            label="Try Different Exercise"
-            onPress={handleGetNewExercise}
-            variant="secondary"
-          />
-          <Button label="Skip" onPress={handleSkip} variant="ghost" />
-        </View>
-      </SafeAreaView>
+          <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
+            <Button
+              label="Try Different Exercise"
+              onPress={handleGetNewExercise}
+              variant="secondary"
+            />
+            <Button label="Skip" onPress={handleSkip} variant="ghost" />
+          </View>
+        </SafeAreaView>
+      </BackgroundWrapper>
     );
   }
 
@@ -629,7 +698,8 @@ export default function ExerciseScreen() {
     selectedCategory === "eye-posture" || entryParam === "eye-reset";
 
   return (
-    <SafeAreaView style={styles.container}>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={scrollContentStyle}>
         <View style={styles.completeContainer}>
           <LumiIllustration
@@ -652,25 +722,26 @@ export default function ExerciseScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
-        <Button
-          label={completedEyeReset ? "I Feel Refreshed!" : "I Feel Energized!"}
-          onPress={handleComplete}
-          variant="primary"
-        />
-        <Button
-          label={completedEyeReset ? "Try Another Eye Reset" : "Do Another Exercise"}
-          onPress={() => {
-            if (entryParam === "eye-reset" || entryParam === "move") {
-              handleGetNewExercise();
-              return;
-            }
-            setPhase("select");
-          }}
-          variant="secondary"
-        />
-        <Button label="Back" onPress={handleSkip} variant="ghost" />
-      </View>
-    </SafeAreaView>
+        <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
+          <Button
+            label={completedEyeReset ? "I Feel Refreshed!" : "I Feel Energized!"}
+            onPress={handleComplete}
+            variant="primary"
+          />
+          <Button
+            label={completedEyeReset ? "Try Another Eye Reset" : "Do Another Exercise"}
+            onPress={() => {
+              if (entryParam === "eye-reset" || entryParam === "move") {
+                handleGetNewExercise();
+                return;
+              }
+              setPhase("select");
+            }}
+            variant="secondary"
+          />
+          <Button label="Back" onPress={handleSkip} variant="ghost" />
+        </View>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

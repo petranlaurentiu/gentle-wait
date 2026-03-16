@@ -3,6 +3,7 @@
  * Liquid Glass Design System
  */
 import { Button } from "@/src/components/Button";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import {
@@ -60,6 +61,8 @@ export default function PauseScreen() {
 
   const appPackage = params.appPackage as string;
   const appLabel = (params.appLabel as string) || "App";
+  const familyActivitySelectionId =
+    (params.familyActivitySelectionId as string) || "";
 
   // Breathing animation
   const breathProgress = useSharedValue(0);
@@ -174,7 +177,13 @@ export default function PauseScreen() {
     if (type === "move" || type === "eye-reset") {
       router.push({
         pathname: "/exercise",
-        params: { sessionId, appPackage, appLabel, entry: type },
+        params: {
+          sessionId,
+          appPackage,
+          appLabel,
+          entry: type,
+          familyActivitySelectionId,
+        },
       });
     } else {
       router.push({
@@ -184,6 +193,7 @@ export default function PauseScreen() {
           sessionId,
           appPackage,
           appLabel,
+          familyActivitySelectionId,
           reason: selectedReason || undefined,
         },
       });
@@ -353,156 +363,158 @@ export default function PauseScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={styles.contentWrapper}>
-          {phase === "breathing" && (
-            <Animated.View
-              style={[phaseAnimatedStyle, styles.breathingContainer]}
-            >
-              <Text style={styles.timerText}>{timer}</Text>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          <View style={styles.contentWrapper}>
+            {phase === "breathing" && (
+              <Animated.View
+                style={[phaseAnimatedStyle, styles.breathingContainer]}
+              >
+                <Text style={styles.timerText}>{timer}</Text>
 
-              <View style={styles.circleContainer}>
-                {/* Animated glow */}
-                <Animated.View style={[styles.glowOuter, glowAnimatedStyle]}>
-                  <LinearGradient
-                    colors={[
-                      "rgba(0, 212, 255, 0.4)",
-                      "rgba(168, 85, 247, 0.2)",
-                      "transparent",
-                    ]}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: (CIRCLE_SIZE + 60) / 2,
-                    }}
-                    start={{ x: 0.5, y: 0.5 }}
-                    end={{ x: 1, y: 1 }}
-                  />
-                </Animated.View>
-
-                {/* Glass breathing circle */}
-                <Animated.View
-                  style={[styles.glassCircle, circleAnimatedStyle]}
-                >
-                  <BlurView
-                    intensity={40}
-                    style={styles.circleBlur}
-                    tint="dark"
-                  >
+                <View style={styles.circleContainer}>
+                  {/* Animated glow */}
+                  <Animated.View style={[styles.glowOuter, glowAnimatedStyle]}>
                     <LinearGradient
                       colors={[
-                        "rgba(0, 212, 255, 0.15)",
-                        "rgba(168, 85, 247, 0.1)",
-                        "rgba(255, 107, 157, 0.05)",
+                        "rgba(0, 212, 255, 0.4)",
+                        "rgba(168, 85, 247, 0.2)",
+                        "transparent",
                       ]}
-                      style={styles.circleGradient}
-                      start={{ x: 0, y: 0 }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: (CIRCLE_SIZE + 60) / 2,
+                      }}
+                      start={{ x: 0.5, y: 0.5 }}
                       end={{ x: 1, y: 1 }}
-                    >
-                      <Text style={styles.breathText}>{breathText}</Text>
-                    </LinearGradient>
-                  </BlurView>
-                </Animated.View>
-              </View>
-
-              <Text style={styles.breathMessage}>
-                You paused. That&apos;s already a win.
-              </Text>
-            </Animated.View>
-          )}
-
-          {phase === "question" && (
-            <Animated.View
-              style={[phaseAnimatedStyle, styles.questionContainer]}
-            >
-              <Text style={styles.questionTitle}>
-                What brought you <Text style={styles.questionAccent}>here</Text>
-                ?
-              </Text>
-              <View style={styles.chipGrid}>
-                {reasonChoices.map((choice) => (
-                  <TouchableOpacity
-                    key={choice.value}
-                    style={[
-                      styles.chip,
-                      selectedReason === choice.value && styles.chipSelected,
-                    ]}
-                    onPress={() => handleReasonSelect(choice.value)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={choice.icon}
-                      size={24}
-                      color={selectedReason === choice.value ? colors.primary : colors.textSecondary}
                     />
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedReason === choice.value &&
-                          styles.chipSelectedText,
-                      ]}
-                    >
-                      {choice.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Animated.View>
-          )}
-        </View>
+                  </Animated.View>
 
-        <View style={styles.actionContainer}>
-          <Text style={styles.actionTitle}>What would you like to do?</Text>
-          <Button
-            label="Take a Moment to Pray"
-            onPress={() => handleAlternative("prayer")}
-            variant="primary"
-            iconName="hands-pray"
-            iconSet="material"
-          />
-          <Button
-            label="Breathe"
-            onPress={() => handleAlternative("breathe")}
-            variant="secondary"
-            iconName="flower-outline"
-          />
-          <Button
-            label="Ground Yourself"
-            onPress={() => handleAlternative("grounding")}
-            variant="secondary"
-            iconName="leaf-outline"
-          />
-          <Button
-            label="Move"
-            onPress={() => handleAlternative("move")}
-            variant="secondary"
-            iconName="fitness-outline"
-          />
-          <Button
-            label="Eye Reset"
-            onPress={() => handleAlternative("eye-reset")}
-            variant="secondary"
-            iconName="eye-outline"
-          />
-          <Button
-            label="Journal This Moment"
-            onPress={() => handleAlternative("reflect")}
-            variant="secondary"
-            iconName="journal-outline"
-          />
-          <View style={styles.divider} />
-          <Button
-            label="I don't need this right now"
-            onPress={handleClose}
-            variant="ghost"
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+                  {/* Glass breathing circle */}
+                  <Animated.View
+                    style={[styles.glassCircle, circleAnimatedStyle]}
+                  >
+                    <BlurView
+                      intensity={40}
+                      style={styles.circleBlur}
+                      tint="dark"
+                    >
+                      <LinearGradient
+                        colors={[
+                          "rgba(0, 212, 255, 0.15)",
+                          "rgba(168, 85, 247, 0.1)",
+                          "rgba(255, 107, 157, 0.05)",
+                        ]}
+                        style={styles.circleGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text style={styles.breathText}>{breathText}</Text>
+                      </LinearGradient>
+                    </BlurView>
+                  </Animated.View>
+                </View>
+
+                <Text style={styles.breathMessage}>
+                  You paused. That&apos;s already a win.
+                </Text>
+              </Animated.View>
+            )}
+
+            {phase === "question" && (
+              <Animated.View
+                style={[phaseAnimatedStyle, styles.questionContainer]}
+              >
+                <Text style={styles.questionTitle}>
+                  What brought you <Text style={styles.questionAccent}>here</Text>
+                  ?
+                </Text>
+                <View style={styles.chipGrid}>
+                  {reasonChoices.map((choice) => (
+                    <TouchableOpacity
+                      key={choice.value}
+                      style={[
+                        styles.chip,
+                        selectedReason === choice.value && styles.chipSelected,
+                      ]}
+                      onPress={() => handleReasonSelect(choice.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={choice.icon}
+                        size={24}
+                        color={selectedReason === choice.value ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.chipText,
+                          selectedReason === choice.value &&
+                            styles.chipSelectedText,
+                        ]}
+                      >
+                        {choice.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Animated.View>
+            )}
+          </View>
+
+          <View style={styles.actionContainer}>
+            <Text style={styles.actionTitle}>What would you like to do?</Text>
+            <Button
+              label="Take a Moment to Pray"
+              onPress={() => handleAlternative("prayer")}
+              variant="primary"
+              iconName="hands-pray"
+              iconSet="material"
+            />
+            <Button
+              label="Breathe"
+              onPress={() => handleAlternative("breathe")}
+              variant="secondary"
+              iconName="flower-outline"
+            />
+            <Button
+              label="Ground Yourself"
+              onPress={() => handleAlternative("grounding")}
+              variant="secondary"
+              iconName="leaf-outline"
+            />
+            <Button
+              label="Move"
+              onPress={() => handleAlternative("move")}
+              variant="secondary"
+              iconName="fitness-outline"
+            />
+            <Button
+              label="Eye Reset"
+              onPress={() => handleAlternative("eye-reset")}
+              variant="secondary"
+              iconName="eye-outline"
+            />
+            <Button
+              label="Journal This Moment"
+              onPress={() => handleAlternative("reflect")}
+              variant="secondary"
+              iconName="journal-outline"
+            />
+            <View style={styles.divider} />
+            <Button
+              label="I don't need this right now"
+              onPress={handleClose}
+              variant="ghost"
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

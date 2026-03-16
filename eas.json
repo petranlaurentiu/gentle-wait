@@ -24,7 +24,8 @@
       },
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       }
     },
     "production": {
@@ -39,7 +40,8 @@
       },
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "latest"
       }
     }
   },
@@ -50,9 +52,9 @@
         "track": "internal"
       },
       "ios": {
-        "appleId": "your-apple-id@example.com",
+        "appleId": "petran_laurentiu@icloud.com",
         "ascAppId": "your-app-store-connect-app-id",
-        "appleTeamId": "your-team-id"
+        "appleTeamId": "CNS3PJ66YR"
       }
     }
   }

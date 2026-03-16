@@ -5,7 +5,11 @@
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
-import { launchApp } from "@/src/services/native";
+import {
+  launchApp,
+  markAppHandled,
+  startIOSCooldownForSelection,
+} from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
@@ -50,6 +54,8 @@ export default function PrayerScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
+  const familyActivitySelectionId =
+    (params.familyActivitySelectionId as string) || "";
 
   const [startTime] = useState(Date.now());
   const [phase, setPhase] = useState<PrayerPhase>("prayer");
@@ -119,6 +125,13 @@ export default function PrayerScreen() {
         sessionId,
       });
 
+      if (Platform.OS === "ios" && familyActivitySelectionId) {
+        await startIOSCooldownForSelection(
+          familyActivitySelectionId,
+          settings.cooldownMinutes || 15,
+        );
+      }
+
       // Navigate directly to home using replace to avoid navigation stack issues
       router.replace("/home");
 
@@ -126,6 +139,7 @@ export default function PrayerScreen() {
       if (Platform.OS === "android" && appPackage) {
         setTimeout(async () => {
           try {
+            await markAppHandled(appPackage);
             const launched = await launchApp(appPackage);
             if (launched) {
               console.log("[Prayer] Launched app:", appPackage);

@@ -4,27 +4,33 @@
  * Android uses the legacy GentleWait native module.
  * iOS uses Apple's Family Controls via react-native-device-activity.
  */
+import type {
+  IOSFamilyActivitySelection,
+  SelectedApp,
+} from "@/src/domain/models";
+import { Asset } from "expo-asset";
 import { NativeModules, Platform } from "react-native";
 import {
+  addSelectionToWhitelistAndUpdateBlock,
   AuthorizationStatus,
   blockSelection,
   cleanUpAfterActivity,
   configureActions,
+  copyFile,
+  getAppGroupFileDirectory,
   getAuthorizationStatus,
   isAvailable as isDeviceActivityAvailable,
   pollAuthorizationStatus,
   requestAuthorization,
   resetBlocks,
-  startMonitoring,
   setFamilyActivitySelectionId,
+  startMonitoring,
   stopMonitoring,
+  updateShieldWithId,
   userDefaultsGet,
   userDefaultsRemove,
   userDefaultsSet,
-  updateShieldWithId,
-  type Action,
 } from "react-native-device-activity";
-import type { IOSFamilyActivitySelection, SelectedApp } from "@/src/domain/models";
 
 const GentleWaitModule = NativeModules.GentleWaitModule ?? null;
 
@@ -34,8 +40,9 @@ const FAMILY_ACTIVITY_SELECTION_IDS_KEY = "familyActivitySelectionIds";
 const IOS_SHIELD_ID = "gentlewait-default";
 const IOS_MAIN_ACTIVITY = `gentlewait-monitor-${IOS_SELECTION_ID}`;
 const IOS_COOLDOWN_ACTIVITY = `gentlewait-cooldown-${IOS_SELECTION_ID}`;
-const IOS_DEEP_LINK_URL =
-  "gentlewait://pause?appPackage=ios.familycontrols&appLabel=Protected%20app&source=shield";
+const IOS_SHIELD_ICON_FILENAME = "shield-mascot.png";
+// DeviceActivitySchedule requires a minimum 15-minute monitoring interval on iOS
+const IOS_MIN_COOLDOWN_MINUTES = 15;
 
 type PendingInterception = {
   appPackage: string;
@@ -95,7 +102,9 @@ export async function clearIOSFamilyControlsSelection(): Promise<void> {
   }
 
   const currentSelectionIds =
-    userDefaultsGet<Record<string, string>>(FAMILY_ACTIVITY_SELECTION_IDS_KEY) ?? {};
+    userDefaultsGet<Record<string, string>>(
+      FAMILY_ACTIVITY_SELECTION_IDS_KEY,
+    ) ?? {};
 
   if (currentSelectionIds[IOS_SELECTION_ID]) {
     const { [IOS_SELECTION_ID]: _removed, ...remaining } = currentSelectionIds;
@@ -129,33 +138,86 @@ export function getIOSSelectionSummary(
       : null,
   ].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(" • ") : "Selection saved in Family Controls.";
+  return parts.length > 0 ? parts.join(" \u2022 ") : "Selection saved.";
 }
 
-function buildIOSShieldConfig() {
+async function ensureIOSShieldIcon(): Promise<string | null> {
+  const appGroupDirectory = getAppGroupFileDirectory();
+  if (!appGroupDirectory) {
+    return null;
+  }
+
+  const mascotAsset = Asset.fromModule(
+    require("../../../assets/lumi/lumi-shield-mascot.png"),
+  );
+
+  if (!mascotAsset.localUri) {
+    await mascotAsset.downloadAsync();
+  }
+
+  if (!mascotAsset.localUri) {
+    return null;
+  }
+
+  copyFile(
+    mascotAsset.localUri,
+    `${appGroupDirectory}/${IOS_SHIELD_ICON_FILENAME}`,
+    true,
+  );
+
+  return IOS_SHIELD_ICON_FILENAME;
+}
+
+function buildIOSShieldConfig(iconAppGroupRelativePath: string | null) {
   return {
-    backgroundBlurStyle: 8,
-    backgroundColor: { red: 245, green: 248, blue: 252, alpha: 0.96 },
-    title: "Take a breath before you continue",
-    titleColor: { red: 24, green: 31, blue: 42, alpha: 1 },
+    backgroundBlurStyle: 18, // systemThickMaterialDark — consistent dark backdrop
+    backgroundColor: { red: 15, green: 23, blue: 36, alpha: 0.85 },
+    title: "A gentle pause",
+    titleColor: { red: 245, green: 247, blue: 251, alpha: 1 },
     subtitle:
-      "GentleWait added a short layer of friction here. Open the app for a few minutes, or step back into your pause ritual.",
-    subtitleColor: { red: 84, green: 94, blue: 111, alpha: 1 },
-    iconSystemName: "leaf.circle",
-    iconTint: { red: 53, green: 114, blue: 91, alpha: 1 },
-    primaryButtonLabel: "Open for a few minutes",
+      "You opened this without thinking — and noticing that is already a win.",
+    subtitleColor: { red: 226, green: 232, blue: 240, alpha: 0.78 },
+    iconAppGroupRelativePath: iconAppGroupRelativePath ?? undefined,
+    iconSystemName: iconAppGroupRelativePath ? undefined : "leaf.circle.fill",
+    iconTint: iconAppGroupRelativePath
+      ? undefined
+      : { red: 126, green: 230, blue: 198, alpha: 1 },
+    primaryButtonLabel: "Choose calm instead",
     primaryButtonLabelColor: { red: 255, green: 255, blue: 255, alpha: 1 },
-    primaryButtonBackgroundColor: { red: 53, green: 114, blue: 91, alpha: 1 },
-    secondaryButtonLabel: "Open GentleWait",
-    secondaryButtonLabelColor: { red: 53, green: 114, blue: 91, alpha: 1 },
+    primaryButtonBackgroundColor: { red: 52, green: 120, blue: 156, alpha: 1 },
+    secondaryButtonLabel: "Continue anyway",
+    secondaryButtonLabelColor: { red: 226, green: 232, blue: 240, alpha: 0.5 },
   } as const;
 }
 
 function buildIOSShieldActions(cooldownMinutes: number) {
-  const cooldownMs = Math.max(cooldownMinutes, 1) * 60 * 1000;
+  const cooldownMs =
+    Math.max(cooldownMinutes, IOS_MIN_COOLDOWN_MINUTES) * 60 * 1000;
 
   return {
     primary: {
+      behavior: "close" as const,
+      actions: [
+        {
+          type: "sendNotification" as const,
+          payload: {
+            identifier: "gentlewait-shield-pause",
+            title: "Nice choice — you paused",
+            body: "Tap to start a quick exercise. You'll feel the difference.",
+            sound: "default" as const,
+            interruptionLevel: "timeSensitive" as unknown as "active",
+            userInfo: {
+              source: "shield",
+              action: "pause",
+              familyActivitySelectionId: "{familyActivitySelectionId}",
+              appLabel: "{applicationName}",
+              webDomain: "{webDomain}",
+            },
+          },
+        },
+      ],
+    },
+    secondary: {
       behavior: "defer" as const,
       actions: [
         { type: "addCurrentToWhitelist" as const },
@@ -166,15 +228,6 @@ function buildIOSShieldActions(cooldownMinutes: number) {
           intervalEndDelayMs: cooldownMs,
           deviceActivityEvents: [],
         },
-      ],
-    },
-    secondary: {
-      behavior: "close" as const,
-      actions: [
-        {
-          type: "openUrlWithDispatch",
-          url: IOS_DEEP_LINK_URL,
-        } as Action & { type: "openUrlWithDispatch"; url: string },
       ],
     },
   };
@@ -204,7 +257,8 @@ export async function configureIOSProtection(
   cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
   cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
 
-  const shieldConfiguration = buildIOSShieldConfig();
+  const shieldIconPath = await ensureIOSShieldIcon();
+  const shieldConfiguration = buildIOSShieldConfig(shieldIconPath);
   const shieldActions = buildIOSShieldActions(cooldownMinutes);
 
   setFamilyActivitySelectionId({
@@ -266,7 +320,7 @@ export async function isServiceEnabled(): Promise<boolean> {
     if (Platform.OS === "android") {
       return Boolean(
         isAndroidNativeModuleAvailable() &&
-          (await GentleWaitModule.isAccessibilityServiceEnabled()),
+        (await GentleWaitModule.isAccessibilityServiceEnabled()),
       );
     }
 
@@ -337,7 +391,10 @@ export async function getAndroidProtectionStatus(): Promise<AndroidProtectionSta
       accessibilityEnabled: Boolean(accessibilityEnabled),
     };
   } catch (error) {
-    console.error("[NativeService] Error getting Android protection status:", error);
+    console.error(
+      "[NativeService] Error getting Android protection status:",
+      error,
+    );
     return {
       available,
       accessibilityEnabled: false,
@@ -354,7 +411,10 @@ export async function openAndroidAccessibilitySettings(): Promise<boolean> {
     await GentleWaitModule.openAccessibilitySettings();
     return true;
   } catch (error) {
-    console.error("[NativeService] Error opening accessibility settings:", error);
+    console.error(
+      "[NativeService] Error opening accessibility settings:",
+      error,
+    );
     return false;
   }
 }
@@ -468,4 +528,67 @@ export async function launchApp(packageName: string): Promise<boolean> {
     console.error("[NativeService] Error launching app:", error);
     return false;
   }
+}
+
+export async function startIOSCooldownForSelection(
+  familyActivitySelectionId: string,
+  cooldownMinutes: number,
+): Promise<void> {
+  if (!isIOSFamilyControlsAvailable()) {
+    return;
+  }
+
+  const normalizedSelectionId = familyActivitySelectionId.trim();
+  if (!normalizedSelectionId) {
+    return;
+  }
+
+  const cooldownMs =
+    Math.max(cooldownMinutes, IOS_MIN_COOLDOWN_MINUTES) * 60 * 1000;
+
+  addSelectionToWhitelistAndUpdateBlock(
+    { activitySelectionId: normalizedSelectionId },
+    "startIOSCooldownForSelection",
+  );
+
+  configureActions({
+    activityName: IOS_COOLDOWN_ACTIVITY,
+    callbackName: "intervalDidEnd",
+    actions: [
+      { type: "clearWhitelistAndUpdateBlock" as const },
+      {
+        type: "stopMonitoring" as const,
+        activityNames: [IOS_COOLDOWN_ACTIVITY],
+      },
+    ],
+  });
+
+  stopMonitoring([IOS_COOLDOWN_ACTIVITY]);
+
+  const now = new Date();
+  const endAt = new Date(now.getTime() + cooldownMs);
+
+  await startMonitoring(
+    IOS_COOLDOWN_ACTIVITY,
+    {
+      intervalStart: {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+        hour: now.getHours(),
+        minute: now.getMinutes(),
+        second: now.getSeconds(),
+      },
+      intervalEnd: {
+        year: endAt.getFullYear(),
+        month: endAt.getMonth() + 1,
+        day: endAt.getDate(),
+        hour: endAt.getHours(),
+        minute: endAt.getMinutes(),
+        second: endAt.getSeconds(),
+      },
+      repeats: false,
+    },
+    [],
+  );
 }

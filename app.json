@@ -22,7 +22,7 @@
       "package": "com.petran_laurentiu.gentlewait"
     },
     "web": {
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/main_logo.png"
     },
     "plugins": [
@@ -47,7 +47,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5518f02a-19c1-4d4a-b78a-2ed3c162d4c1"
+        "projectId": "69df8842-0da4-4247-aeb8-aeae6770af56"
       }
     }
   }

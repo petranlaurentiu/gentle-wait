@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   AppState,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
+import * as StoreReview from "expo-store-review";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
@@ -306,6 +308,17 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleRateApp = async () => {
+    if (await StoreReview.hasAction()) {
+      await StoreReview.requestReview();
+    } else {
+      const storeUrl = StoreReview.storeUrl();
+      if (storeUrl) {
+        await Linking.openURL(storeUrl);
+      }
+    }
+  };
+
   const getPromptLabel = (value: string) => {
     switch (value) {
       case "always":
@@ -541,7 +554,7 @@ export default function SettingsScreen() {
               <View style={styles.list}>
                 <View style={styles.appItem}>
                   <View style={{ flex: 1 }}>
-                    <AppText variant="heading">Family Controls selection</AppText>
+                    <AppText variant="heading">Managed apps</AppText>
                     <AppText variant="caption" color="secondary">
                       {getIOSSelectionSummary(iosSelection)}
                     </AppText>
@@ -562,7 +575,7 @@ export default function SettingsScreen() {
             ) : (
               <GlassCard intensity="light">
                 <AppText variant="body" color="secondary" align="center">
-                  No iPhone apps selected yet. Add a Family Controls selection to start.
+                  No apps selected yet. Choose which apps to add a pause to.
                 </AppText>
               </GlassCard>
             )
@@ -610,7 +623,7 @@ export default function SettingsScreen() {
             <AppText variant="button" color="inverse">
               {isIOSFamilyControlsFlow
                 ? iosSelection
-                  ? "Edit Family Controls Selection"
+                  ? "Edit Selection"
                   : "Choose Apps"
                 : hasReachedFreeAppLimit
                   ? "Upgrade for More Apps"
@@ -853,6 +866,57 @@ export default function SettingsScreen() {
                 <AppText variant="caption" color="secondary">Delete history, settings, and protected apps.</AppText>
               </View>
               <Ionicons name="trash-outline" size={20} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.section, privacyAnimation]}>
+          <AppText variant="eyebrow" color="secondary">About & Support</AppText>
+          <View style={styles.list}>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={handleRateApp}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Rate GentleWait</AppText>
+                <AppText variant="caption" color="secondary">Enjoying the app? A rating helps others find it.</AppText>
+              </View>
+              <Ionicons name="star-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => Linking.openURL("https://www.notion.so/Privacy-Policy-for-GentleWait-31c9ac52ab9580da81a4dec495c3cf9f")}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Privacy Policy</AppText>
+              </View>
+              <Ionicons name="document-text-outline" size={20} color={colors.secondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => Linking.openURL("https://www.notion.so/Terms-of-Service-for-GentleWait-31c9ac52ab95803aa568c39cd0b11b89")}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Terms of Service</AppText>
+              </View>
+              <Ionicons name="reader-outline" size={20} color={colors.secondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => Linking.openURL("mailto:gentlewaitapp@gmail.com")}
+              activeOpacity={0.82}
+            >
+              <View style={styles.settingMain}>
+                <AppText variant="heading">Contact Support</AppText>
+                <AppText variant="caption" color="secondary">gentlewaitapp@gmail.com</AppText>
+              </View>
+              <Ionicons name="mail-outline" size={20} color={colors.secondary} />
             </TouchableOpacity>
           </View>
         </Animated.View>

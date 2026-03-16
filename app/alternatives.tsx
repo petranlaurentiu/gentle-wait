@@ -3,6 +3,7 @@
  * Liquid Glass Design System
  */
 import { Button } from "@/src/components/Button";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { GlassCard } from "@/src/components/GlassCard";
 import { LumiIllustration } from "@/src/components/LumiIllustration";
 import { getLumiAssetForAlternative } from "@/src/data/lumi";
@@ -12,7 +13,11 @@ import {
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
-import { launchApp } from "@/src/services/native";
+import {
+  launchApp,
+  markAppHandled,
+  startIOSCooldownForSelection,
+} from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import {
   getRecentJournalEntries,
@@ -59,6 +64,8 @@ export default function AlternativesScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
+  const familyActivitySelectionId =
+    (params.familyActivitySelectionId as string) || "";
 
   const [startTime] = useState(Date.now());
   const [isComplete, setIsComplete] = useState(false);
@@ -293,11 +300,24 @@ export default function AlternativesScreen() {
         };
 
         await insertJournalEntry(entry);
+        if (Platform.OS === "ios" && familyActivitySelectionId) {
+          await startIOSCooldownForSelection(
+            familyActivitySelectionId,
+            settings.cooldownMinutes || 15,
+          );
+        }
         setPreviousEntries((entries) => [entry, ...entries].slice(0, 10));
         setSavedJournalEntry(entry);
         setJournalSaveError(null);
         setJournalEntry("");
         return;
+      }
+
+      if (Platform.OS === "ios" && familyActivitySelectionId) {
+        await startIOSCooldownForSelection(
+          familyActivitySelectionId,
+          settings.cooldownMinutes || 15,
+        );
       }
 
       exitToHome();
@@ -317,6 +337,7 @@ export default function AlternativesScreen() {
     if (Platform.OS === "android" && appPackage) {
       setTimeout(async () => {
         try {
+          await markAppHandled(appPackage);
           const launched = await launchApp(appPackage);
           if (launched) {
             console.log("[Alternatives] Launched app:", appPackage);
@@ -656,35 +677,38 @@ export default function AlternativesScreen() {
   // Completed state (except for reflect and prayer which handle completion inline)
   if (isComplete && type !== "reflect" && type !== "prayer") {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.scrollContent}>
-          <LumiIllustration
-            source={getLumiAssetForAlternative(type, true)}
-            maxHeight={heroHeight}
-            scale={1.8}
-          />
-          <Text style={styles.exerciseName}>Well Done!</Text>
-          <Text style={styles.completeMessage}>
-            You just gave yourself a moment of calm.{"\n"}That&apos;s something
-            to be proud of.
-          </Text>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              label="I Feel Better"
-              onPress={handleComplete}
-              variant="primary"
+      <BackgroundWrapper>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.scrollContent}>
+            <LumiIllustration
+              source={getLumiAssetForAlternative(type, true)}
+              maxHeight={heroHeight}
+              scale={1.8}
             />
-            <Button label="Back" onPress={handleSkip} variant="ghost" />
+            <Text style={styles.exerciseName}>Well Done!</Text>
+            <Text style={styles.completeMessage}>
+              You just gave yourself a moment of calm.{"\n"}That&apos;s something
+              to be proud of.
+            </Text>
+
+            <View style={styles.buttonContainer}>
+              <Button
+                label="I Feel Better"
+                onPress={handleComplete}
+                variant="primary"
+              />
+              <Button label="Back" onPress={handleSkip} variant="ghost" />
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </BackgroundWrapper>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* BREATHING EXERCISE */}
         {type === "breathe" && (
           <>
@@ -939,14 +963,15 @@ export default function AlternativesScreen() {
             )}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
 
-      {/* Breathing skip button */}
-      {type === "breathe" && !isComplete && (
-        <View style={styles.buttonContainer}>
-          <Button label="Skip" onPress={handleSkip} variant="ghost" />
-        </View>
-      )}
-    </SafeAreaView>
+        {/* Breathing skip button */}
+        {type === "breathe" && !isComplete && (
+          <View style={styles.buttonContainer}>
+            <Button label="Skip" onPress={handleSkip} variant="ghost" />
+          </View>
+        )}
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

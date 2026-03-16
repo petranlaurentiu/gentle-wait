@@ -11,8 +11,9 @@ import { useFonts } from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect } from "react";
-import { ActivityIndicator, AppState, View } from "react-native";
+import * as Notifications from "expo-notifications";
+import { useCallback, useEffect, useRef } from "react";
+import { ActivityIndicator, AppState, Platform, View } from "react-native";
 import "react-native-reanimated";
 
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
@@ -71,6 +72,51 @@ export default function RootLayout() {
       await SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Handle notification taps from shield "Step back" action (iOS)
+  const notificationResponseRef = useRef<ReturnType<typeof Notifications.addNotificationResponseReceivedListener>>(undefined);
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    // Request notification permission for shield notifications
+    Notifications.requestPermissionsAsync({
+      ios: { allowAlert: true, allowSound: true },
+    }).catch(() => {});
+
+    notificationResponseRef.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+        if (data?.source === "shield" && data?.action === "pause") {
+          const familyActivitySelectionId =
+            typeof data.familyActivitySelectionId === "string"
+              && data.familyActivitySelectionId !== "familyActivitySelectionId"
+              ? data.familyActivitySelectionId
+              : "";
+          const appLabel =
+            typeof data.appLabel === "string" && data.appLabel !== "applicationName"
+              ? data.appLabel
+              : typeof data.webDomain === "string" && data.webDomain !== "webDomain"
+                ? data.webDomain
+                : "Protected app";
+
+          router.push({
+            pathname: "/pause",
+            params: {
+              appPackage: familyActivitySelectionId || "ios.familycontrols",
+              appLabel,
+              familyActivitySelectionId,
+              source: "shield",
+            },
+          });
+        }
+      });
+
+    return () => {
+      notificationResponseRef.current?.remove();
+    };
+  }, [router]);
 
   // Handle pending interception from accessibility service
   useEffect(() => {
@@ -284,6 +330,7 @@ export default function RootLayout() {
                   headerShown: false,
                   presentation: "fullScreenModal",
                   gestureEnabled: false,
+                  animation: "fade",
                 }}
               />
               <Stack.Screen
@@ -303,6 +350,7 @@ export default function RootLayout() {
                 name="journal"
                 options={{
                   headerShown: false,
+                  animation: "fade_from_bottom",
                 }}
               />
               <Stack.Screen
@@ -310,6 +358,7 @@ export default function RootLayout() {
                 options={{
                   headerShown: false,
                   presentation: "fullScreenModal",
+                  animation: "fade",
                 }}
               />
             </Stack>

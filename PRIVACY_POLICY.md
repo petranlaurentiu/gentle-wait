@@ -55,4 +55,4 @@ You can:
 
 ## Contact
 
-If you publish GentleWait, replace this section with your production support email and website.
+For questions or concerns about your privacy, contact us at gentlewaitapp@gmail.com.

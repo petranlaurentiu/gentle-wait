@@ -1,0 +1,26 @@
+diff --git a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift b/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
+index 48d628e..63fca8e 100644
+--- a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
++++ b/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
+@@ -61,7 +61,7 @@ func resolveIcon(dict: [String: Any]) -> UIImage? {
+   }
+ 
+   if let iconTint = getColor(color: dict["iconTint"] as? [String: Double]) {
+-    image?.withTintColor(iconTint)
++    image = image?.withTintColor(iconTint, renderingMode: .alwaysOriginal)
+   }
+ 
+   return image
+diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
+index 0b7e83c..0b122b9 100644
+--- a/node_modules/react-native-device-activity/ios/Shared.swift
++++ b/node_modules/react-native-device-activity/ios/Shared.swift
+@@ -303,7 +303,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+   }
+ 
+   if let userInfo = contents["userInfo"] as? [String: Any] {
+-    content.userInfo = userInfo
++    content.userInfo = replacePlaceholdersInObject(userInfo, with: placeholders)
+   }
+ 
+   if #available(iOS 15.0, *) {
