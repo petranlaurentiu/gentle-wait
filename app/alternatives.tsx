@@ -332,7 +332,13 @@ export default function AlternativesScreen() {
   };
 
   const exitToHome = () => {
-    router.replace("/home");
+    // Dismiss all modals (pause → alternatives) to return to the original home screen.
+    // Using replace("/home") would stack a second home on top of the still-present pause modal.
+    if (router.canDismiss()) {
+      router.dismissAll();
+    } else {
+      router.replace("/home");
+    }
 
     if (Platform.OS === "android" && appPackage) {
       setTimeout(async () => {

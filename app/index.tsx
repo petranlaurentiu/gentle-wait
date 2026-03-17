@@ -15,7 +15,8 @@ export default function EntryPoint() {
 
   useEffect(() => {
     const navigate = () => {
-      const hasCompletedOnboarding = settings.selectedApps.length > 0;
+      const hasCompletedOnboarding =
+        settings.onboardingCompleted === true || settings.selectedApps.length > 0;
       if (hasCompletedOnboarding) {
         router.replace("/home");
       } else {
@@ -25,7 +26,7 @@ export default function EntryPoint() {
 
     const timer = setTimeout(navigate, 100);
     return () => clearTimeout(timer);
-  }, [settings.selectedApps.length, router]);
+  }, [settings.onboardingCompleted, settings.selectedApps.length, router]);
 
   return (
     <View

@@ -282,8 +282,12 @@ export default function ExerciseScreen() {
         );
       }
       
-      // Navigate directly to home using replace to avoid navigation stack issues
-      router.replace("/home");
+      // Dismiss all modals (pause → exercise) to return to the original home screen
+      if (router.canDismiss()) {
+        router.dismissAll();
+      } else {
+        router.replace("/home");
+      }
 
       // Launch the app after a brief delay (pending interception already cleared)
       if (Platform.OS === "android" && appPackage) {
@@ -303,7 +307,11 @@ export default function ExerciseScreen() {
       }
     } catch (error) {
       console.error("[Exercise] Error completing exercise:", error);
-      router.replace("/home");
+      if (router.canDismiss()) {
+        router.dismissAll();
+      } else {
+        router.replace("/home");
+      }
     }
   };
 

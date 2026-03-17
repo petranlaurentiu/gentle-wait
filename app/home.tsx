@@ -8,7 +8,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
-import { DebugMenu } from "@/src/components/DebugMenu";
+import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
 import {
@@ -89,6 +89,7 @@ export default function HomeScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: "transparent",
     },
     header: {
       flexDirection: "row",
@@ -239,8 +240,9 @@ export default function HomeScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.header, headerAnimation]}>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <Animated.View style={[styles.header, headerAnimation]}>
         <View style={styles.brandWrap}>
           <Animated.View style={[styles.logoFrame, logoFloat]}>
             <Image source={mainLogo} style={{ width: 28, height: 28 }} resizeMode="contain" />
@@ -255,11 +257,11 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
+          showsVerticalScrollIndicator={false}
+        >
         <Animated.View style={heroAnimation}>
           <GlassCard glowColor="primary" style={styles.heroCard}>
             <View style={styles.heroTopRow}>
@@ -435,8 +437,8 @@ export default function HomeScreen() {
             </AppText>
           </View>
         </Animated.View>
-      </ScrollView>
-      <DebugMenu />
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }

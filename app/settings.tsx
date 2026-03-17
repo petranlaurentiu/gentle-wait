@@ -26,7 +26,12 @@ import {
   getUpgradePitch,
   PRICING,
 } from "@/src/constants/monetization";
-import { presentBillingCustomerCenter } from "@/src/services/billing";
+import {
+  getCustomerInfo,
+  hasPremiumAccess,
+  presentBillingCustomerCenter,
+  restoreBillingPurchases,
+} from "@/src/services/billing";
 import {
   COOLDOWN_OPTIONS,
   WheelPicker,
@@ -54,10 +59,34 @@ import {
   getEyeResetExercisePreferenceLabel,
   getMoveExercisePreferenceLabel,
 } from "@/src/data/exercises";
-import type { ExerciseEntryPoint } from "@/src/domain/models";
+import type { ExerciseEntryPoint, UserSettings } from "@/src/domain/models";
 
 const PAUSE_DURATIONS = [8, 10, 15, 20, 30];
 const PROMPT_OPTIONS: ("off" | "sometimes" | "always")[] = ["off", "sometimes", "always"];
+const SETTINGS_STORAGE_KEY = "user_settings";
+
+function createClearedSettings(premium: boolean): UserSettings {
+  const now = Date.now();
+
+  return {
+    id: "default",
+    userName: "",
+    pauseDurationSec: 15,
+    cooldownMinutes: 15,
+    promptFrequency: "sometimes",
+    selectedApps: [],
+    theme: "system",
+    premium,
+    iosFamilyActivitySelection: null,
+    moveExercisePreference: DEFAULT_MOVE_EXERCISE_PREFERENCE,
+    eyeResetExercisePreference: DEFAULT_EYE_RESET_EXERCISE_PREFERENCE,
+    onboardingCompleted: false,
+    goals: [],
+    emotions: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -256,7 +285,7 @@ export default function SettingsScreen() {
   const handleResetOnboarding = () => {
     Alert.alert(
       "Reset Onboarding",
-      "This will reset your preferences and show the onboarding again. Continue?",
+      "This will reset your onboarding choices and protected apps, then show onboarding again. Your history and Premium access will stay intact.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -283,7 +312,7 @@ export default function SettingsScreen() {
   const handleClearAllData = () => {
     Alert.alert(
       "Clear All Data",
-      "This will permanently delete all your pause history, settings, and protected apps. This action cannot be undone.",
+      "This will permanently delete your local pause history, settings, and protected apps. Premium purchases stay tied to your App Store or Google Play account.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -291,11 +320,31 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              let preservedPremium = settings.premium;
+
+              try {
+                const customerInfo = await getCustomerInfo();
+                preservedPremium =
+                  preservedPremium || hasPremiumAccess(customerInfo);
+
+                if (!preservedPremium) {
+                  const restoreResult = await restoreBillingPurchases();
+                  preservedPremium =
+                    restoreResult.success && restoreResult.restored;
+                }
+              } catch (billingError) {
+                console.warn(
+                  "[Settings] Failed to refresh billing before clearing data, preserving local premium state:",
+                  billingError,
+                );
+              }
+
               await deleteAllEvents();
-
               await clearProtectedApps();
-
-              mmkvStorage.clearAll();
+              mmkvStorage.setJSON(
+                SETTINGS_STORAGE_KEY,
+                createClearedSettings(preservedPremium),
+              );
               loadSettings();
               router.replace("/onboarding");
             } catch (error) {

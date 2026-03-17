@@ -62,7 +62,7 @@ import ReanimatedAnimated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const mainLogo = require("@/assets/images/main_logo.png");
 
@@ -182,6 +182,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { width, height: screenHeight } = useWindowDimensions();
   const isNarrowPreviewLayout = width < 420;
   const isCompactPreviewViewport = width < 420 || screenHeight < 880;
@@ -2172,11 +2173,12 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={[
           styles.contentContainer,
+          { paddingTop: insets.top + spacing.lg },
           step === "program-preview" && styles.previewContentContainer,
         ]}
         contentInsetAdjustmentBehavior="automatic"
