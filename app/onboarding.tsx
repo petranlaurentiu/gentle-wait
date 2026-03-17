@@ -62,7 +62,10 @@ import ReanimatedAnimated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const mainLogo = require("@/assets/images/main_logo.png");
 
@@ -1265,6 +1268,7 @@ export default function OnboardingScreen() {
       lineHeight: typography.body.lineHeight,
       color: colors.textSecondary,
       textAlign: "center",
+      alignSelf: "center",
       maxWidth: 300,
     },
     // Age selection styles
@@ -1805,8 +1809,8 @@ export default function OnboardingScreen() {
     },
     previewHeroTop: {
       alignItems: "center",
-      gap: spacing.md,
-      marginBottom: spacing.md,
+      gap: spacing.xs,
+      marginBottom: spacing.xs,
     },
     previewHeroTopCompact: {
       flexDirection: "row",
@@ -1875,8 +1879,8 @@ export default function OnboardingScreen() {
       alignItems: "stretch",
       justifyContent: "center",
       gap: spacing.sm,
-      marginBottom: spacing.md,
-      paddingVertical: spacing.xs,
+      marginBottom: spacing.sm,
+      paddingVertical: 4,
       paddingHorizontal: isNarrowPreviewLayout ? spacing.sm : spacing.md,
       borderRadius: radius.card,
       backgroundColor: "rgba(255, 255, 255, 0.04)",
@@ -1888,12 +1892,12 @@ export default function OnboardingScreen() {
       alignItems: "center",
       justifyContent: "center",
       gap: 2,
-      minHeight: isCompactPreviewViewport ? 44 : 60,
+      minHeight: isCompactPreviewViewport ? 36 : 48,
     },
     previewMetricValue: {
-      fontFamily: fonts.thin,
-      fontSize: isCompactPreviewViewport ? 28 : 34,
-      lineHeight: isCompactPreviewViewport ? 30 : 36,
+      fontFamily: fonts.bold,
+      fontSize: isCompactPreviewViewport ? 22 : 26,
+      lineHeight: isCompactPreviewViewport ? 24 : 26,
       letterSpacing: -1.2,
       color: colors.text,
     },
@@ -1910,25 +1914,25 @@ export default function OnboardingScreen() {
     },
     programDays: {
       flexDirection: "column",
-      gap: spacing.xs,
+      gap: 4,
     },
     programDay: {
       flexDirection: "row",
       alignItems: "flex-start",
-      gap: spacing.sm,
-      paddingVertical: isCompactPreviewViewport ? spacing.sm : spacing.md,
+      gap: spacing.xs,
+      paddingVertical: 8,
       paddingHorizontal: isCompactPreviewViewport
-        ? spacing.sm + 2
+        ? spacing.sm
         : isNarrowPreviewLayout
-          ? spacing.md
-          : spacing.lg,
+          ? spacing.sm + 2
+          : spacing.md,
       backgroundColor: "rgba(255, 255, 255, 0.045)",
       borderRadius: radius.card,
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
     programDayIndex: {
-      width: isCompactPreviewViewport ? 28 : 34,
+      width: isCompactPreviewViewport ? 24 : 28,
       paddingTop: 1,
       alignItems: "center",
       flexShrink: 0,
@@ -1940,13 +1944,13 @@ export default function OnboardingScreen() {
       letterSpacing: 1,
     },
     programDayIconWrap: {
-      width: isCompactPreviewViewport ? 38 : isNarrowPreviewLayout ? 42 : 48,
-      height: isCompactPreviewViewport ? 38 : isNarrowPreviewLayout ? 42 : 48,
+      width: isCompactPreviewViewport ? 32 : isNarrowPreviewLayout ? 36 : 40,
+      height: isCompactPreviewViewport ? 32 : isNarrowPreviewLayout ? 36 : 40,
       borderRadius: isCompactPreviewViewport
-        ? 14
+        ? 12
         : isNarrowPreviewLayout
-          ? 16
-          : 18,
+          ? 14
+          : 16,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -1961,14 +1965,14 @@ export default function OnboardingScreen() {
     },
     programDayLabel: {
       fontFamily: fonts.semiBold,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      fontSize: typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
       color: colors.text,
     },
     programDayDescription: {
       fontFamily: fonts.regular,
-      fontSize: typography.caption.fontSize,
-      lineHeight: 18,
+      fontSize: typography.small.fontSize,
+      lineHeight: typography.small.lineHeight,
       color: colors.textSecondary,
     },
     programConnector: {
@@ -2178,7 +2182,7 @@ export default function OnboardingScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingTop: insets.top + spacing.lg },
+
           step === "program-preview" && styles.previewContentContainer,
         ]}
         contentInsetAdjustmentBehavior="automatic"
@@ -2335,7 +2339,7 @@ export default function OnboardingScreen() {
                         <View style={styles.programDayIconWrap}>
                           <Ionicons
                             name={item.icon}
-                            size={isCompactPreviewViewport ? 20 : 24}
+                            size={isCompactPreviewViewport ? 16 : 18}
                             color={
                               index === 1 ? colors.secondary : colors.primary
                             }
@@ -2796,7 +2800,10 @@ export default function OnboardingScreen() {
                     </Text>
                   </View>
 
-                  <GlassCard glowColor="primary" style={styles.analysisHeroCard}>
+                  <GlassCard
+                    glowColor="primary"
+                    style={styles.analysisHeroCard}
+                  >
                     <LinearGradient
                       colors={[
                         colors.primaryLight,
@@ -2869,9 +2876,7 @@ export default function OnboardingScreen() {
                             color={colors.primary}
                             style={{ marginTop: 2 }}
                           />
-                          <Text style={styles.analysisInsightText}>
-                            {item}
-                          </Text>
+                          <Text style={styles.analysisInsightText}>{item}</Text>
                         </View>
                       ))}
                     </View>
@@ -3428,7 +3433,8 @@ export default function OnboardingScreen() {
               </View>
 
               <Text style={styles.permissionFootnote}>
-                Private by design — everything stays on your device. We never see your data.
+                Private by design — everything stays on your device. We never
+                see your data.
               </Text>
             </>
           )}
@@ -3501,8 +3507,8 @@ export default function OnboardingScreen() {
 
                 {!isCompactCooldownViewport && (
                   <Text style={styles.cooldownHint}>
-                    Shorter times keep you accountable. Longer times feel gentler
-                    after a focused break.
+                    Shorter times keep you accountable. Longer times feel
+                    gentler after a focused break.
                   </Text>
                 )}
               </View>

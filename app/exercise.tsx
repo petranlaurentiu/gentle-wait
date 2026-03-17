@@ -2,36 +2,6 @@
  * Exercise screen - Physical movement breaks with category selection
  * Liquid Glass Design System
  */
-import { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Platform,
-  useWindowDimensions,
-  LayoutChangeEvent,
-} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import {
-  launchApp,
-  markAppHandled,
-  startIOSCooldownForSelection,
-} from "@/src/services/native";
-import { useTheme } from "@/src/theme/ThemeProvider";
-import { spacing, typography, fonts, radius } from "@/src/theme/theme";
-import { insertEvent } from "@/src/services/storage/sqlite";
-import { useAppStore } from "@/src/services/storage";
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
@@ -39,8 +9,8 @@ import { LumiIllustration } from "@/src/components/LumiIllustration";
 import {
   DEFAULT_EYE_RESET_EXERCISE_PREFERENCE,
   DEFAULT_MOVE_EXERCISE_PREFERENCE,
-  EXERCISE_ENTRY_METADATA,
   EXERCISE_CATEGORY_METADATA,
+  EXERCISE_ENTRY_METADATA,
   getCategoryMeta,
   getExerciseById,
   getExercisesByCategory,
@@ -54,6 +24,39 @@ import {
   ExerciseCategory,
   ExerciseEntryPoint,
 } from "@/src/domain/models";
+import {
+  launchApp,
+  markAppHandled,
+  startIOSCooldownForSelection,
+} from "@/src/services/native";
+import { useAppStore } from "@/src/services/storage";
+import { insertEvent } from "@/src/services/storage/sqlite";
+import { useTheme } from "@/src/theme/ThemeProvider";
+import { fonts, radius, spacing, typography } from "@/src/theme/theme";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Dimensions,
+  LayoutChangeEvent,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -104,8 +107,8 @@ export default function ExerciseScreen() {
       ? 108
       : 148
     : isCompactScreen
-      ? 170
-      : 250;
+      ? 132
+      : 188;
   const completionHeroHeight = isCompactScreen ? 150 : 220;
 
   // Animation
@@ -130,27 +133,33 @@ export default function ExerciseScreen() {
   }, [phase, exercise, isPaused]);
 
   // Adjust exercise duration to match user's pause duration setting
-  const adjustExerciseForDuration = useCallback((ex: Exercise): Exercise => {
-    if (ex.durationSec <= pauseDuration) {
-      // Exercise fits within pause duration, use as-is
-      return ex;
-    }
-    // Scale down exercise duration to fit within pause duration
-    // Keep the same exercise but reduce duration proportionally
-    return {
-      ...ex,
-      durationSec: pauseDuration,
-    };
-  }, [pauseDuration]);
+  const adjustExerciseForDuration = useCallback(
+    (ex: Exercise): Exercise => {
+      if (ex.durationSec <= pauseDuration) {
+        // Exercise fits within pause duration, use as-is
+        return ex;
+      }
+      // Scale down exercise duration to fit within pause duration
+      // Keep the same exercise but reduce duration proportionally
+      return {
+        ...ex,
+        durationSec: pauseDuration,
+      };
+    },
+    [pauseDuration],
+  );
 
-  const startExercise = useCallback((nextExercise: Exercise) => {
-    const adjustedExercise = adjustExerciseForDuration(nextExercise);
-    setExercise(adjustedExercise);
-    setSelectedCategory(adjustedExercise.category);
-    setTimeLeft(adjustedExercise.durationSec);
-    setStartTime(Date.now());
-    setPhase("exercise");
-  }, [adjustExerciseForDuration]);
+  const startExercise = useCallback(
+    (nextExercise: Exercise) => {
+      const adjustedExercise = adjustExerciseForDuration(nextExercise);
+      setExercise(adjustedExercise);
+      setSelectedCategory(adjustedExercise.category);
+      setTimeLeft(adjustedExercise.durationSec);
+      setStartTime(Date.now());
+      setPhase("exercise");
+    },
+    [adjustExerciseForDuration],
+  );
 
   const pickRandomExerciseFromPool = useCallback((pool: Exercise[]) => {
     if (pool.length === 0) {
@@ -281,7 +290,7 @@ export default function ExerciseScreen() {
           settings.cooldownMinutes || 15,
         );
       }
-      
+
       // Dismiss all modals (pause → exercise) to return to the original home screen
       if (router.canDismiss()) {
         router.dismissAll();
@@ -339,7 +348,11 @@ export default function ExerciseScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: spacing.lg,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xs,
+    },
+    scrollArea: {
+      flex: 1,
     },
     scrollContent: {
       flexGrow: 1,
@@ -407,8 +420,8 @@ export default function ExerciseScreen() {
       marginBottom: isEyeResetFlow
         ? spacing.xs
         : isCompactScreen
-          ? spacing.sm
-          : spacing.lg,
+          ? spacing.xs
+          : spacing.md,
     },
     exerciseCategory: {
       fontFamily: fonts.semiBold,
@@ -435,8 +448,8 @@ export default function ExerciseScreen() {
       marginBottom: isEyeResetFlow
         ? spacing.xs
         : isCompactScreen
-          ? spacing.sm
-          : spacing.lg,
+          ? spacing.xs
+          : spacing.md,
     },
     timerCircle: {
       width: isEyeResetFlow
@@ -467,12 +480,18 @@ export default function ExerciseScreen() {
       marginBottom: isEyeResetFlow
         ? spacing.xs
         : isCompactScreen
-          ? spacing.sm
-          : spacing.lg,
+          ? spacing.xs
+          : spacing.md,
     },
     timerText: {
       fontFamily: fonts.thin,
-      fontSize: isEyeResetFlow ? (isCompactScreen ? 28 : 34) : isCompactScreen ? 38 : 48,
+      fontSize: isEyeResetFlow
+        ? isCompactScreen
+          ? 28
+          : 34
+        : isCompactScreen
+          ? 38
+          : 48,
       color: colors.text,
     },
     timerUnit: {
@@ -489,7 +508,7 @@ export default function ExerciseScreen() {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
       borderRadius: 2,
       overflow: "hidden",
-      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
+      marginBottom: isCompactScreen ? spacing.xs : spacing.md,
     },
     progressFill: {
       height: "100%",
@@ -497,7 +516,7 @@ export default function ExerciseScreen() {
       borderRadius: 2,
     },
     instructionsCard: {
-      marginBottom: isCompactScreen ? spacing.sm : spacing.lg,
+      marginBottom: isCompactScreen ? spacing.xs : spacing.md,
     },
     instructionsText: {
       fontFamily: fonts.regular,
@@ -561,11 +580,12 @@ export default function ExerciseScreen() {
     buttonContainer: {
       gap: spacing.sm,
       marginTop: isCompactScreen ? spacing.sm : "auto",
-      paddingBottom: Math.max(insets.bottom, spacing.xs),
+      paddingBottom: 0,
     },
   });
 
-  const footerSpacing = footerHeight + spacing.md;
+  const footerSpacing =
+    footerHeight + Math.max(insets.bottom, spacing.md) + spacing.md;
   const scrollContentStyle = [
     phase === "exercise" ? styles.exerciseScrollContent : styles.scrollContent,
     { paddingBottom: footerSpacing },
@@ -578,53 +598,64 @@ export default function ExerciseScreen() {
     return (
       <BackgroundWrapper>
         <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={scrollContentStyle}>
-          <LumiIllustration
-            source={getLumiAssetForExercise({ entry: entryParam })}
-            maxHeight={heroHeight}
-          />
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={scrollContentStyle}
+          >
+            <LumiIllustration
+              source={getLumiAssetForExercise({ entry: entryParam })}
+              maxHeight={heroHeight}
+            />
 
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {entryMeta ? entryMeta.label : "Choose Your Reset"}
-            </Text>
-            <Text style={styles.subtitle}>
-              {entryMeta
-                ? entryMeta.description
-                : "Choose what feels right for your body right now"}
-            </Text>
-          </View>
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                {entryMeta ? entryMeta.label : "Choose Your Reset"}
+              </Text>
+              <Text style={styles.subtitle}>
+                {entryMeta
+                  ? entryMeta.description
+                  : "Choose what feels right for your body right now"}
+              </Text>
+            </View>
 
-          <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryCard,
-                  { backgroundColor: category.color },
-                ]}
-                onPress={() => handleSelectCategory(category.id)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={category.iconName} size={32} color={colors.primary} />
-                <View style={styles.categoryContent}>
-                  <Text style={styles.categoryLabel}>{category.label}</Text>
-                  <Text style={styles.categoryDescription}>
-                    {category.description}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            ))}
-          </View>
+            <View style={styles.categoriesGrid}>
+              {CATEGORIES.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryCard,
+                    { backgroundColor: category.color },
+                  ]}
+                  onPress={() => handleSelectCategory(category.id)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={category.iconName}
+                    size={32}
+                    color={colors.primary}
+                  />
+                  <View style={styles.categoryContent}>
+                    <Text style={styles.categoryLabel}>{category.label}</Text>
+                    <Text style={styles.categoryDescription}>
+                      {category.description}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          <Button
-            label="Surprise Me"
-            onPress={handleRandomExercise}
-            variant="secondary"
-            iconName="shuffle-outline"
-          />
-        </ScrollView>
+            <Button
+              label="Surprise Me"
+              onPress={handleRandomExercise}
+              variant="secondary"
+              iconName="shuffle-outline"
+            />
+          </ScrollView>
 
           <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
             <Button label="Back" onPress={handleSkip} variant="ghost" />
@@ -636,57 +667,63 @@ export default function ExerciseScreen() {
 
   // Exercise in progress
   if (phase === "exercise" && exercise) {
-    const categoryLabel = getCategoryMeta(exercise.category)?.label || exercise.category;
+    const categoryLabel =
+      getCategoryMeta(exercise.category)?.label || exercise.category;
 
     return (
       <BackgroundWrapper>
         <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={scrollContentStyle}>
-          <LumiIllustration
-            source={getLumiAssetForExercise({
-              entry: entryParam,
-              category: exercise.category,
-            })}
-            maxHeight={activeHeroHeight}
-          />
-
-          <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseCategory}>{categoryLabel}</Text>
-            <Text style={styles.exerciseName}>{exercise.name}</Text>
-          </View>
-
-          <View style={styles.timerContainer}>
-            <View style={styles.timerCircle}>
-              <Text style={styles.timerText}>{timeLeft}</Text>
-              <Text style={styles.timerUnit}>seconds</Text>
-            </View>
-          </View>
-
-          <View style={styles.progressBar}>
-            <Animated.View
-              style={[styles.progressFill, progressAnimatedStyle]}
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={scrollContentStyle}
+          >
+            <LumiIllustration
+              source={getLumiAssetForExercise({
+                entry: entryParam,
+                category: exercise.category,
+              })}
+              maxHeight={activeHeroHeight}
             />
-          </View>
 
-          <GlassCard glowColor="primary" style={styles.instructionsCard}>
-            <Text style={styles.instructionsText}>{exercise.instructions}</Text>
+            <View style={styles.exerciseHeader}>
+              <Text style={styles.exerciseCategory}>{categoryLabel}</Text>
+              <Text style={styles.exerciseName}>{exercise.name}</Text>
+            </View>
 
-            {exercise.reps && (
-              <View style={styles.detailsRow}>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Duration</Text>
-                  <Text style={styles.detailValue}>
-                    {exercise.durationSec}s
-                  </Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Reps</Text>
-                  <Text style={styles.detailValue}>{exercise.reps}</Text>
-                </View>
+            <View style={styles.timerContainer}>
+              <View style={styles.timerCircle}>
+                <Text style={styles.timerText}>{timeLeft}</Text>
+                <Text style={styles.timerUnit}>seconds</Text>
               </View>
-            )}
-          </GlassCard>
-        </ScrollView>
+            </View>
+
+            <View style={styles.progressBar}>
+              <Animated.View
+                style={[styles.progressFill, progressAnimatedStyle]}
+              />
+            </View>
+
+            <GlassCard glowColor="primary" style={styles.instructionsCard}>
+              <Text style={styles.instructionsText}>
+                {exercise.instructions}
+              </Text>
+
+              {exercise.reps && (
+                <View style={styles.detailsRow}>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Duration</Text>
+                    <Text style={styles.detailValue}>
+                      {exercise.durationSec}s
+                    </Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Reps</Text>
+                    <Text style={styles.detailValue}>{exercise.reps}</Text>
+                  </View>
+                </View>
+              )}
+            </GlassCard>
+          </ScrollView>
 
           <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
             <Button
@@ -708,36 +745,43 @@ export default function ExerciseScreen() {
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={scrollContentStyle}>
-        <View style={styles.completeContainer}>
-          <LumiIllustration
-            source={getLumiAssetForExercise({
-              entry: entryParam,
-              category: selectedCategory,
-              isComplete: true,
-            })}
-            maxHeight={completionHeroHeight}
-            scale={1.3}
-          />
-          <Text style={styles.completeTitle}>
-            {completedEyeReset ? "Eyes Reset!" : "Great Job!"}
-          </Text>
-          <Text style={styles.completeMessage}>
-            {completedEyeReset
-              ? "You gave your eyes and posture a real break instead of falling back into the scroll."
-              : "You just moved your body instead of scrolling.\nThat&apos;s a powerful choice."}
-          </Text>
-        </View>
-      </ScrollView>
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={scrollContentStyle}
+        >
+          <View style={styles.completeContainer}>
+            <LumiIllustration
+              source={getLumiAssetForExercise({
+                entry: entryParam,
+                category: selectedCategory,
+                isComplete: true,
+              })}
+              maxHeight={completionHeroHeight}
+              scale={1.3}
+            />
+            <Text style={styles.completeTitle}>
+              {completedEyeReset ? "Eyes Reset!" : "Well Done!"}
+            </Text>
+            <Text style={styles.completeMessage}>
+              {completedEyeReset
+                ? "You gave your eyes and posture a real break instead of falling back into the scroll."
+                : "You just gave yourself a moment of calm.\nThat's something to be proud of."}
+            </Text>
+          </View>
+        </ScrollView>
 
         <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
           <Button
-            label={completedEyeReset ? "I Feel Refreshed!" : "I Feel Energized!"}
+            label={completedEyeReset ? "I Feel Refreshed!" : "I Feel Better"}
             onPress={handleComplete}
             variant="primary"
           />
           <Button
-            label={completedEyeReset ? "Try Another Eye Reset" : "Do Another Exercise"}
+            label={
+              completedEyeReset
+                ? "Try Another Eye Reset"
+                : "Do Another Exercise"
+            }
             onPress={() => {
               if (entryParam === "eye-reset" || entryParam === "move") {
                 handleGetNewExercise();

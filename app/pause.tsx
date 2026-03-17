@@ -422,7 +422,7 @@ export default function PauseScreen() {
                 </View>
 
                 <Text style={styles.breathMessage}>
-                  You paused. That&apos;s already a win.
+                  You paused. That's already a win.
                 </Text>
               </Animated.View>
             )}

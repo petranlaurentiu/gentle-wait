@@ -693,7 +693,7 @@ export default function AlternativesScreen() {
             />
             <Text style={styles.exerciseName}>Well Done!</Text>
             <Text style={styles.completeMessage}>
-              You just gave yourself a moment of calm.{"\n"}That&apos;s something
+              You just gave yourself a moment of calm.{"\n"}That's something
               to be proud of.
             </Text>
 
