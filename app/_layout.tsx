@@ -126,13 +126,13 @@ export default function RootLayout() {
       try {
         // Prevent concurrent processing
         if (isProcessing) {
-          console.log("[DeepLink] Already processing interception, skipping");
+          if (__DEV__) console.log("[DeepLink] Already processing interception, skipping");
           return;
         }
 
         const pending = await getPendingInterception();
         if (pending && pending.appPackage) {
-          console.log(
+          if (__DEV__) console.log(
             "[DeepLink] Pending interception found:",
             pending.appPackage
           );
@@ -142,7 +142,7 @@ export default function RootLayout() {
           
           // Clear the pending interception IMMEDIATELY to prevent loops
           await markAppHandled(pending.appPackage);
-          console.log("[DeepLink] Cleared pending interception:", pending.appPackage);
+          if (__DEV__) console.log("[DeepLink] Cleared pending interception:", pending.appPackage);
           
           setCurrentInterceptionEvent({
             id: `pending-${Date.now()}`,
@@ -167,7 +167,7 @@ export default function RootLayout() {
           }, 1000);
         }
       } catch (error) {
-        console.log("[DeepLink] Error checking pending interception:", error);
+        if (__DEV__) console.log("[DeepLink] Error checking pending interception:", error);
         isProcessing = false;
       }
     };

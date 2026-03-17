@@ -70,7 +70,7 @@ export async function initializeDatabase() {
         CREATE INDEX IF NOT EXISTS idx_journal_ts_desc ON journal_entries(ts DESC);
       `);
 
-      console.log('Database initialized successfully');
+      if (__DEV__) console.log('Database initialized successfully');
     } catch (error) {
       console.error('Error initializing database:', error);
       db = null;

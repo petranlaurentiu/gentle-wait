@@ -11,7 +11,7 @@ let inMemoryStore: Record<string, any> = {};
 try {
   // Check if we're on a platform that supports native modules
   if (Platform.OS === "web") {
-    console.log("[Storage] Web platform detected - using in-memory storage");
+    if (__DEV__) console.log("[Storage] Web platform detected - using in-memory storage");
   } else {
     // Try to require MMKV
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -20,14 +20,14 @@ try {
     // Prefer the v4+ API (createMMKV), fall back to older MMKV class if needed
     if (mmkvModule && typeof mmkvModule.createMMKV === "function") {
       storage = mmkvModule.createMMKV();
-      console.log("[Storage] ✅ MMKV initialized - settings will persist");
+      if (__DEV__) console.log("[Storage] ✅ MMKV initialized - settings will persist");
     } else if (
       mmkvModule &&
       mmkvModule.MMKV &&
       typeof mmkvModule.MMKV === "function"
     ) {
       storage = new mmkvModule.MMKV();
-      console.log("[Storage] ✅ MMKV initialized - settings will persist");
+      if (__DEV__) console.log("[Storage] ✅ MMKV initialized - settings will persist");
     } else {
       throw new Error("MMKV class not found in module");
     }

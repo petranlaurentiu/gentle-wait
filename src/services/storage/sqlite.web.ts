@@ -8,7 +8,7 @@ import { mmkvStorage } from './mmkv';
  * Web stub: Initialize the database (no-op on web)
  */
 export async function initializeDatabase() {
-  console.log('Note: SQLite not available on web. Using MMKV for event storage.');
+  if (__DEV__) console.log('Note: SQLite not available on web. Using MMKV for event storage.');
   return;
 }
 
