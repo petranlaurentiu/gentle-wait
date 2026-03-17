@@ -194,6 +194,10 @@ export default function OnboardingScreen() {
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
   const mode = params.mode as string | undefined; // "complete-profile" for adding personalization later
   const isCompleteProfileMode = mode === "complete-profile";
+  const isScreenshotMode =
+    params.screenshotMode === "1" || params.screenshotMode === "true";
+  const isSimulatorScreenshotMode =
+    isScreenshotMode || (__DEV__ && Platform.OS === "ios");
 
   // For complete-profile mode, start at goals step
   const initialStep = isCompleteProfileMode
@@ -559,6 +563,7 @@ export default function OnboardingScreen() {
 
     if (
       step === "select-apps" &&
+      !isSimulatorScreenshotMode &&
       ((isIOSFamilyControlsFlow &&
         !iosFamilyActivitySelection?.familyActivitySelection) ||
         (!isIOSFamilyControlsFlow && selectedAppSet.size === 0))
@@ -573,6 +578,7 @@ export default function OnboardingScreen() {
     if (
       step === "select-apps" &&
       isIOSFamilyControlsFlow &&
+      !isSimulatorScreenshotMode &&
       !validateIOSSelectionForPlan()
     ) {
       return;
@@ -3204,6 +3210,12 @@ export default function OnboardingScreen() {
                         Upgrade for categories and websites.
                       </Text>
                     )}
+                  {isSimulatorScreenshotMode && (
+                    <Text style={styles.descriptionSmall}>
+                      Screenshot mode: selection is optional so you can continue
+                      through onboarding screens on simulator.
+                    </Text>
+                  )}
                 </>
               ) : (
                 <>
@@ -3355,6 +3367,12 @@ export default function OnboardingScreen() {
                     <Text style={styles.descriptionSmall}>
                       You&apos;ve reached the free plan limit. Upgrade to
                       protect more apps and unlock the AI Companion.
+                    </Text>
+                  )}
+                  {isSimulatorScreenshotMode && (
+                    <Text style={styles.descriptionSmall}>
+                      Screenshot mode: selection is optional so you can continue
+                      through onboarding screens on simulator.
                     </Text>
                   )}
                 </>

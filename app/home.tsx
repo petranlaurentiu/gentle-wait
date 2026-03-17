@@ -27,6 +27,7 @@ const mainLogo = require("@/assets/images/main_logo.png");
 
 const QUICK_ACTIONS = [
   { label: "Breathe", icon: "flower-outline", onPress: "/alternatives", params: { type: "breathe" } },
+  { label: "Pray", icon: "heart-outline", onPress: "/alternatives", params: { type: "prayer" } },
   { label: "Move", icon: "fitness-outline", onPress: "/exercise", params: { entry: "move" } },
   { label: "Eye Reset", icon: "eye-outline", onPress: "/exercise", params: { entry: "eye-reset" } },
   { label: "Journal", icon: "journal-outline", onPress: "/alternatives", params: { type: "reflect" } },
