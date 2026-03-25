@@ -142,30 +142,35 @@ export function getIOSSelectionSummary(
 }
 
 async function ensureIOSShieldIcon(): Promise<string | null> {
-  const appGroupDirectory = getAppGroupFileDirectory();
-  if (!appGroupDirectory) {
+  try {
+    const appGroupDirectory = getAppGroupFileDirectory();
+    if (!appGroupDirectory) {
+      return null;
+    }
+
+    const mascotAsset = Asset.fromModule(
+      require("../../../assets/lumi/lumi-shield-mascot.png"),
+    );
+
+    if (!mascotAsset.localUri) {
+      await mascotAsset.downloadAsync();
+    }
+
+    if (!mascotAsset.localUri) {
+      return null;
+    }
+
+    copyFile(
+      mascotAsset.localUri,
+      `${appGroupDirectory}/${IOS_SHIELD_ICON_FILENAME}`,
+      true,
+    );
+
+    return IOS_SHIELD_ICON_FILENAME;
+  } catch (error) {
+    console.warn("[NativeService] Could not copy shield icon, using fallback:", error);
     return null;
   }
-
-  const mascotAsset = Asset.fromModule(
-    require("../../../assets/lumi/lumi-shield-mascot.png"),
-  );
-
-  if (!mascotAsset.localUri) {
-    await mascotAsset.downloadAsync();
-  }
-
-  if (!mascotAsset.localUri) {
-    return null;
-  }
-
-  copyFile(
-    mascotAsset.localUri,
-    `${appGroupDirectory}/${IOS_SHIELD_ICON_FILENAME}`,
-    true,
-  );
-
-  return IOS_SHIELD_ICON_FILENAME;
 }
 
 function buildIOSShieldConfig(iconAppGroupRelativePath: string | null) {

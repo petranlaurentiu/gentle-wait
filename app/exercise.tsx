@@ -25,6 +25,7 @@ import {
   ExerciseEntryPoint,
 } from "@/src/domain/models";
 import {
+  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
   startIOSCooldownForSelection,
@@ -79,7 +80,7 @@ export default function ExerciseScreen() {
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
   const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || "";
+    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
   const entryParam = params.entry as ExerciseEntryPoint | undefined;
   const categoryParam = params.category as ExerciseCategory | undefined;
 
@@ -272,6 +273,16 @@ export default function ExerciseScreen() {
     }
   };
 
+  const navigateHome = () => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
+
+    setTimeout(() => {
+      router.replace("/home");
+    }, 0);
+  };
+
   const handleComplete = async () => {
     try {
       await insertEvent({
@@ -288,15 +299,10 @@ export default function ExerciseScreen() {
         await startIOSCooldownForSelection(
           familyActivitySelectionId,
           settings.cooldownMinutes || 15,
-        );
+        ).catch((e) => console.warn("[Exercise] Cooldown error:", e));
       }
 
-      // Dismiss all modals (pause → exercise) to return to the original home screen
-      if (router.canDismiss()) {
-        router.dismissAll();
-      } else {
-        router.replace("/home");
-      }
+      navigateHome();
 
       // Launch the app after a brief delay (pending interception already cleared)
       if (Platform.OS === "android" && appPackage) {
@@ -316,11 +322,7 @@ export default function ExerciseScreen() {
       }
     } catch (error) {
       console.error("[Exercise] Error completing exercise:", error);
-      if (router.canDismiss()) {
-        router.dismissAll();
-      } else {
-        router.replace("/home");
-      }
+      navigateHome();
     }
   };
 

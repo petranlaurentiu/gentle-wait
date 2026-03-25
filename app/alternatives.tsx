@@ -14,6 +14,7 @@ import {
 } from "@/src/data/mindfulness";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
 import {
+  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
   startIOSCooldownForSelection,
@@ -65,7 +66,7 @@ export default function AlternativesScreen() {
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
   const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || "";
+    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
 
   const [startTime] = useState(Date.now());
   const [isComplete, setIsComplete] = useState(false);
@@ -304,7 +305,7 @@ export default function AlternativesScreen() {
           await startIOSCooldownForSelection(
             familyActivitySelectionId,
             settings.cooldownMinutes || 15,
-          );
+          ).catch((e) => console.warn("[Alternatives] Cooldown error:", e));
         }
         setPreviousEntries((entries) => [entry, ...entries].slice(0, 10));
         setSavedJournalEntry(entry);
@@ -317,7 +318,7 @@ export default function AlternativesScreen() {
         await startIOSCooldownForSelection(
           familyActivitySelectionId,
           settings.cooldownMinutes || 15,
-        );
+        ).catch((e) => console.warn("[Alternatives] Cooldown error:", e));
       }
 
       exitToHome();
@@ -332,13 +333,13 @@ export default function AlternativesScreen() {
   };
 
   const exitToHome = () => {
-    // Dismiss all modals (pause → alternatives) to return to the original home screen.
-    // Using replace("/home") would stack a second home on top of the still-present pause modal.
     if (router.canDismiss()) {
       router.dismissAll();
-    } else {
-      router.replace("/home");
     }
+
+    setTimeout(() => {
+      router.replace("/home");
+    }, 0);
 
     if (Platform.OS === "android" && appPackage) {
       setTimeout(async () => {
@@ -693,7 +694,7 @@ export default function AlternativesScreen() {
             />
             <Text style={styles.exerciseName}>Well Done!</Text>
             <Text style={styles.completeMessage}>
-              You just gave yourself a moment of calm.{"\n"}That's something
+              You just gave yourself a moment of calm.{"\n"}That&apos;s something
               to be proud of.
             </Text>
 
