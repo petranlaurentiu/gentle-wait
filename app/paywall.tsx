@@ -2,9 +2,6 @@ import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
 import {
-  BillingPackage,
-  getBillingPackages,
-  initializeBilling,
   presentBillingPaywall,
   restoreBillingPurchases,
 } from "@/src/services/billing";
@@ -13,98 +10,28 @@ import { useTheme } from "@/src/theme/ThemeProvider";
 import { radius, spacing } from "@/src/theme/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function getPackagePriority(pkg: BillingPackage) {
-  const key =
-    `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
-
-  if (key.includes("annual") || key.includes("year")) return 0;
-  if (key.includes("monthly") || key.includes("month")) return 1;
-  if (key.includes("lifetime")) return 2;
-  return 3;
-}
-
-function getPackageKind(pkg: BillingPackage) {
-  const key =
-    `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
-
-  if (key.includes("annual") || key.includes("year")) return "annual";
-  if (key.includes("monthly") || key.includes("month")) return "monthly";
-  if (key.includes("lifetime")) return "lifetime";
-  return "other";
-}
-
-function getPackageDisplayTitle(pkg: BillingPackage) {
-  switch (getPackageKind(pkg)) {
-    case "annual":
-      return "Annual";
-    case "monthly":
-      return "Monthly";
-    case "lifetime":
-      return "Lifetime";
-    default:
-      return pkg.title;
-  }
-}
+const BENEFITS = [
+  { icon: "shield-checkmark-outline" as const, text: "Unlimited protected apps" },
+  { icon: "sparkles-outline" as const, text: "AI Companion & guided reflection" },
+  { icon: "trending-up-outline" as const, text: "Premium insights & personalization" },
+];
 
 export default function PaywallScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const settings = useAppStore((state) => state.settings);
   const updateSettings = useAppStore((state) => state.updateSettings);
-  const setBillingPackages = useAppStore((state) => state.setBillingPackages);
 
-  const [packages, setPackages] = useState<BillingPackage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadBilling = async () => {
-      try {
-        const init = await initializeBilling();
-        if (!active) return;
-
-        if (!init.available || !init.configured) {
-          setPackages([]);
-          return;
-        }
-
-        const nextPackages = await getBillingPackages();
-        if (!active) return;
-
-        const sortedPackages = [...nextPackages].sort(
-          (a, b) => getPackagePriority(a) - getPackagePriority(b),
-        );
-        setPackages(sortedPackages);
-        setBillingPackages(sortedPackages);
-      } catch (error) {
-        console.error("[Paywall] Failed to load RevenueCat offerings:", error);
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadBilling();
-
-    return () => {
-      active = false;
-    };
-  }, [setBillingPackages]);
 
   const handleOpenPaywall = async () => {
     setIsProcessing(true);
@@ -154,84 +81,60 @@ export default function PaywallScreen() {
     },
     header: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      justifyContent: "flex-end",
       alignItems: "center",
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
     },
     closeButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: colors.glassFill,
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
-    content: {
+    body: {
+      flex: 1,
+      justifyContent: "space-between",
       paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.xxl * 2,
-      gap: spacing.lg,
+      paddingBottom: spacing.lg,
     },
-    heroCard: {
-      gap: spacing.md,
+    heroSection: {
       alignItems: "center",
+      gap: spacing.md,
+      paddingTop: spacing.lg,
     },
     heroIconWrap: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
+      width: 80,
+      height: 80,
+      borderRadius: 40,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: colors.primaryLight,
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
-    packageList: {
-      gap: spacing.md,
+    heroTextGroup: {
+      gap: spacing.xs,
+      alignItems: "center",
     },
-    packageCard: {
-      borderRadius: radius.glass,
-      borderWidth: 1,
-      borderColor: colors.glassStroke,
-      backgroundColor: colors.glassFill,
-      padding: spacing.lg,
+    benefitsCard: {
       gap: spacing.sm,
-    },
-    packageHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      gap: spacing.md,
-    },
-    badge: {
-      alignSelf: "flex-start",
-      paddingHorizontal: spacing.sm + 2,
-      paddingVertical: spacing.xs + 2,
-      borderRadius: radius.pills,
-      borderWidth: 1,
-      borderColor: colors.glassStroke,
-      backgroundColor: colors.surfaceElevated,
-      marginBottom: spacing.xs,
     },
     benefitRow: {
       flexDirection: "row",
       gap: spacing.sm,
-      alignItems: "flex-start",
+      alignItems: "center",
     },
-    footer: {
+    ctaSection: {
       gap: spacing.md,
     },
     finePrint: {
       textAlign: "center",
-    },
-    loadingWrap: {
-      paddingVertical: spacing.xxl,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: spacing.md,
     },
     successOverlay: {
       position: "absolute",
@@ -298,12 +201,6 @@ export default function PaywallScreen() {
       )}
 
       <View style={styles.header}>
-        <View>
-          <AppText variant="eyebrow" color="secondary">
-            Premium
-          </AppText>
-          <AppText variant="screenTitle">GentleWait Pro</AppText>
-        </View>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
@@ -313,123 +210,37 @@ export default function PaywallScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-      >
-        <GlassCard glowColor="primary">
-          <View style={styles.heroCard}>
-            <View style={styles.heroIconWrap}>
-              <Ionicons
-                name="sparkles-outline"
-                size={30}
-                color={colors.primary}
-              />
-            </View>
-            <AppText variant="title" align="center">
+      <View style={styles.body}>
+        <View style={styles.heroSection}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons
+              name="sparkles-outline"
+              size={36}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.heroTextGroup}>
+            <AppText variant="screenTitle" align="center">
               Unlock GentleWait Pro
             </AppText>
-            <AppText variant="bodyLarge" color="secondary" align="center">
-              Choose the plan that fits your rhythm. Purchases, renewals, and
-              restores stay managed by the App Store or Google Play.
+            <AppText variant="body" color="secondary" align="center">
+              Get the full experience with premium features
             </AppText>
           </View>
+        </View>
+
+        <GlassCard intensity="light" style={styles.benefitsCard}>
+          {BENEFITS.map((b) => (
+            <View key={b.text} style={styles.benefitRow}>
+              <Ionicons name={b.icon} size={20} color={colors.primary} />
+              <AppText variant="body">{b.text}</AppText>
+            </View>
+          ))}
         </GlassCard>
 
-        <GlassCard intensity="light">
-          <View style={styles.packageList}>
-            <View style={styles.benefitRow}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={18}
-                color={colors.secondary}
-              />
-              <AppText variant="body" color="secondary">
-                Unlimited protected apps
-              </AppText>
-            </View>
-            <View style={styles.benefitRow}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={18}
-                color={colors.secondary}
-              />
-              <AppText variant="body" color="secondary">
-                AI Companion and guided reflection
-              </AppText>
-            </View>
-            <View style={styles.benefitRow}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={18}
-                color={colors.secondary}
-              />
-              <AppText variant="body" color="secondary">
-                Future premium insights and advanced personalization
-              </AppText>
-            </View>
-          </View>
-        </GlassCard>
-
-        {isLoading ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <AppText variant="body" color="secondary">
-              Loading RevenueCat offering…
-            </AppText>
-          </View>
-        ) : packages.length > 0 ? (
-          <View style={styles.packageList}>
-            {packages.map((pkg) => (
-              <View key={pkg.identifier} style={styles.packageCard}>
-                <View style={styles.packageHeader}>
-                  <View style={{ flex: 1 }}>
-                    {getPackageKind(pkg) === "annual" && (
-                      <View style={styles.badge}>
-                        <AppText variant="eyebrow" color="primary">
-                          Recommended
-                        </AppText>
-                      </View>
-                    )}
-                    <AppText variant="heading">
-                      {getPackageDisplayTitle(pkg)}
-                    </AppText>
-                    <AppText variant="body" color="secondary">
-                      {pkg.description}
-                    </AppText>
-                  </View>
-                  <AppText variant="heading" color="primary">
-                    {pkg.priceString}
-                  </AppText>
-                </View>
-                {pkg.introOffer && (
-                  <AppText variant="caption" color="secondary">
-                    Intro offer: {pkg.introOffer}
-                  </AppText>
-                )}
-              </View>
-            ))}
-          </View>
-        ) : (
-          <GlassCard intensity="light">
-            <View style={styles.loadingWrap}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={24}
-                color={colors.accent}
-              />
-              <AppText variant="body" color="secondary" align="center">
-                No current offering is available yet. Finish configuring your
-                RevenueCat offering and dashboard paywall first.
-              </AppText>
-            </View>
-          </GlassCard>
-        )}
-
-        <View style={styles.footer}>
+        <View style={styles.ctaSection}>
           <Button
-            label={settings.premium ? "View plans" : "See plans"}
+            label={isProcessing ? "Opening..." : "See Plans & Subscribe"}
             onPress={handleOpenPaywall}
             disabled={isProcessing}
             variant="primary"
@@ -441,11 +252,11 @@ export default function PaywallScreen() {
             variant="secondary"
           />
           <AppText variant="caption" color="tertiary" style={styles.finePrint}>
-            Subscriptions renew automatically unless cancelled in your App Store
-            or Google Play account settings.
+            Subscriptions renew automatically unless cancelled in your store
+            account settings.
           </AppText>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
