@@ -1,0 +1,16 @@
+diff --git a/node_modules/expo-notifications/ios/EXNotifications/Notifications/Handler/SingleNotificationHandlerTask.swift b/node_modules/expo-notifications/ios/EXNotifications/Notifications/Handler/SingleNotificationHandlerTask.swift
+index fb73640..115e5c0 100644
+--- a/node_modules/expo-notifications/ios/EXNotifications/Notifications/Handler/SingleNotificationHandlerTask.swift
++++ b/node_modules/expo-notifications/ios/EXNotifications/Notifications/Handler/SingleNotificationHandlerTask.swift
+@@ -37,6 +37,11 @@ public class SingleNotificationHandlerTask {
+   @objc
+   public func timeout() {
+     delegate.handleNotificationTimeout(notification)
++    // When JS doesn't respond in time (e.g. app suspended), show the notification
++    // with default presentation options instead of silently dropping it
++    if let completionHandler = completionHandler {
++      completionHandler([.banner, .sound, .list])
++    }
+     finish()
+   }
+ 

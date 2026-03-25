@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
-index 44f48b6..e33fe8b 100644
+index 44f48b6..6248bf6 100644
 --- a/node_modules/react-native-device-activity/ios/Shared.swift
 +++ b/node_modules/react-native-device-activity/ios/Shared.swift
 @@ -193,8 +193,9 @@ func executeGenericAction(
@@ -44,6 +44,45 @@ index 44f48b6..e33fe8b 100644
    }
  
    if #available(iOS 15.0, *) {
+@@ -327,19 +342,32 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+     }
+   }
+ 
+-  if let threadIdentifier = contents["threadIdentifier"] as? String {
+-    content.threadIdentifier = threadIdentifier
+-  }
++  // Always use a unique threadIdentifier to prevent iOS thread-based coalescing
++  content.threadIdentifier = UUID().uuidString
+ 
+   if let launchImageName = contents["launchImageName"] as? String {
+     content.launchImageName = launchImageName
+   }
+ 
+-  let identifier = contents["identifier"] as? String ?? UUID().uuidString
++  // Defeat iOS content-based deduplication by making each notification body unique.
++  // iOS suppresses banners for notifications with identical title+body, even with different identifiers.
++  let epochMs = Int(Date().timeIntervalSince1970 * 1000)
++  if !content.body.isEmpty {
++    content.body = content.body + " \u{200B}\(epochMs)"
++  }
++
++  let identifier = UUID().uuidString
++
++  // Clear all previous notifications to ensure a clean slate
++  let center = UNUserNotificationCenter.current()
++  center.removeAllDeliveredNotifications()
++  center.removeAllPendingNotificationRequests()
+ 
+-  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
++  // Use a 1-second trigger instead of immediate delivery
++  let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
++  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+ 
+-  UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
++  center.add(request, withCompletionHandler: nil)
+ }
+ 
+ // dataRequest which sends request to given URL and convert to Decodable Object
 diff --git a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift b/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
 index 48d628e..63fca8e 100644
 --- a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
