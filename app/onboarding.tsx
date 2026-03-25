@@ -39,7 +39,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Fragment, useEffect, useState } from "react";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -64,12 +65,10 @@ import ReanimatedAnimated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const mainLogo = require("@/assets/images/main_logo.png");
+const lumiMascotVideo = require("@/assets/lumi/video/lumi-mascot.mp4");
 
 const PROGRAM_PREVIEW_STEPS = [
   {
@@ -190,7 +189,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const { width, height: screenHeight } = useWindowDimensions();
   const isNarrowPreviewLayout = width < 420;
   const isCompactPreviewViewport = width < 420 || screenHeight < 880;
@@ -229,7 +227,9 @@ export default function OnboardingScreen() {
     string | null
   >(null);
   const updateSettings = useAppStore((state) => state.updateSettings);
-  const setNotificationsDenied = useAppStore((state) => state.setNotificationsDenied);
+  const setNotificationsDenied = useAppStore(
+    (state) => state.setNotificationsDenied,
+  );
   const currentSettings = useAppStore((state) => state.settings);
   const [notificationsGranted, setNotificationsGranted] = useState(false);
   const [stepKey, setStepKey] = useState(0);
@@ -386,10 +386,12 @@ export default function OnboardingScreen() {
 
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        Notifications.getPermissionsAsync().then((result) => {
-          setNotificationsGranted(result.granted);
-          setNotificationsDenied(!result.granted);
-        }).catch(() => {});
+        Notifications.getPermissionsAsync()
+          .then((result) => {
+            setNotificationsGranted(result.granted);
+            setNotificationsDenied(!result.granted);
+          })
+          .catch(() => {});
       }
     });
 
@@ -764,6 +766,38 @@ export default function OnboardingScreen() {
     opacity: toastOpacity.value,
     transform: [{ translateY: toastTranslateY.value }],
   }));
+
+  const lumiLoopResetRef = useRef(false);
+  const lumiPreviewPlayer = useVideoPlayer(lumiMascotVideo, (player) => {
+    player.loop = false;
+    player.muted = true;
+    player.timeUpdateEventInterval = 0.05;
+    player.play();
+  });
+
+  useEffect(() => {
+    const subscription = lumiPreviewPlayer.addListener(
+      "timeUpdate",
+      (event) => {
+        if (event.currentTime < 0.25) {
+          lumiLoopResetRef.current = false;
+          return;
+        }
+
+        if (
+          lumiPreviewPlayer.duration > 0 &&
+          event.currentTime >= lumiPreviewPlayer.duration - 0.08 &&
+          !lumiLoopResetRef.current
+        ) {
+          lumiLoopResetRef.current = true;
+          lumiPreviewPlayer.currentTime = 0.02;
+          lumiPreviewPlayer.play();
+        }
+      },
+    );
+
+    return () => subscription.remove();
+  }, [lumiPreviewPlayer]);
 
   const styles = StyleSheet.create({
     container: {
@@ -1811,11 +1845,9 @@ export default function OnboardingScreen() {
       color: colors.textMuted,
       textAlign: "center",
       lineHeight: 18,
-      marginTop: spacing.md,
     },
     previewIntro: {
       alignItems: "center",
-      marginBottom: spacing.md,
       gap: spacing.sm,
     },
     previewBadge: {
@@ -1836,53 +1868,82 @@ export default function OnboardingScreen() {
       letterSpacing: 0.8,
       textTransform: "uppercase",
     },
-    previewHeroCard: {
-      marginVertical: spacing.md,
-      overflow: "hidden",
+    previewIntroText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+      maxWidth: 340,
     },
-    previewHeroGradient: {
+    previewShowcaseCard: {
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+      overflow: "hidden",
+      gap: spacing.lg,
+    },
+    previewShowcaseGlow: {
       ...StyleSheet.absoluteFillObject,
       opacity: 0.9,
     },
-    previewHeroTop: {
-      alignItems: "center",
-      gap: spacing.xs,
-      marginBottom: spacing.xs,
-    },
-    previewHeroTopCompact: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    previewSpotlight: {
-      width: isCompactPreviewViewport ? 72 : isNarrowPreviewLayout ? 96 : 120,
-      height: isCompactPreviewViewport ? 72 : isNarrowPreviewLayout ? 96 : 120,
+    previewVideoShell: {
+      position: "relative",
       alignItems: "center",
       justifyContent: "center",
     },
-    previewSpotlightRing: {
+    previewVideoFrame: {
+      width: "100%",
+      borderRadius: 28,
+      padding: isCompactPreviewViewport ? 10 : 12,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.18)",
+      shadowColor: colors.primary,
+      shadowOpacity: 0.2,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 12 },
+    },
+    previewVideoInner: {
+      width: "100%",
+      aspectRatio: isCompactPreviewViewport ? 0.82 : 0.9,
+      borderRadius: 20,
+      overflow: "hidden",
+      backgroundColor: "rgba(13, 19, 26, 0.78)",
+    },
+    previewVideo: {
       width: "100%",
       height: "100%",
-      borderRadius: 999,
-      padding: isCompactPreviewViewport ? 10 : isNarrowPreviewLayout ? 12 : 14,
-      shadowColor: colors.primary,
-      shadowOpacity: 0.22,
-      shadowRadius: isCompactPreviewViewport ? 18 : 26,
-      shadowOffset: { width: 0, height: isCompactPreviewViewport ? 6 : 10 },
     },
-    previewSpotlightCore: {
-      flex: 1,
-      borderRadius: 999,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(245, 247, 251, 0.88)",
-    },
-    previewHeroCopy: {
+    previewFloatingChip: {
+      position: "absolute",
+      right: isCompactPreviewViewport ? 16 : 20,
+      bottom: isCompactPreviewViewport ? 16 : 20,
+      flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.sm + 2,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(12, 22, 28, 0.74)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.14)",
     },
-    previewHeroCopyCompact: {
-      flex: 1,
-      alignItems: "flex-start",
+    previewFloatingChipText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.small.fontSize,
+      color: colors.text,
+    },
+    previewNarrativeBlock: {
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.xs,
+    },
+    previewNarrativeEyebrow: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.small.fontSize,
+      color: colors.secondary,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      marginTop: spacing.md,
     },
     previewHeroTitle: {
       fontFamily: fonts.semiBold,
@@ -1898,8 +1959,8 @@ export default function OnboardingScreen() {
           : 36,
       letterSpacing: -0.4,
       color: colors.text,
-      textAlign: isCompactPreviewViewport ? "left" : "center",
-      maxWidth: isCompactPreviewViewport ? undefined : 320,
+      textAlign: "center",
+      maxWidth: 340,
     },
     previewHeroDescription: {
       fontFamily: fonts.regular,
@@ -1908,69 +1969,41 @@ export default function OnboardingScreen() {
         : typography.body.fontSize,
       lineHeight: isCompactPreviewViewport ? 20 : typography.body.lineHeight,
       color: colors.textSecondary,
-      textAlign: isCompactPreviewViewport ? "left" : "center",
-      maxWidth: isCompactPreviewViewport ? undefined : 320,
-    },
-    previewMetricsRow: {
-      flexDirection: "row",
-      alignItems: "stretch",
-      justifyContent: "center",
-      gap: spacing.sm,
-      marginBottom: spacing.sm,
-      paddingVertical: 4,
-      paddingHorizontal: isNarrowPreviewLayout ? spacing.sm : spacing.md,
-      borderRadius: radius.card,
-      backgroundColor: "rgba(255, 255, 255, 0.04)",
-      borderWidth: 1,
-      borderColor: colors.glassStroke,
-    },
-    previewMetric: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 2,
-      minHeight: isCompactPreviewViewport ? 36 : 48,
-    },
-    previewMetricValue: {
-      fontFamily: fonts.bold,
-      fontSize: isCompactPreviewViewport ? 22 : 26,
-      lineHeight: isCompactPreviewViewport ? 24 : 26,
-      letterSpacing: -1.2,
-      color: colors.text,
-    },
-    previewMetricLabel: {
-      fontFamily: fonts.medium,
-      fontSize: typography.caption.fontSize,
-      color: colors.textSecondary,
       textAlign: "center",
-    },
-    previewMetricDivider: {
-      width: 1,
-      backgroundColor: colors.glassStroke,
-      opacity: 0.8,
+      maxWidth: 330,
     },
     programDays: {
-      flexDirection: "column",
-      gap: 4,
+      flexDirection: isNarrowPreviewLayout ? "column" : "row",
+      alignItems: isNarrowPreviewLayout ? "stretch" : "center",
+      justifyContent: "center",
+      gap: spacing.sm,
     },
     programDay: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: spacing.xs,
-      paddingVertical: 8,
+      flex: 1,
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
       paddingHorizontal: isCompactPreviewViewport
         ? spacing.sm
         : isNarrowPreviewLayout
           ? spacing.sm + 2
           : spacing.md,
-      backgroundColor: "rgba(255, 255, 255, 0.045)",
-      borderRadius: radius.card,
+      backgroundColor: "rgba(255, 255, 255, 0.06)",
+      borderRadius: 24,
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
+    programDayHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
     programDayIndex: {
-      width: isCompactPreviewViewport ? 24 : 28,
-      paddingTop: 1,
+      minWidth: isCompactPreviewViewport ? 38 : 42,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(255,255,255,0.08)",
       alignItems: "center",
       flexShrink: 0,
     },
@@ -1980,30 +2013,13 @@ export default function OnboardingScreen() {
       color: colors.textMuted,
       letterSpacing: 1,
     },
-    programDayIconWrap: {
-      width: isCompactPreviewViewport ? 32 : isNarrowPreviewLayout ? 36 : 40,
-      height: isCompactPreviewViewport ? 32 : isNarrowPreviewLayout ? 36 : 40,
-      borderRadius: isCompactPreviewViewport
-        ? 12
-        : isNarrowPreviewLayout
-          ? 14
-          : 16,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
-      borderWidth: 1,
-      borderColor: colors.glassStroke,
-      flexShrink: 0,
-    },
     programDayContent: {
-      flex: 1,
-      gap: 2,
-      paddingTop: 1,
+      gap: spacing.xs,
     },
     programDayLabel: {
       fontFamily: fonts.semiBold,
-      fontSize: typography.caption.fontSize,
-      lineHeight: typography.caption.lineHeight,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
       color: colors.text,
     },
     programDayDescription: {
@@ -2016,15 +2032,8 @@ export default function OnboardingScreen() {
       flexDirection: isNarrowPreviewLayout ? "column" : "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: spacing.xs,
-      opacity: 0.82,
-      paddingVertical: isNarrowPreviewLayout ? 0 : 2,
-      paddingHorizontal: isNarrowPreviewLayout ? 0 : spacing.lg,
-    },
-    programConnectorLine: {
-      width: isNarrowPreviewLayout ? 1 : 44,
-      height: isNarrowPreviewLayout ? (isCompactPreviewViewport ? 10 : 14) : 1,
-      backgroundColor: colors.glassStroke,
+      opacity: 0.72,
+      paddingVertical: isNarrowPreviewLayout ? 0 : spacing.md,
     },
     textInput: {
       marginVertical: spacing.lg,
@@ -2289,91 +2298,80 @@ export default function OnboardingScreen() {
                 </View>
 
                 <Text style={styles.title}>
-                  Breathe. Reflect.{" "}
-                  <Text style={styles.titleAccent}>Grow.</Text>
+                  Meet <Text style={styles.titleAccent}>Lumi.</Text>
+                </Text>
+                <Text style={styles.previewIntroText}>
+                  A gentle pause before the scroll.
                 </Text>
               </View>
 
-              <GlassCard glowColor="primary" style={styles.previewHeroCard}>
+              <GlassCard glowColor="primary" style={styles.previewShowcaseCard}>
                 <LinearGradient
                   colors={[
-                    colors.primaryLight,
-                    "rgba(126, 230, 198, 0.14)",
+                    "rgba(126, 230, 198, 0.32)",
+                    "rgba(82, 192, 255, 0.14)",
                     "transparent",
                   ]}
-                  start={{ x: 0, y: 0 }}
+                  start={{ x: 0.1, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.previewHeroGradient}
+                  style={styles.previewShowcaseGlow}
                 />
 
-                <View
-                  style={[
-                    styles.previewHeroTop,
-                    isCompactPreviewViewport && styles.previewHeroTopCompact,
-                  ]}
-                >
-                  <View style={styles.previewSpotlight}>
-                    <LinearGradient
-                      colors={[
-                        colors.gradientAccent1,
-                        colors.gradientAccent2,
-                        colors.gradientAccent3,
-                      ]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.previewSpotlightRing}
-                    >
-                      <View style={styles.previewSpotlightCore}>
-                        <Ionicons
-                          name="leaf-outline"
-                          size={isCompactPreviewViewport ? 24 : 32}
-                          color={colors.bg}
-                        />
-                      </View>
-                    </LinearGradient>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.previewHeroCopy,
-                      isCompactPreviewViewport && styles.previewHeroCopyCompact,
+                <View style={styles.previewVideoShell}>
+                  <LinearGradient
+                    colors={[
+                      "rgba(255,255,255,0.2)",
+                      "rgba(255,255,255,0.02)",
+                      "rgba(255,255,255,0.12)",
                     ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.previewVideoFrame}
                   >
-                    <Text style={styles.previewHeroTitle}>
-                      Every interruption becomes a gentle reset
-                    </Text>
-                    <Text style={styles.previewHeroDescription}>
-                      Slow the urge, surface intent, and make the next choice
-                      feel lighter.
+                    <View style={styles.previewVideoInner}>
+                      <VideoView
+                        player={lumiPreviewPlayer}
+                        style={styles.previewVideo}
+                        contentFit="cover"
+                        nativeControls={false}
+                        allowsFullscreen={false}
+                        allowsPictureInPicture={false}
+                      />
+                    </View>
+                  </LinearGradient>
+
+                  <View style={styles.previewFloatingChip}>
+                    <Ionicons
+                      name="sparkles"
+                      size={14}
+                      color={colors.secondary}
+                    />
+                    <Text style={styles.previewFloatingChipText}>
+                      Lumi greets the urge
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.previewMetricsRow}>
-                  <View style={styles.previewMetric}>
-                    <Text style={styles.previewMetricValue}>3</Text>
-                    <Text style={styles.previewMetricLabel}>small rituals</Text>
-                  </View>
-                  <View style={styles.previewMetricDivider} />
-                  <View style={styles.previewMetric}>
-                    <Text style={styles.previewMetricValue}>1</Text>
-                    <Text style={styles.previewMetricLabel}>
-                      calmer response
-                    </Text>
-                  </View>
+                <View style={styles.previewNarrativeBlock}>
+                  <Text style={styles.previewNarrativeEyebrow}>
+                    Softer interruption
+                  </Text>
+                  <Text style={styles.previewHeroTitle}>Slow the reflex.</Text>
+                  <Text style={styles.previewHeroDescription}>
+                    Lumi makes the pause feel calm, not harsh.
+                  </Text>
                 </View>
 
                 <View style={styles.programDays}>
                   {PROGRAM_PREVIEW_STEPS.map((item, index) => (
                     <Fragment key={item.label}>
                       <View style={styles.programDay}>
-                        <View style={styles.programDayIndex}>
-                          <Text style={styles.programDayIndexText}>
-                            0{index + 1}
-                          </Text>
-                        </View>
-
-                        <View style={styles.programDayIconWrap}>
+                        <View style={styles.programDayHeader}>
+                          <View style={styles.programDayIndex}>
+                            <Text style={styles.programDayIndexText}>
+                              0{index + 1}
+                            </Text>
+                          </View>
                           <Ionicons
                             name={item.icon}
                             size={isCompactPreviewViewport ? 16 : 18}
@@ -2382,7 +2380,6 @@ export default function OnboardingScreen() {
                             }
                           />
                         </View>
-
                         <View style={styles.programDayContent}>
                           <Text style={styles.programDayLabel}>
                             {item.label}
@@ -2395,17 +2392,15 @@ export default function OnboardingScreen() {
 
                       {index < PROGRAM_PREVIEW_STEPS.length - 1 && (
                         <View style={styles.programConnector}>
-                          <View style={styles.programConnectorLine} />
                           <Ionicons
                             name={
                               isNarrowPreviewLayout
                                 ? "arrow-down"
                                 : "arrow-forward"
                             }
-                            size={16}
+                            size={14}
                             color={colors.textMuted}
                           />
-                          <View style={styles.programConnectorLine} />
                         </View>
                       )}
                     </Fragment>
@@ -3601,7 +3596,8 @@ export default function OnboardingScreen() {
                 <Button
                   label="Enable Notifications"
                   onPress={async () => {
-                    const { status } = await Notifications.getPermissionsAsync();
+                    const { status } =
+                      await Notifications.getPermissionsAsync();
                     if (status === "denied") {
                       // iOS won't show the dialog again after denial — open Settings
                       Linking.openSettings();
@@ -3633,7 +3629,10 @@ export default function OnboardingScreen() {
                     color={colors.secondary}
                   />
                   <Text
-                    style={[styles.permissionStatusLabel, { color: colors.secondary }]}
+                    style={[
+                      styles.permissionStatusLabel,
+                      { color: colors.secondary },
+                    ]}
                   >
                     Notifications are on
                   </Text>
