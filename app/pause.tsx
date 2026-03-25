@@ -208,6 +208,7 @@ export default function PauseScreen() {
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
     },
     contentWrapper: {
       flex: 1,
@@ -400,49 +401,7 @@ export default function PauseScreen() {
               >
                 <Text style={styles.timerText}>{timer}</Text>
 
-                <View style={styles.circleContainer}>
-                  {/* Animated glow */}
-                  <Animated.View style={[styles.glowOuter, glowAnimatedStyle]}>
-                    <LinearGradient
-                      colors={[
-                        "rgba(0, 212, 255, 0.4)",
-                        "rgba(168, 85, 247, 0.2)",
-                        "transparent",
-                      ]}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: (CIRCLE_SIZE + 60) / 2,
-                      }}
-                      start={{ x: 0.5, y: 0.5 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  </Animated.View>
-
-                  {/* Glass breathing circle */}
-                  <Animated.View
-                    style={[styles.glassCircle, circleAnimatedStyle]}
-                  >
-                    <BlurView
-                      intensity={40}
-                      style={styles.circleBlur}
-                      tint="dark"
-                    >
-                      <LinearGradient
-                        colors={[
-                          "rgba(0, 212, 255, 0.15)",
-                          "rgba(168, 85, 247, 0.1)",
-                          "rgba(255, 107, 157, 0.05)",
-                        ]}
-                        style={styles.circleGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <Text style={styles.breathText}>{breathText}</Text>
-                      </LinearGradient>
-                    </BlurView>
-                  </Animated.View>
-                </View>
+                <Text style={styles.breathText}>{breathText}</Text>
 
                 <Text style={styles.breathMessage}>
                   You paused. That's already a win.

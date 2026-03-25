@@ -37,6 +37,7 @@ import { fonts, radius, spacing, typography } from "@/src/theme/theme";
 import { useFadeInAnimation } from "@/src/utils/animations";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Fragment, useEffect, useState } from "react";
 import {
@@ -107,6 +108,7 @@ type OnboardingStep =
   | "permissions"
   | "duration"
   | "cooldown"
+  | "notifications"
   | "done";
 
 // Age ranges
@@ -165,6 +167,7 @@ const getStepOrder = (
         : (["select-apps", "permissions"] as const)),
       "duration",
       "cooldown",
+      ...(isIOS ? (["notifications"] as const) : []),
       "done",
     ];
   }
@@ -177,6 +180,7 @@ const getStepOrder = (
       : (["select-apps", "permissions"] as const)),
     "duration",
     "cooldown",
+    ...(isIOS ? (["notifications"] as const) : []),
     "done",
   ];
 };
@@ -224,7 +228,9 @@ export default function OnboardingScreen() {
     string | null
   >(null);
   const updateSettings = useAppStore((state) => state.updateSettings);
+  const setNotificationsDenied = useAppStore((state) => state.setNotificationsDenied);
   const currentSettings = useAppStore((state) => state.settings);
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
   const [stepKey, setStepKey] = useState(0);
 
   // Onboarding state - initialize from current settings if in complete-profile mode
@@ -3539,6 +3545,78 @@ export default function OnboardingScreen() {
             </>
           )}
 
+          {step === "notifications" && (
+            <>
+              <View style={{ alignItems: "center", marginBottom: spacing.md }}>
+                <View
+                  style={{
+                    width: 68,
+                    height: 68,
+                    borderRadius: 34,
+                    backgroundColor: colors.primaryLight,
+                    borderWidth: 1,
+                    borderColor: colors.glassStroke,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={30}
+                    color={colors.primary}
+                  />
+                </View>
+              </View>
+              <Text style={styles.title}>
+                {notificationsGranted
+                  ? "Notifications enabled"
+                  : "Stay connected to your pauses"}
+              </Text>
+              <Text style={styles.description}>
+                {notificationsGranted
+                  ? "You'll receive a gentle notification each time you choose calm. Tap it to start a guided breathing exercise."
+                  : "When you choose calm over a blocked app, GentleWait sends a notification to guide you to a breathing exercise. Without notifications, the shield closes but nothing happens."}
+              </Text>
+
+              {!notificationsGranted && (
+                <Button
+                  label="Enable Notifications"
+                  onPress={async () => {
+                    const result = await Notifications.requestPermissionsAsync({
+                      ios: { allowAlert: true, allowSound: true },
+                    });
+                    setNotificationsGranted(result.granted);
+                    setNotificationsDenied(!result.granted);
+                  }}
+                  variant="primary"
+                  style={{ marginTop: spacing.md }}
+                />
+              )}
+
+              {notificationsGranted && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                    marginTop: spacing.md,
+                  }}
+                >
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={colors.secondary}
+                  />
+                  <Text
+                    style={[styles.permissionStatusLabel, { color: colors.secondary }]}
+                  >
+                    Notifications are on
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
           {step === "done" && (
             <>
               <Text style={styles.title}>You&apos;re ready!</Text>
@@ -3703,7 +3781,9 @@ export default function OnboardingScreen() {
                       ? "Almost There"
                       : skipToStep === "select-apps" && step === "select-apps"
                         ? "Save"
-                        : "Continue"
+                        : step === "notifications" && !notificationsGranted
+                          ? "Skip for now"
+                          : "Continue"
           }
           onPress={handleNext}
           variant="primary"

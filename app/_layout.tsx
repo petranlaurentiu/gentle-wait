@@ -37,6 +37,17 @@ import { useAppStore } from "@/src/services/storage";
 import { initializeDatabase } from "@/src/services/storage/sqlite";
 import { ThemeProvider } from "@/src/theme/ThemeProvider";
 
+// Show notification banners even when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
@@ -79,10 +90,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS !== "ios") return;
 
-    // Request notification permission for shield notifications
-    Notifications.requestPermissionsAsync({
-      ios: { allowAlert: true, allowSound: true },
-    }).then((result) => {
+    // Check notification permission status (actual request happens in onboarding)
+    Notifications.getPermissionsAsync().then((result) => {
       setNotificationsDenied(!result.granted);
     }).catch(() => {});
 
