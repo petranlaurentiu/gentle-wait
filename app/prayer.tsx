@@ -6,6 +6,7 @@ import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
 import {
+  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
   startIOSCooldownForSelection,
@@ -55,7 +56,7 @@ export default function PrayerScreen() {
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
   const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || "";
+    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
 
   const [startTime] = useState(Date.now());
   const [phase, setPhase] = useState<PrayerPhase>("prayer");
@@ -113,6 +114,16 @@ export default function PrayerScreen() {
     transform: [{ scale: glowScale.value }],
   }));
 
+  const navigateHome = () => {
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
+
+    setTimeout(() => {
+      router.replace("/home");
+    }, 0);
+  };
+
   const handleComplete = async () => {
     try {
       await insertEvent({
@@ -129,11 +140,10 @@ export default function PrayerScreen() {
         await startIOSCooldownForSelection(
           familyActivitySelectionId,
           settings.cooldownMinutes || 15,
-        );
+        ).catch((e) => console.warn("[Prayer] Cooldown error:", e));
       }
 
-      // Navigate directly to home using replace to avoid navigation stack issues
-      router.replace("/home");
+      navigateHome();
 
       // Launch the app after a brief delay (pending interception already cleared)
       if (Platform.OS === "android" && appPackage) {
@@ -153,7 +163,7 @@ export default function PrayerScreen() {
       }
     } catch (error) {
       console.error("[Prayer] Error completing prayer:", error);
-      router.replace("/home");
+      navigateHome();
     }
   };
 

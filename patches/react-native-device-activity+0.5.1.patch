@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
-index 44f48b6..6248bf6 100644
+index 44f48b6..c569820 100644
 --- a/node_modules/react-native-device-activity/ios/Shared.swift
 +++ b/node_modules/react-native-device-activity/ios/Shared.swift
 @@ -193,8 +193,9 @@ func executeGenericAction(
@@ -44,7 +44,7 @@ index 44f48b6..6248bf6 100644
    }
  
    if #available(iOS 15.0, *) {
-@@ -327,19 +342,32 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+@@ -327,19 +342,25 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
      }
    }
  
