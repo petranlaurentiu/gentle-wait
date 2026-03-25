@@ -63,6 +63,7 @@ export default function PauseScreen() {
   const appLabel = (params.appLabel as string) || "App";
   const familyActivitySelectionId =
     (params.familyActivitySelectionId as string) || "";
+  const fromShield = params.source === "shield";
 
   // Breathing animation
   const breathProgress = useSharedValue(0);
@@ -351,6 +352,19 @@ export default function PauseScreen() {
       backgroundColor: "rgba(255, 255, 255, 0.1)",
       marginVertical: spacing.sm,
     },
+    shieldBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    shieldBannerText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.primary,
+    },
   });
 
   const reasonChoices: { label: string; value: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -370,6 +384,15 @@ export default function PauseScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
+          {fromShield && phase === "breathing" && (
+            <View style={styles.shieldBanner}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+              <Text style={styles.shieldBannerText}>
+                You chose calm over {appLabel}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.contentWrapper}>
             {phase === "breathing" && (
               <Animated.View
