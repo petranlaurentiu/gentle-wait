@@ -53,6 +53,7 @@ export default function RootLayout() {
     (state) => state.setCurrentInterceptionEvent
   );
   const updateSettings = useAppStore((state) => state.updateSettings);
+  const setNotificationsDenied = useAppStore((state) => state.setNotificationsDenied);
   const router = useRouter();
 
   // Load custom fonts
@@ -81,6 +82,8 @@ export default function RootLayout() {
     // Request notification permission for shield notifications
     Notifications.requestPermissionsAsync({
       ios: { allowAlert: true, allowSound: true },
+    }).then((result) => {
+      setNotificationsDenied(!result.granted);
     }).catch(() => {});
 
     notificationResponseRef.current =
@@ -182,6 +185,12 @@ export default function RootLayout() {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         checkPendingInterception();
+        // Re-check notification permission (user may have enabled in Settings)
+        if (Platform.OS === "ios") {
+          Notifications.getPermissionsAsync().then((result) => {
+            setNotificationsDenied(!result.granted);
+          }).catch(() => {});
+        }
       }
     });
 

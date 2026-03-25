@@ -175,7 +175,7 @@ function buildIOSShieldConfig(iconAppGroupRelativePath: string | null) {
     title: "A gentle pause",
     titleColor: { red: 245, green: 247, blue: 251, alpha: 1 },
     subtitle:
-      "You opened this without thinking — and noticing that is already a win.",
+      "You opened this without thinking — and noticing that is already a win.\nTap below, then open GentleWait for a guided pause.",
     subtitleColor: { red: 226, green: 232, blue: 240, alpha: 0.78 },
     iconAppGroupRelativePath: iconAppGroupRelativePath ?? undefined,
     iconSystemName: iconAppGroupRelativePath ? undefined : "leaf.circle.fill",

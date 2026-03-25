@@ -43,6 +43,8 @@ interface AppStore {
   billingPackages: BillingPackage[];
   setBillingAvailable: (available: boolean) => void;
   setBillingPackages: (packages: BillingPackage[]) => void;
+  notificationsDenied: boolean;
+  setNotificationsDenied: (denied: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -155,5 +157,10 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setBillingPackages: (packages) => {
     set({ billingPackages: packages });
+  },
+
+  notificationsDenied: false,
+  setNotificationsDenied: (denied) => {
+    set({ notificationsDenied: denied });
   },
 }));

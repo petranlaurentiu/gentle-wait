@@ -2,7 +2,7 @@
  * Home screen - Main dashboard.
  */
 import React, { useState } from "react";
-import { Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Linking, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const settings = useAppStore((state) => state.settings);
+  const notificationsDenied = useAppStore((state) => state.notificationsDenied);
   const [todayPauses, setTodayPauses] = useState(0);
   const [weeklyStats, setWeeklyStats] = useState({
     pausesTotal: 0,
@@ -238,6 +239,19 @@ export default function HomeScreen() {
       paddingTop: spacing.sm,
       gap: spacing.sm,
     },
+    notifBanner: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.glass,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      backgroundColor: colors.glassFill,
+    },
+    notifBannerText: {
+      flex: 1,
+    },
   });
 
   return (
@@ -263,6 +277,22 @@ export default function HomeScreen() {
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}
         >
+        {Platform.OS === "ios" && notificationsDenied && settings.selectedApps.length > 0 && (
+          <TouchableOpacity
+            style={styles.notifBanner}
+            activeOpacity={0.8}
+            onPress={() => Linking.openSettings()}
+          >
+            <Ionicons name="notifications-off-outline" size={22} color={colors.accent} />
+            <View style={styles.notifBannerText}>
+              <AppText variant="caption" color="accent">
+                Notifications are needed to guide you when you pause an app. Tap to enable.
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+          </TouchableOpacity>
+        )}
+
         <Animated.View style={heroAnimation}>
           <GlassCard glowColor="primary" style={styles.heroCard}>
             <View style={styles.heroTopRow}>

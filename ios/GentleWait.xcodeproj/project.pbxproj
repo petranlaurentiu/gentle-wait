@@ -9,10 +9,10 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4FF41ADFC3DEE15080BBE8AE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A9476B5681E1EAE47B35B6F /* PrivacyInfo.xcprivacy */; };
+		80F90F544F20D2B062ACED60 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E0F3DF8454C65C47AD4C8EA3 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		BF4F643FF5C7DAE2362F4E75 /* libPods-GentleWait.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 93ADCA36FDF4F1F15E67C7C4 /* libPods-GentleWait.a */; };
-		EAB2A43BECA3075CB220E5D7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 085997D4CE846BEE21A57624 /* ExpoModulesProvider.swift */; };
+		CB122EBD8E45042B85E8B788 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279C6CA6619D35FA6A2AD760 /* ExpoModulesProvider.swift */; };
+		D94150008159AC280952BBBC /* libPods-GentleWait.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3017DD2790665440CD0509AA /* libPods-GentleWait.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		XX103037AC5A7B821341EBXX /* ShieldConfiguration.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XXEC8F4A23169846583657XX /* ShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XX44FC18D28196FBCB6075XX /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = XXB6D82409997898620841XX /* ManagedSettingsUI.framework */; };
@@ -62,23 +62,23 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		085997D4CE846BEE21A57624 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-GentleWait/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* GentleWait.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; fileEncoding = 4; includeInIndex = 0; path = GentleWait.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = GentleWait/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = Info.plist; path = GentleWait/Info.plist; sourceTree = "<group>"; };
-		1A9476B5681E1EAE47B35B6F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = GentleWait/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		93ADCA36FDF4F1F15E67C7C4 /* libPods-GentleWait.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-GentleWait.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		9A5E343336917AB545A9DABB /* Pods-GentleWait.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GentleWait.debug.xcconfig"; path = "Target Support Files/Pods-GentleWait/Pods-GentleWait.debug.xcconfig"; sourceTree = "<group>"; };
+		279C6CA6619D35FA6A2AD760 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-GentleWait/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		3017DD2790665440CD0509AA /* libPods-GentleWait.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-GentleWait.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = GentleWait/SplashScreen.storyboard; sourceTree = "<group>"; };
-		ACFECC71110CC609C3681B5D /* Pods-GentleWait.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GentleWait.release.xcconfig"; path = "Target Support Files/Pods-GentleWait/Pods-GentleWait.release.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 1; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		DFA240AD4EDC601E61A252FA /* Pods-GentleWait.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GentleWait.release.xcconfig"; path = "Target Support Files/Pods-GentleWait/Pods-GentleWait.release.xcconfig"; sourceTree = "<group>"; };
+		E0F3DF8454C65C47AD4C8EA3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = GentleWait/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		ED294D4CC915D7285D79AFCD /* Pods-GentleWait.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GentleWait.debug.xcconfig"; path = "Target Support Files/Pods-GentleWait/Pods-GentleWait.debug.xcconfig"; sourceTree = "<group>"; };
+		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = undefined; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = GentleWait/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* GentleWait-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "GentleWait-Bridging-Header.h"; path = "GentleWait/GentleWait-Bridging-Header.h"; sourceTree = "<group>"; };
 		XX05E83E103BF49F57A457XX /* ShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 4; includeInIndex = 0; path = ShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		XX7DDE620121E0E26B18E0XX /* ActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 4; includeInIndex = 0; path = ActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		XXB6D82409997898620841XX /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 1; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
-		XXCA68A9416C78B970D1D9XX /* DeviceActivity.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 1; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		XXB6D82409997898620841XX /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = undefined; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		XXCA68A9416C78B970D1D9XX /* DeviceActivity.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = undefined; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		XXEC8F4A23169846583657XX /* ShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 4; includeInIndex = 0; path = ShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -86,24 +86,24 @@
 		XX3D9EE52B4535B9999C48XX /* Exceptions for "ActivityMonitorExtension" folder in "ActivityMonitorExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"expo-target.config.js",
 				Info.plist,
+				"expo-target.config.js",
 			);
 			target = XX88CF7045CFA4BF147673XX /* ActivityMonitorExtension */;
 		};
 		XX6E0F9413D6C1FD090E2DXX /* Exceptions for "ShieldAction" folder in "ShieldAction" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"expo-target.config.js",
 				Info.plist,
+				"expo-target.config.js",
 			);
 			target = XXB1B2BA6C491B2232D149XX /* ShieldAction */;
 		};
 		XXC846F61350A3A4CDF1CEXX /* Exceptions for "ShieldConfiguration" folder in "ShieldConfiguration" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"expo-target.config.js",
 				Info.plist,
+				"expo-target.config.js",
 			);
 			target = XXF5979A23AB4F6EA2E0A5XX /* ShieldConfiguration */;
 		};
@@ -153,7 +153,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BF4F643FF5C7DAE2362F4E75 /* libPods-GentleWait.a in Frameworks */,
+				D94150008159AC280952BBBC /* libPods-GentleWait.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -185,7 +185,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				1A9476B5681E1EAE47B35B6F /* PrivacyInfo.xcprivacy */,
+				E0F3DF8454C65C47AD4C8EA3 /* PrivacyInfo.xcprivacy */,
 			);
 			name = GentleWait;
 			sourceTree = "<group>";
@@ -196,26 +196,17 @@
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				XXCA68A9416C78B970D1D9XX /* DeviceActivity.framework */,
 				XXB6D82409997898620841XX /* ManagedSettingsUI.framework */,
-				93ADCA36FDF4F1F15E67C7C4 /* libPods-GentleWait.a */,
+				3017DD2790665440CD0509AA /* libPods-GentleWait.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		39A7C2BC1F0FA19A9B1DA488 /* Pods */ = {
+		443A0C262BF9DDFB8F0B1863 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				9A5E343336917AB545A9DABB /* Pods-GentleWait.debug.xcconfig */,
-				ACFECC71110CC609C3681B5D /* Pods-GentleWait.release.xcconfig */,
+				BA642599ECC36980E3291B8E /* GentleWait */,
 			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		76EEA75566C46113AF5F482B /* GentleWait */ = {
-			isa = PBXGroup;
-			children = (
-				085997D4CE846BEE21A57624 /* ExpoModulesProvider.swift */,
-			);
-			name = GentleWait;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -233,8 +224,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				39A7C2BC1F0FA19A9B1DA488 /* Pods */,
-				F03ABC0A3E35CE9B1A9F1F18 /* ExpoModulesProviders */,
+				A31BDBE8B55521B8BAFC90EC /* Pods */,
+				443A0C262BF9DDFB8F0B1863 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -252,6 +243,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		A31BDBE8B55521B8BAFC90EC /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				ED294D4CC915D7285D79AFCD /* Pods-GentleWait.debug.xcconfig */,
+				DFA240AD4EDC601E61A252FA /* Pods-GentleWait.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		BA642599ECC36980E3291B8E /* GentleWait */ = {
+			isa = PBXGroup;
+			children = (
+				279C6CA6619D35FA6A2AD760 /* ExpoModulesProvider.swift */,
+			);
+			name = GentleWait;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -259,14 +268,6 @@
 			);
 			name = Supporting;
 			path = GentleWait/Supporting;
-			sourceTree = "<group>";
-		};
-		F03ABC0A3E35CE9B1A9F1F18 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				76EEA75566C46113AF5F482B /* GentleWait */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		XX3E41C1850246162C0061XX /* expo:targets */ = {
@@ -288,14 +289,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "GentleWait" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				8B3F59EC6E6560CFDC0DDD55 /* [Expo] Configure project */,
+				B133973343E78BB845C94120 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				XX72A8CFBF0FBA13A79902XX /* Embed Foundation Extensions */,
-				98FC0D9E2532EB750D8C9B93 /* [CP] Embed Pods Frameworks */,
+				CA1A00793B158DAFD8734D33 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -374,13 +375,10 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = CNS3PJ66YR;
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
 					};
 					XX88CF7045CFA4BF147673XX = {
 						CreatedOnToolsVersion = 14.3;
@@ -428,7 +426,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				4FF41ADFC3DEE15080BBE8AE /* PrivacyInfo.xcprivacy in Resources */,
+				80F90F544F20D2B062ACED60 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -472,7 +470,6 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(CONFIGURATION_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/ip.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -542,7 +539,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-GentleWait/Pods-GentleWait-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		8B3F59EC6E6560CFDC0DDD55 /* [Expo] Configure project */ = {
+		B133973343E78BB845C94120 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -566,7 +563,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-GentleWait/expo-configure-project.sh\"\n";
 		};
-		98FC0D9E2532EB750D8C9B93 /* [CP] Embed Pods Frameworks */ = {
+		CA1A00793B158DAFD8734D33 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -596,7 +593,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				EAB2A43BECA3075CB220E5D7 /* ExpoModulesProvider.swift in Sources */,
+				CB122EBD8E45042B85E8B788 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -644,13 +641,12 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9A5E343336917AB545A9DABB /* Pods-GentleWait.debug.xcconfig */;
+			baseConfigurationReference = ED294D4CC915D7285D79AFCD /* Pods-GentleWait.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GentleWait/GentleWait.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CNS3PJ66YR;
 				ENABLE_BITCODE = NO;
@@ -684,13 +680,12 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ACFECC71110CC609C3681B5D /* Pods-GentleWait.release.xcconfig */;
+			baseConfigurationReference = DFA240AD4EDC601E61A252FA /* Pods-GentleWait.release.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = GentleWait/GentleWait.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CNS3PJ66YR;
 				INFOPLIST_FILE = GentleWait/Info.plist;
@@ -739,7 +734,6 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -747,10 +741,8 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
-				DEVELOPMENT_TEAM = CNS3PJ66YR;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -777,7 +769,6 @@
 				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = "group.com.petran-laurentiu.gentlewait";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
@@ -807,7 +798,6 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -815,10 +805,8 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
-				DEVELOPMENT_TEAM = CNS3PJ66YR;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -837,8 +825,6 @@
 				REACT_NATIVE_DEVICE_ACTIVITY_APP_GROUP = "group.com.petran-laurentiu.gentlewait";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
@@ -856,7 +842,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ShieldAction/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -881,6 +866,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -899,7 +885,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ShieldConfiguration/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -924,6 +909,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -942,7 +928,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ShieldAction/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -984,7 +969,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ShieldConfiguration/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1026,7 +1010,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ActivityMonitorExtension/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1051,6 +1034,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1069,7 +1053,6 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CODE_SIGN_ENTITLEMENTS = ../targets/ActivityMonitorExtension/generated.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;

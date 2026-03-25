@@ -7,7 +7,7 @@ import {
 } from "@/src/services/billing";
 import { useAppStore } from "@/src/services/storage";
 import { useTheme } from "@/src/theme/ThemeProvider";
-import { radius, spacing } from "@/src/theme/theme";
+import { spacing } from "@/src/theme/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
