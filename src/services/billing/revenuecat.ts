@@ -41,7 +41,7 @@ let purchasesModulePromise: Promise<PurchasesModule | null> | null = null;
 let purchasesUiModulePromise: Promise<PurchasesUiModule | null> | null = null;
 let isConfigured = false;
 
-const PREFERRED_OFFERING_IDENTIFIERS = ["default", "premium"] as const;
+const PREFERRED_OFFERING_IDENTIFIERS = ["premium"] as const;
 
 function getRevenueCatApiKey() {
   if (Platform.OS === "ios") {

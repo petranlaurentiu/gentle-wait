@@ -578,7 +578,6 @@ export default function OnboardingScreen() {
     if (
       step === "select-apps" &&
       isIOSFamilyControlsFlow &&
-      !isSimulatorScreenshotMode &&
       !validateIOSSelectionForPlan()
     ) {
       return;
