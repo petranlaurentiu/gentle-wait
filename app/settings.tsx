@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import * as StoreReview from "expo-store-review";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -358,13 +359,49 @@ export default function SettingsScreen() {
   };
 
   const handleRateApp = async () => {
-    if (await StoreReview.hasAction()) {
-      await StoreReview.requestReview();
-    } else {
+    try {
+      if (Platform.OS === "android" && await StoreReview.hasAction()) {
+        await StoreReview.requestReview();
+        return;
+      }
+
+      const androidPackage =
+        Constants.expoConfig?.android?.package ||
+        Constants.manifest2?.extra?.expoClient?.android?.package ||
+        "com.petran_laurentiu.gentlewait";
+
+      if (Platform.OS === "android") {
+        const marketUrl = `market://details?id=${androidPackage}`;
+        const playWebUrl =
+          `https://play.google.com/store/apps/details?id=${androidPackage}`;
+
+        if (await Linking.canOpenURL(marketUrl)) {
+          await Linking.openURL(marketUrl);
+          return;
+        }
+
+        await Linking.openURL(playWebUrl);
+        return;
+      }
+
       const storeUrl = StoreReview.storeUrl();
       if (storeUrl) {
         await Linking.openURL(storeUrl);
+        return;
       }
+
+      Alert.alert(
+        "Rating unavailable",
+        "We couldn't open the store page from this device.",
+      );
+    } catch (error) {
+      console.error("[Settings] Failed to open rating flow:", error);
+      Alert.alert(
+        "Rating unavailable",
+        Platform.OS === "android"
+          ? "We couldn't open the Play Store from this device. This can happen on an emulator without the Play Store app."
+          : "We couldn't open the store page from this device.",
+      );
     }
   };
 

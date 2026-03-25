@@ -231,6 +231,7 @@ export default function OnboardingScreen() {
   const updateSettings = useAppStore((state) => state.updateSettings);
   const setNotificationsDenied = useAppStore((state) => state.setNotificationsDenied);
   const currentSettings = useAppStore((state) => state.settings);
+  const billingAvailable = useAppStore((state) => state.billingAvailable);
   const [notificationsGranted, setNotificationsGranted] = useState(false);
   const [stepKey, setStepKey] = useState(0);
 
@@ -262,8 +263,9 @@ export default function OnboardingScreen() {
     useState<IOSFamilyActivitySelection | null>(
       currentSettings.iosFamilyActivitySelection || null,
     );
+  const hasProtectedAppsPremium = currentSettings.premium && billingAvailable;
   const hasReachedFreeAppLimit =
-    !currentSettings.premium &&
+    !hasProtectedAppsPremium &&
     selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT;
   const isIOSFamilyControlsFlow = Platform.OS === "ios";
   const isCompactCooldownViewport = width < 420 || screenHeight < 820;
@@ -344,6 +346,24 @@ export default function OnboardingScreen() {
     skipToStep,
   ]);
 
+  useEffect(() => {
+    if (
+      hasProtectedAppsPremium ||
+      isIOSFamilyControlsFlow ||
+      selectedAppSet.size <= FREE_PROTECTED_APPS_LIMIT
+    ) {
+      return;
+    }
+
+    setSelectedAppSet(
+      new Set(Array.from(selectedAppSet).slice(0, FREE_PROTECTED_APPS_LIMIT)),
+    );
+  }, [
+    hasProtectedAppsPremium,
+    isIOSFamilyControlsFlow,
+    selectedAppSet,
+  ]);
+
   // Check accessibility/Family Controls permission status
   const checkPermissionStatus = async () => {
     if (Platform.OS !== "android" && Platform.OS !== "ios") return;
@@ -404,7 +424,7 @@ export default function OnboardingScreen() {
       newSet.delete(packageName);
     } else {
       if (
-        !currentSettings.premium &&
+        !hasProtectedAppsPremium &&
         selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT
       ) {
         setValidationMessage(null);
@@ -479,7 +499,7 @@ export default function OnboardingScreen() {
       // Deselect all displayed
       displayedApps.forEach((app) => newSet.delete(app.packageName));
     } else {
-      if (!currentSettings.premium) {
+      if (!hasProtectedAppsPremium) {
         const remainingSlots = Math.max(
           FREE_PROTECTED_APPS_LIMIT - newSet.size,
           0,
@@ -521,7 +541,7 @@ export default function OnboardingScreen() {
   };
 
   const validateIOSSelectionForPlan = () => {
-    if (currentSettings.premium) {
+    if (hasProtectedAppsPremium) {
       return true;
     }
 
@@ -608,6 +628,21 @@ export default function OnboardingScreen() {
       return;
     }
 
+    if (
+      step === "select-apps" &&
+      !isIOSFamilyControlsFlow &&
+      !hasProtectedAppsPremium &&
+      selectedAppSet.size > FREE_PROTECTED_APPS_LIMIT
+    ) {
+      setSelectedAppSet(
+        new Set(Array.from(selectedAppSet).slice(0, FREE_PROTECTED_APPS_LIMIT)),
+      );
+      setValidationMessage(
+        `Free plan: protect up to ${FREE_PROTECTED_APPS_LIMIT} app.`,
+      );
+      return;
+    }
+
     if (step === "age" && !selectedAge) {
       setValidationMessage(
         "Choose your age range so we can tailor the experience.",
@@ -617,7 +652,9 @@ export default function OnboardingScreen() {
 
     if (step === "permissions" && !permissionEnabled) {
       setValidationMessage(
-        "Please allow Screen Time access so GentleWait can create gentle pauses before your chosen apps.",
+        Platform.OS === "ios"
+          ? "Please allow Screen Time access so GentleWait can create gentle pauses before your chosen apps."
+          : "Please enable Accessibility access so GentleWait can notice when a selected app opens and start the pause flow.",
       );
       return;
     }
@@ -724,7 +761,18 @@ export default function OnboardingScreen() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       router.replace("/home");
     } else {
-      setStep(stepOrder[currentIndex + 1]);
+      const nextStep = stepOrder[currentIndex + 1];
+
+      if (Platform.OS === "android" && step === "select-apps") {
+        const accessibilityEnabled = await isServiceEnabled();
+        setPermissionEnabled(accessibilityEnabled);
+        setStep(accessibilityEnabled && nextStep === "permissions"
+          ? "duration"
+          : nextStep);
+        return;
+      }
+
+      setStep(nextStep);
     }
   };
 
@@ -2214,7 +2262,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={[
@@ -3231,7 +3279,7 @@ export default function OnboardingScreen() {
                     </View>
                   )}
 
-                  {!currentSettings.premium &&
+                  {!hasProtectedAppsPremium &&
                     exceedsFreeIOSSelectionLimit(
                       iosFamilyActivitySelection,
                       FREE_PROTECTED_APPS_LIMIT,
@@ -3255,7 +3303,7 @@ export default function OnboardingScreen() {
                     <Text style={styles.descriptionAccent}>gentle pause</Text>{" "}
                     before they open.
                   </Text>
-                  {!currentSettings.premium && (
+                  {!hasProtectedAppsPremium && (
                     <Text style={styles.selectedCount}>
                       Free plan: protect up to {FREE_PROTECTED_APPS_LIMIT} apps.
                     </Text>
@@ -3362,7 +3410,7 @@ export default function OnboardingScreen() {
                     onChangeText={setSearchQuery}
                   />
 
-                  {displayedApps.length > 0 && (
+                  {displayedApps.length > 0 && hasProtectedAppsPremium && (
                     <TouchableOpacity
                       style={styles.selectAllButton}
                       onPress={handleToggleAllDisplayed}
@@ -3382,6 +3430,11 @@ export default function OnboardingScreen() {
                           key={app.packageName}
                           label={`${app.label}`}
                           checked={selectedAppSet.has(app.packageName)}
+                          disabled={
+                            !hasProtectedAppsPremium &&
+                            !selectedAppSet.has(app.packageName) &&
+                            selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT
+                          }
                           onPress={() => handleAppToggle(app.packageName)}
                         />
                       ))
@@ -3394,7 +3447,7 @@ export default function OnboardingScreen() {
                     {selectedAppSet.size} app
                     {selectedAppSet.size !== 1 ? "s" : ""} selected
                   </Text>
-                  {!currentSettings.premium && hasReachedFreeAppLimit && (
+                  {!hasProtectedAppsPremium && hasReachedFreeAppLimit && (
                     <Text style={styles.descriptionSmall}>
                       You&apos;ve reached the free plan limit. Upgrade to
                       protect more apps and unlock the AI Companion.
@@ -3414,14 +3467,18 @@ export default function OnboardingScreen() {
           {step === "permissions" && (
             <>
               <Text style={styles.title}>
-                {permissionEnabled ? "You\u2019re all set" : "One small step"}
+                {permissionEnabled
+                  ? "You\u2019re all set"
+                  : Platform.OS === "ios"
+                    ? "One small step"
+                    : "Turn on Accessibility"}
               </Text>
               <Text style={styles.description}>
                 {permissionEnabled
                   ? "GentleWait can now create gentle pauses before your chosen apps."
                   : isIOSFamilyControlsFlow
                     ? "GentleWait needs permission to manage screen time for the apps you choose."
-                    : "GentleWait needs permission to notice when a chosen app opens."}
+                    : "GentleWait needs Accessibility access to notice when a chosen app opens and show your pause screen at the right moment."}
               </Text>
 
               <View style={styles.permissionCard}>
@@ -3440,7 +3497,7 @@ export default function OnboardingScreen() {
                   >
                     {isIOSFamilyControlsFlow
                       ? "App management"
-                      : "App detection"}
+                      : "Accessibility access"}
                   </Text>
                   <Text
                     style={[
@@ -3454,7 +3511,11 @@ export default function OnboardingScreen() {
 
                 {!permissionEnabled && (
                   <Button
-                    label="Allow access"
+                    label={
+                      Platform.OS === "ios"
+                        ? "Allow access"
+                        : "Open Accessibility Settings"
+                    }
                     onPress={async () => {
                       try {
                         if (
@@ -3470,9 +3531,23 @@ export default function OnboardingScreen() {
                         const granted = await requestServiceAuthorization();
                         if (granted) {
                           setPermissionEnabled(true);
+                          return;
+                        }
+
+                        if (Platform.OS === "android") {
+                          Alert.alert(
+                            "Android setup incomplete",
+                            "This build cannot open Accessibility Settings yet because the Android native accessibility module is not available. Add and register the Android GentleWait native module and accessibility service, then rebuild the app.",
+                          );
                         }
                       } catch (error) {
                         console.error("Permission request error:", error);
+                        if (Platform.OS === "android") {
+                          Alert.alert(
+                            "Could not open Accessibility Settings",
+                            "GentleWait could not open Android Accessibility Settings from this build.",
+                          );
+                        }
                       }
                     }}
                     variant="primary"

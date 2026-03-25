@@ -20,6 +20,7 @@ import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import {
   addBillingCustomerInfoListener,
+  getBillingDebugSnapshot,
   getBillingPackages,
   getCustomerInfo,
   hasPremiumAccess,
@@ -263,10 +264,21 @@ export default function RootLayout() {
           getBillingPackages(),
         ]);
 
+        if (__DEV__) {
+          const snapshot = await getBillingDebugSnapshot();
+          console.log("[Billing] Bootstrap snapshot:", snapshot);
+        }
+
         setBillingPackages(packages);
         updateSettings({ premium: hasPremiumAccess(customerInfo) });
 
         unsubscribe = await addBillingCustomerInfoListener((info) => {
+          if (__DEV__) {
+            console.log("[Billing] Customer info update:", {
+              activeEntitlementIds: Object.keys(info?.entitlements?.active ?? {}),
+              activeSubscriptions: info?.activeSubscriptions ?? [],
+            });
+          }
           updateSettings({ premium: hasPremiumAccess(info) });
         });
       } catch (error) {

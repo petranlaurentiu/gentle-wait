@@ -11,9 +11,10 @@ interface CheckboxProps {
   label: string;
   checked: boolean;
   onPress: () => void;
+  disabled?: boolean;
 }
 
-export function Checkbox({ label, checked, onPress }: CheckboxProps) {
+export function Checkbox({ label, checked, onPress, disabled = false }: CheckboxProps) {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
@@ -28,6 +29,7 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
       marginBottom: spacing.sm,
       borderWidth: 1,
       borderColor: checked ? colors.primary : colors.glassStroke,
+      opacity: disabled ? 0.55 : 1,
     },
     checkbox: {
       width: 22,
@@ -53,6 +55,9 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
   });
 
   const handlePress = async () => {
+    if (disabled) {
+      return;
+    }
     await triggerSelectionFeedback();
     onPress();
   };
@@ -62,6 +67,7 @@ export function Checkbox({ label, checked, onPress }: CheckboxProps) {
       style={styles.container}
       onPress={handlePress}
       activeOpacity={0.7}
+      disabled={disabled}
     >
       <View style={styles.checkbox}>
         {checked && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}

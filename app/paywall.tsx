@@ -139,7 +139,7 @@ export default function PaywallScreen() {
     successOverlay: {
       position: "absolute",
       inset: 0,
-      backgroundColor: "rgba(5, 10, 20, 0.44)",
+      backgroundColor: "rgba(4, 10, 20, 0.74)",
       alignItems: "center",
       justifyContent: "center",
       padding: spacing.lg,
@@ -151,6 +151,14 @@ export default function PaywallScreen() {
       maxWidth: 420,
       gap: spacing.lg,
       alignItems: "center",
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.3,
+      shadowRadius: 28,
+      elevation: 16,
     },
     successIconWrap: {
       width: 72,
@@ -158,7 +166,7 @@ export default function PaywallScreen() {
       borderRadius: 36,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.primaryLight,
+      backgroundColor: "rgba(143, 214, 255, 0.22)",
       borderWidth: 1,
       borderColor: colors.glassStroke,
     },
@@ -172,7 +180,7 @@ export default function PaywallScreen() {
     <SafeAreaView style={styles.container}>
       {successMessage && (
         <View style={styles.successOverlay}>
-          <GlassCard glowColor="primary" style={styles.successCard}>
+          <GlassCard intensity="strong" glowColor="primary" style={styles.successCard}>
             <View style={styles.successIconWrap}>
               <Ionicons
                 name="checkmark-circle-outline"

@@ -183,6 +183,32 @@ export async function getCustomerInfo() {
   return Purchases?.getCustomerInfo() ?? null;
 }
 
+export async function getBillingDebugSnapshot() {
+  const init = await initializeBilling();
+  if (!init.configured) {
+    return {
+      configured: false,
+      available: init.available,
+      reason: init.reason,
+    };
+  }
+
+  const Purchases = await getPurchasesModule();
+  const [appUserID, customerInfo] = await Promise.all([
+    Purchases?.getAppUserID?.() ?? null,
+    Purchases?.getCustomerInfo?.() ?? null,
+  ]);
+
+  return {
+    configured: true,
+    available: init.available,
+    appUserID,
+    activeEntitlementIds: Object.keys(customerInfo?.entitlements?.active ?? {}),
+    activeSubscriptions: customerInfo?.activeSubscriptions ?? [],
+    customerInfo,
+  };
+}
+
 export function hasPremiumAccess(customerInfo: RevenueCatCustomerInfo | null) {
   return Boolean(customerInfo?.entitlements.active[PREMIUM_ENTITLEMENT_ID]);
 }
