@@ -342,19 +342,32 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?]) 
     }
   }
 
-  if let threadIdentifier = contents["threadIdentifier"] as? String {
-    content.threadIdentifier = threadIdentifier
-  }
+  // Always use a unique threadIdentifier to prevent iOS thread-based coalescing
+  content.threadIdentifier = UUID().uuidString
 
   if let launchImageName = contents["launchImageName"] as? String {
     content.launchImageName = launchImageName
   }
 
-  let identifier = contents["identifier"] as? String ?? UUID().uuidString
+  // Defeat iOS content-based deduplication by making each notification body unique.
+  // iOS suppresses banners for notifications with identical title+body, even with different identifiers.
+  let epochMs = Int(Date().timeIntervalSince1970 * 1000)
+  if !content.body.isEmpty {
+    content.body = content.body + " \u{200B}\(epochMs)"
+  }
 
-  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+  let identifier = UUID().uuidString
 
-  UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+  // Clear all previous notifications to ensure a clean slate
+  let center = UNUserNotificationCenter.current()
+  center.removeAllDeliveredNotifications()
+  center.removeAllPendingNotificationRequests()
+
+  // Use a 1-second trigger instead of immediate delivery
+  let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
+  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+  center.add(request, withCompletionHandler: nil)
 }
 
 // dataRequest which sends request to given URL and convert to Decodable Object

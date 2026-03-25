@@ -342,19 +342,27 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?]) 
     }
   }
 
-  if let threadIdentifier = contents["threadIdentifier"] as? String {
-    content.threadIdentifier = threadIdentifier
-  }
+  content.threadIdentifier = UUID().uuidString
 
   if let launchImageName = contents["launchImageName"] as? String {
     content.launchImageName = launchImageName
   }
 
-  let identifier = contents["identifier"] as? String ?? UUID().uuidString
+  let epochMs = Int(Date().timeIntervalSince1970 * 1000)
+  if !content.body.isEmpty {
+    content.body = content.body + " \u{200B}\(epochMs)"
+  }
 
-  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+  let identifier = UUID().uuidString
 
-  UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+  let center = UNUserNotificationCenter.current()
+  center.removeAllDeliveredNotifications()
+  center.removeAllPendingNotificationRequests()
+
+  let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
+  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+
+  center.add(request, withCompletionHandler: nil)
 }
 
 // dataRequest which sends request to given URL and convert to Decodable Object
