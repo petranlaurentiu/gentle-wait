@@ -349,13 +349,6 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?]) 
     content.launchImageName = launchImageName
   }
 
-  // Defeat iOS content-based deduplication by making each notification body unique.
-  // iOS suppresses banners for notifications with identical title+body, even with different identifiers.
-  let epochMs = Int(Date().timeIntervalSince1970 * 1000)
-  if !content.body.isEmpty {
-    content.body = content.body + " \u{200B}\(epochMs)"
-  }
-
   let identifier = UUID().uuidString
 
   // Clear all previous notifications to ensure a clean slate
