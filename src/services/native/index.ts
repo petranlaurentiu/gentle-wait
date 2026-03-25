@@ -215,7 +215,6 @@ function buildIOSShieldActions(cooldownMinutes: number) {
         {
           type: "sendNotification" as const,
           payload: {
-            identifier: "gentlewait-shield-pause",
             title: "Nice choice — you paused",
             body: "Tap to start a quick exercise. You'll feel the difference.",
             sound: "default" as const,

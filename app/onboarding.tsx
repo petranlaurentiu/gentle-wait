@@ -45,6 +45,7 @@ import {
   Alert,
   AppState,
   Image,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -378,6 +379,24 @@ export default function OnboardingScreen() {
       };
     }
   }, [step]);
+
+  // Re-check notification permission when returning from Settings
+  useEffect(() => {
+    if (step !== "notifications" || Platform.OS !== "ios") return;
+
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        Notifications.getPermissionsAsync().then((result) => {
+          setNotificationsGranted(result.granted);
+          setNotificationsDenied(!result.granted);
+        }).catch(() => {});
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [step, setNotificationsDenied]);
 
   const handleAppToggle = (packageName: string) => {
     const newSet = new Set(selectedAppSet);
@@ -3582,6 +3601,12 @@ export default function OnboardingScreen() {
                 <Button
                   label="Enable Notifications"
                   onPress={async () => {
+                    const { status } = await Notifications.getPermissionsAsync();
+                    if (status === "denied") {
+                      // iOS won't show the dialog again after denial — open Settings
+                      Linking.openSettings();
+                      return;
+                    }
                     const result = await Notifications.requestPermissionsAsync({
                       ios: { allowAlert: true, allowSound: true },
                     });
@@ -3782,14 +3807,15 @@ export default function OnboardingScreen() {
                       : skipToStep === "select-apps" && step === "select-apps"
                         ? "Save"
                         : step === "notifications" && !notificationsGranted
-                          ? "Skip for now"
+                          ? "Enable notifications to continue"
                           : "Continue"
           }
           onPress={handleNext}
           variant="primary"
           disabled={
             (step === "setup-choice" && setupPath === null) ||
-            (step === "permissions" && !permissionEnabled)
+            (step === "permissions" && !permissionEnabled) ||
+            (step === "notifications" && !notificationsGranted)
           }
         />
       </View>
