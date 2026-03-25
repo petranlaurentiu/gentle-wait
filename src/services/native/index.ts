@@ -198,6 +198,20 @@ function buildIOSShieldActions(cooldownMinutes: number) {
     primary: {
       behavior: "close" as const,
       actions: [
+        // 1. Persist interception data to shared UserDefaults (always succeeds)
+        {
+          type: "writeUserDefaults" as any,
+          key: "gentlewait.pendingShieldInterception",
+          value: {
+            source: "shield",
+            action: "pause",
+            familyActivitySelectionId: "{familyActivitySelectionId}",
+            appLabel: "{applicationName}",
+            webDomain: "{webDomain}",
+            ts: String(Date.now()),
+          },
+        },
+        // 2. Send notification (works if permitted, silently dropped otherwise)
         {
           type: "sendNotification" as const,
           payload: {
@@ -214,6 +228,11 @@ function buildIOSShieldActions(cooldownMinutes: number) {
               webDomain: "{webDomain}",
             },
           },
+        },
+        // 3. Open app directly (guaranteed fallback, no permission needed)
+        {
+          type: "openApp" as any,
+          url: "gentlewait://shield-pause",
         },
       ],
     },
@@ -480,6 +499,38 @@ export async function clearProtectedApps(): Promise<void> {
 }
 
 export async function getPendingInterception(): Promise<PendingInterception | null> {
+  if (Platform.OS === "ios") {
+    try {
+      const pending = userDefaultsGet<{
+        source: string;
+        action: string;
+        familyActivitySelectionId: string;
+        appLabel: string;
+        webDomain: string;
+        ts: string;
+      }>("gentlewait.pendingShieldInterception");
+
+      if (pending?.source === "shield") {
+        const appLabel =
+          pending.appLabel && pending.appLabel !== "applicationName"
+            ? pending.appLabel
+            : pending.webDomain && pending.webDomain !== "webDomain"
+              ? pending.webDomain
+              : "Protected app";
+
+        return {
+          appPackage: pending.familyActivitySelectionId || "ios.familycontrols",
+          appLabel,
+          ts: Number(pending.ts) || Date.now(),
+        };
+      }
+      return null;
+    } catch (error) {
+      if (__DEV__) console.log("[NativeService] Error reading iOS pending interception:", error);
+      return null;
+    }
+  }
+
   if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return null;
   }
@@ -493,6 +544,11 @@ export async function getPendingInterception(): Promise<PendingInterception | nu
 }
 
 export async function markAppHandled(packageName: string): Promise<void> {
+  if (Platform.OS === "ios") {
+    userDefaultsRemove("gentlewait.pendingShieldInterception");
+    return;
+  }
+
   if (Platform.OS !== "android" || !isAndroidNativeModuleAvailable()) {
     return;
   }

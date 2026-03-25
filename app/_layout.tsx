@@ -101,6 +101,10 @@ export default function RootLayout() {
                 ? data.webDomain
                 : "Protected app";
 
+          // Clear pending UserDefaults data to prevent double navigation
+          // from the AppState "active" handler
+          markAppHandled(familyActivitySelectionId || "ios.familycontrols");
+
           router.push({
             pathname: "/pause",
             params: {
@@ -118,7 +122,7 @@ export default function RootLayout() {
     };
   }, [router]);
 
-  // Handle pending interception from accessibility service
+  // Handle pending interception (Android: accessibility service, iOS: shield UserDefaults)
   useEffect(() => {
     let isProcessing = false;
 
@@ -158,6 +162,8 @@ export default function RootLayout() {
             params: {
               appPackage: pending.appPackage,
               appLabel: pending.appLabel || pending.appPackage,
+              familyActivitySelectionId: Platform.OS === "ios" ? pending.appPackage : undefined,
+              source: Platform.OS === "ios" ? "shield" : undefined,
             },
           });
           

@@ -1,3 +1,49 @@
+diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
+index 44f48b6..e33fe8b 100644
+--- a/node_modules/react-native-device-activity/ios/Shared.swift
++++ b/node_modules/react-native-device-activity/ios/Shared.swift
+@@ -193,8 +193,9 @@ func executeGenericAction(
+   } else if type == "disableBlockAllMode" {
+     disableBlockAllMode(triggeredBy: triggeredBy)
+   } else if type == "openApp" {
+-    // todo: replace with general string
+-    openUrl(urlString: "device-activity://")
++    let urlString = action["url"] as? String ?? "device-activity://"
++    let replacedUrl = replacePlaceholders(urlString, with: placeholders)
++    openUrl(urlString: replacedUrl)
+ 
+     sleep(ms: 1000)
+   } else if type == "enableBlockAllMode" {
+@@ -252,6 +253,20 @@ func executeGenericAction(
+         triggeredBy: triggeredBy
+       )
+     }
++  } else if type == "writeUserDefaults" {
++    if let key = action["key"] as? String,
++       let value = action["value"] {
++        if let dictValue = value as? [String: Any] {
++            let replaced = replacePlaceholdersInObject(dictValue, with: placeholders)
++            userDefaults?.set(replaced, forKey: key)
++        } else if let strValue = value as? String {
++            let replaced = replacePlaceholders(strValue, with: placeholders)
++            userDefaults?.set(replaced, forKey: key)
++        } else {
++            userDefaults?.set(value, forKey: key)
++        }
++        userDefaults?.synchronize()
++    }
+   } else if type == "stopMonitoring" {
+     let activityNames = action["activityNames"] as? [String]
+ 
+@@ -304,7 +319,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+   }
+ 
+   if let userInfo = contents["userInfo"] as? [String: Any] {
+-    content.userInfo = userInfo
++    content.userInfo = replacePlaceholdersInObject(userInfo, with: placeholders)
+   }
+ 
+   if #available(iOS 15.0, *) {
 diff --git a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift b/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
 index 48d628e..63fca8e 100644
 --- a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
@@ -11,16 +57,3 @@ index 48d628e..63fca8e 100644
    }
  
    return image
-diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
-index 0b7e83c..0b122b9 100644
---- a/node_modules/react-native-device-activity/ios/Shared.swift
-+++ b/node_modules/react-native-device-activity/ios/Shared.swift
-@@ -303,7 +303,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
-   }
- 
-   if let userInfo = contents["userInfo"] as? [String: Any] {
--    content.userInfo = userInfo
-+    content.userInfo = replacePlaceholdersInObject(userInfo, with: placeholders)
-   }
- 
-   if #available(iOS 15.0, *) {

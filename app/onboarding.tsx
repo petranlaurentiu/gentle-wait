@@ -591,6 +591,13 @@ export default function OnboardingScreen() {
       return;
     }
 
+    if (step === "permissions" && !permissionEnabled) {
+      setValidationMessage(
+        "Please allow Screen Time access so GentleWait can create gentle pauses before your chosen apps.",
+      );
+      return;
+    }
+
     // If coming from settings and on select-apps step, save and go back
     const isAddingApps = skipToStep === "select-apps";
     if (isAddingApps && step === "select-apps") {
@@ -3701,7 +3708,10 @@ export default function OnboardingScreen() {
           }
           onPress={handleNext}
           variant="primary"
-          disabled={step === "setup-choice" && setupPath === null}
+          disabled={
+            (step === "setup-choice" && setupPath === null) ||
+            (step === "permissions" && !permissionEnabled)
+          }
         />
       </View>
     </SafeAreaView>

@@ -193,8 +193,9 @@ func executeGenericAction(
   } else if type == "disableBlockAllMode" {
     disableBlockAllMode(triggeredBy: triggeredBy)
   } else if type == "openApp" {
-    // todo: replace with general string
-    openUrl(urlString: "device-activity://")
+    let urlString = action["url"] as? String ?? "device-activity://"
+    let replacedUrl = replacePlaceholders(urlString, with: placeholders)
+    openUrl(urlString: replacedUrl)
 
     sleep(ms: 1000)
   } else if type == "enableBlockAllMode" {
@@ -251,6 +252,20 @@ func executeGenericAction(
         intervalEndDelayMs: action["intervalEndDelayMs"] as? Int,
         triggeredBy: triggeredBy
       )
+    }
+  } else if type == "writeUserDefaults" {
+    if let key = action["key"] as? String,
+       let value = action["value"] {
+        if let dictValue = value as? [String: Any] {
+            let replaced = replacePlaceholdersInObject(dictValue, with: placeholders)
+            userDefaults?.set(replaced, forKey: key)
+        } else if let strValue = value as? String {
+            let replaced = replacePlaceholders(strValue, with: placeholders)
+            userDefaults?.set(replaced, forKey: key)
+        } else {
+            userDefaults?.set(value, forKey: key)
+        }
+        userDefaults?.synchronize()
     }
   } else if type == "stopMonitoring" {
     let activityNames = action["activityNames"] as? [String]
