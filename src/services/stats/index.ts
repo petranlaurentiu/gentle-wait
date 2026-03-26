@@ -113,6 +113,78 @@ export async function getWeeklyStats(range: TimeRange = getCurrentWeekRange()): 
   return buildWeeklyStats(counts, mindfulMs);
 }
 
+export function getMonthRange(): TimeRange {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { start: start.getTime(), end: end.getTime() };
+}
+
+export function getAllTimeRange(): TimeRange {
+  return { start: 0, end: Date.now() };
+}
+
+export function getLast7DaysRange(): TimeRange {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 6);
+  start.setHours(0, 0, 0, 0);
+  return { start: start.getTime(), end: now.getTime() };
+}
+
+export function getWeeklySummaryText(
+  current: WeeklyStats,
+  previous: WeeklyStats
+): string {
+  const parts: string[] = [];
+
+  const currentCalmRate =
+    current.pausesTotal > 0
+      ? Math.round(
+          ((current.pausesTotal - current.openedAnyway) / current.pausesTotal) *
+            100
+        )
+      : 0;
+  const previousCalmRate =
+    previous.pausesTotal > 0
+      ? Math.round(
+          ((previous.pausesTotal - previous.openedAnyway) /
+            previous.pausesTotal) *
+            100
+        )
+      : 0;
+  const calmDelta = currentCalmRate - previousCalmRate;
+
+  if (calmDelta > 0) {
+    parts.push(`Your calm rate improved ${calmDelta}% this week`);
+  } else if (calmDelta < 0) {
+    parts.push(
+      `Your calm rate dipped ${Math.abs(calmDelta)}% this week — that's okay, every week is a fresh start`
+    );
+  } else if (current.pausesTotal > 0) {
+    parts.push(`You maintained a ${currentCalmRate}% calm rate this week`);
+  }
+
+  const minutesDelta =
+    current.totalMindfulMinutes - previous.totalMindfulMinutes;
+  if (minutesDelta > 0 && previous.totalMindfulMinutes > 0) {
+    const ratio = Math.round(
+      current.totalMindfulMinutes / previous.totalMindfulMinutes
+    );
+    if (ratio >= 2) {
+      parts.push(
+        `You logged ${current.totalMindfulMinutes} mindful minutes — ${ratio}x last week`
+      );
+    }
+  }
+
+  if (parts.length === 0 && current.pausesTotal === 0) {
+    return "No pauses recorded this week. Open a protected app to start building your streak.";
+  }
+
+  return parts.join(". ") + ".";
+}
+
 export async function getSevenDayTrend(
   range: TimeRange = getCurrentWeekRange()
 ): Promise<{ date: string; count: number }[]> {

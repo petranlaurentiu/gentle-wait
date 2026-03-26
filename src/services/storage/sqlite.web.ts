@@ -209,3 +209,78 @@ export async function deleteAllJournalEntries(): Promise<void> {
     console.error('Error deleting journal entries:', error);
   }
 }
+
+// ==================== PREMIUM ANALYTICS (Web stubs) ====================
+
+export interface PerAppBreakdown {
+  appLabel: string;
+  appPackage: string;
+  totalPauses: number;
+  calmCount: number;
+  topReason: string | null;
+}
+
+export interface WeeklyCalmRatePoint {
+  weekLabel: string;
+  calmRate: number;
+  totalPauses: number;
+}
+
+export async function getPerAppBreakdown(
+  _startTs: number,
+  _endTs: number
+): Promise<PerAppBreakdown[]> {
+  return [];
+}
+
+export async function getHourlyHeatmapData(
+  _startTs: number,
+  _endTs: number
+): Promise<number[][]> {
+  return [];
+}
+
+export async function getWeeklyCalmRateTrend(
+  _startTs: number,
+  _endTs: number
+): Promise<WeeklyCalmRatePoint[]> {
+  return [];
+}
+
+export async function getJournalEntryCount(): Promise<number> {
+  try {
+    const entries: JournalEntry[] = mmkvStorage.getJSON('journal_entries') || [];
+    return entries.length;
+  } catch {
+    return 0;
+  }
+}
+
+export async function getDaysWithAlternativeChosen(
+  _startTs: number,
+  _endTs: number
+): Promise<string[]> {
+  return [];
+}
+
+export async function getTopApps(
+  startTs: number,
+  endTs: number,
+  limit: number = 5
+): Promise<{ appLabel: string; count: number }[]> {
+  try {
+    const events = await getEventsByDateRange(startTs, endTs);
+    const apps: Record<string, number> = {};
+    events.forEach((event: any) => {
+      if (event.appLabel) {
+        apps[event.appLabel] = (apps[event.appLabel] || 0) + 1;
+      }
+    });
+    return Object.entries(apps)
+      .map(([appLabel, count]) => ({ appLabel, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}

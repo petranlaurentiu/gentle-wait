@@ -28,10 +28,10 @@ import {
   getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
-  startIOSCooldownForSelection,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
+import { updateStreak } from "@/src/services/streaks";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -295,12 +295,8 @@ export default function ExerciseScreen() {
         sessionId,
       });
 
-      if (Platform.OS === "ios" && familyActivitySelectionId) {
-        await startIOSCooldownForSelection(
-          familyActivitySelectionId,
-          settings.cooldownMinutes || 15,
-        ).catch((e) => console.warn("[Exercise] Cooldown error:", e));
-      }
+      // Update streak after recording alternative
+      updateStreak(settings.premium).catch(console.error);
 
       navigateHome();
 

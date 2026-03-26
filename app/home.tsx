@@ -17,8 +17,10 @@ import {
 } from "@/src/constants/monetization";
 import { getDailyAffirmation, getDailyQuote } from "@/src/data/mindfulness";
 import { getAiConfigurationError } from "@/src/services/ai/openrouter";
+import { generateDailyNudge } from "@/src/services/ai/nudges";
 import { useAppStore } from "@/src/services/storage";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
+import { updateStreak } from "@/src/services/streaks";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { radius, spacing } from "@/src/theme/theme";
 import { useFadeInAnimation, useLoopAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
@@ -45,17 +47,23 @@ export default function HomeScreen() {
     choseCalmCount: 0,
     mindfulMinutes: 0,
   });
+  const [newBadges, setNewBadges] = useState<string[]>([]);
+  const streakState = useAppStore((state) => state.streakState);
+  const dailyNudge = useAppStore((state) => state.dailyNudge);
+  const dismissNudge = useAppStore((state) => state.dismissNudge);
 
   const dailyQuote = getDailyQuote();
   const dailyAffirmation = getDailyAffirmation();
 
   const headerAnimation = useFadeInAnimation();
-  const heroAnimation = useStaggeredFadeIn(0, 6);
-  const todayCardAnimation = useStaggeredFadeIn(1, 6);
-  const weeklyCardAnimation = useStaggeredFadeIn(2, 6);
-  const appsCardAnimation = useStaggeredFadeIn(3, 6);
-  const actionsAnimation = useStaggeredFadeIn(4, 6);
-  const footerAnimation = useStaggeredFadeIn(5, 6);
+  const heroAnimation = useStaggeredFadeIn(0, 8);
+  const streakCardAnimation = useStaggeredFadeIn(1, 8);
+  const nudgeCardAnimation = useStaggeredFadeIn(2, 8);
+  const todayCardAnimation = useStaggeredFadeIn(3, 8);
+  const weeklyCardAnimation = useStaggeredFadeIn(4, 8);
+  const appsCardAnimation = useStaggeredFadeIn(5, 8);
+  const actionsAnimation = useStaggeredFadeIn(6, 8);
+  const footerAnimation = useStaggeredFadeIn(7, 8);
   const logoFloat = useLoopAnimation(1, 1.015, 9000);
   const protectedAppsRemaining = Math.max(
     FREE_PROTECTED_APPS_LIMIT - settings.selectedApps.length,
@@ -81,11 +89,22 @@ export default function HomeScreen() {
               weekly.alternativePrayed,
             mindfulMinutes: weekly.totalMindfulMinutes,
           });
+
+          // Update streak and check for new badges
+          const streakResult = await updateStreak(settings.premium);
+          if (streakResult.newBadges.length > 0) {
+            setNewBadges(streakResult.newBadges);
+          }
+
+          // Generate daily nudge (no-op if already cached for today)
+          if (settings.premium) {
+            generateDailyNudge().catch(console.error);
+          }
         } catch (error) {
           console.error("Failed to load stats:", error);
         }
       })();
-    }, [])
+    }, [settings.premium])
   );
 
   const styles = StyleSheet.create({
@@ -252,6 +271,43 @@ export default function HomeScreen() {
     notifBannerText: {
       flex: 1,
     },
+    streakCard: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+    },
+    streakLeft: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: spacing.sm,
+    },
+    freezeBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: radius.pills,
+      backgroundColor: colors.primaryLight,
+    },
+    nudgeCard: {
+      gap: spacing.sm,
+    },
+    nudgeHeader: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+    },
+    nudgeHeaderLeft: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: spacing.xs,
+    },
+    nudgeDismiss: {
+      padding: spacing.xs,
+    },
+    nudgeLockedCard: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: spacing.md,
+    },
   });
 
   return (
@@ -320,6 +376,70 @@ export default function HomeScreen() {
                   : `${todayPauses} mindful moments already shifted the tone of your day.`}
             </AppText>
           </GlassCard>
+        </Animated.View>
+
+        {/* Streak card */}
+        <Animated.View style={streakCardAnimation}>
+          <TouchableOpacity activeOpacity={0.82} onPress={() => router.push("/badges")}>
+            <GlassCard intensity="light">
+              <View style={styles.streakCard}>
+                <View style={styles.streakLeft}>
+                  <Ionicons name="flame" size={22} color={colors.primary} />
+                  <AppText variant="bodyLarge">
+                    <AppText variant="bodyLarge" color="primary">{streakState.currentStreak}</AppText> day streak
+                  </AppText>
+                  {streakState.longestStreak > streakState.currentStreak && (
+                    <AppText variant="caption" color="tertiary">
+                      Best: {streakState.longestStreak}
+                    </AppText>
+                  )}
+                </View>
+                <View style={styles.streakLeft}>
+                  <AppText variant="caption" color="secondary">Badges</AppText>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+            </GlassCard>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Daily nudge card */}
+        <Animated.View style={nudgeCardAnimation}>
+          {settings.premium ? (
+            dailyNudge && !dailyNudge.dismissed ? (
+              <GlassCard intensity="light">
+                <View style={styles.nudgeCard}>
+                  <View style={styles.nudgeHeader}>
+                    <View style={styles.nudgeHeaderLeft}>
+                      <Ionicons name="sparkles" size={16} color={colors.primary} />
+                      <AppText variant="eyebrow" color="primary">Daily insight</AppText>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.nudgeDismiss}
+                      onPress={dismissNudge}
+                    >
+                      <Ionicons name="close" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                  <AppText variant="body" color="secondary">
+                    {dailyNudge.text}
+                  </AppText>
+                </View>
+              </GlassCard>
+            ) : null
+          ) : (
+            <TouchableOpacity activeOpacity={0.82} onPress={() => router.push("/paywall")}>
+              <GlassCard intensity="light">
+                <View style={styles.nudgeLockedCard}>
+                  <Ionicons name="sparkles-outline" size={20} color={colors.textMuted} />
+                  <AppText variant="body" color="tertiary">
+                    Unlock daily AI insights with Pro
+                  </AppText>
+                  <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         <Animated.View style={todayCardAnimation}>

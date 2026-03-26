@@ -217,6 +217,10 @@ export default function RootLayout() {
     initializeDatabase().catch(console.error);
     // Load settings from storage
     loadSettings();
+    // Load streak, badge, and nudge state from MMKV
+    useAppStore.getState().loadStreakState();
+    useAppStore.getState().loadBadges();
+    useAppStore.getState().loadNudgeState();
   }, [loadSettings]);
 
   useEffect(() => {
@@ -380,6 +384,13 @@ export default function RootLayout() {
                 options={{
                   headerShown: false,
                   presentation: "modal",
+                }}
+              />
+              <Stack.Screen
+                name="badges"
+                options={{
+                  headerShown: false,
+                  animation: "fade_from_bottom",
                 }}
               />
               <Stack.Screen

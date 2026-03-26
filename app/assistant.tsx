@@ -7,7 +7,6 @@ import {
   getRandomAffirmation,
   getRandomJournalingPrompt,
 } from "@/src/data/mindfulness";
-import { PRICING } from "@/src/constants/monetization";
 import {
   type AiQuotaSnapshot,
   getAiQuotaSnapshot,
@@ -555,7 +554,7 @@ export default function AssistantScreen() {
             </View>
 
             <Text style={styles.lockedFooter}>
-              Premium starts at {PRICING.monthly} or {PRICING.yearly}.
+              Upgrade to Premium for the full experience.
             </Text>
           </View>
 

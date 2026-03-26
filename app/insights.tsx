@@ -10,14 +10,27 @@ import { Button } from "@/src/components/Button";
 import { EmptyState } from "@/src/components/EmptyState";
 import { GlassCard } from "@/src/components/GlassCard";
 import { LoadingState } from "@/src/components/LoadingState";
-import { PRICING } from "@/src/constants/monetization";
+import { BarChart } from "@/src/components/charts/BarChart";
+import { HeatmapChart } from "@/src/components/charts/HeatmapChart";
+import { LineChart } from "@/src/components/charts/LineChart";
 import { useAppStore } from "@/src/services/storage";
-import { getTopApps, getTopTriggers } from "@/src/services/storage/sqlite";
+import {
+  getTopApps,
+  getTopTriggers,
+  getPerAppBreakdown,
+  getHourlyHeatmapData,
+  getWeeklyCalmRateTrend,
+  type PerAppBreakdown,
+  type WeeklyCalmRatePoint,
+} from "@/src/services/storage/sqlite";
 import {
   getCurrentWeekRange,
   getPreviousWeekRange,
+  getMonthRange,
+  getAllTimeRange,
   getSevenDayTrend,
   getWeeklyStats,
+  getWeeklySummaryText,
 } from "@/src/services/stats";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
@@ -54,19 +67,29 @@ export default function InsightsScreen() {
   const [trendData, setTrendData] = useState<{ date: string; count: number }[]>([]);
   const [topTriggers, setTopTriggers] = useState<{ reason: string; count: number }[]>([]);
   const [topApps, setTopApps] = useState<{ appLabel: string; count: number }[]>([]);
+  const [timeRange, setTimeRange] = useState<"week" | "month" | "all">("week");
+  const [appBreakdown, setAppBreakdown] = useState<PerAppBreakdown[]>([]);
+  const [heatmapData, setHeatmapData] = useState<number[][]>([]);
+  const [calmRateTrend, setCalmRateTrend] = useState<WeeklyCalmRatePoint[]>([]);
+  const [weeklySummary, setWeeklySummary] = useState("");
 
   useFocusEffect(
     React.useCallback(() => {
       setIsLoading(true);
       (async () => {
         try {
-          const currentRange = getCurrentWeekRange();
+          const rangeMap = {
+            week: getCurrentWeekRange,
+            month: getMonthRange,
+            all: getAllTimeRange,
+          };
+          const currentRange = rangeMap[timeRange]();
           const previousRange = getPreviousWeekRange();
 
           const [weekly, previousWeekly, trend, triggers, apps] = await Promise.all([
             getWeeklyStats(currentRange),
             getWeeklyStats(previousRange),
-            getSevenDayTrend(currentRange),
+            getSevenDayTrend(getCurrentWeekRange()), // trend always shows current week
             getTopTriggers(currentRange.start, currentRange.end, 4),
             getTopApps(currentRange.start, currentRange.end, 4),
           ]);
@@ -88,13 +111,29 @@ export default function InsightsScreen() {
           setTrendData(trend);
           setTopTriggers(triggers);
           setTopApps(apps);
+
+          // Load premium analytics data
+          if (settings.premium) {
+            const [breakdown, heatmap, calmTrend] = await Promise.all([
+              getPerAppBreakdown(currentRange.start, currentRange.end),
+              getHourlyHeatmapData(currentRange.start, currentRange.end),
+              getWeeklyCalmRateTrend(currentRange.start, currentRange.end),
+            ]);
+            setAppBreakdown(breakdown);
+            setHeatmapData(heatmap);
+            setCalmRateTrend(calmTrend);
+
+            // Generate weekly summary text
+            const summary = getWeeklySummaryText(weekly, previousWeekly);
+            setWeeklySummary(summary);
+          }
         } catch (error) {
           console.error("Failed to load insights:", error);
         } finally {
           setIsLoading(false);
         }
       })();
-    }, [])
+    }, [timeRange, settings.premium])
   );
 
   const reasonLabels: Record<string, string> = {
@@ -366,6 +405,55 @@ export default function InsightsScreen() {
     ctaButton: {
       flex: 1,
     },
+    timeRangeRow: {
+      flexDirection: "row" as const,
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    timeRangePill: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pills,
+      backgroundColor: colors.glassFill,
+      borderWidth: 1,
+      borderColor: colors.glassStroke,
+    },
+    timeRangePillActive: {
+      backgroundColor: colors.primary + "20",
+      borderColor: colors.primary,
+    },
+    timeRangePillText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textMuted,
+    },
+    timeRangePillTextActive: {
+      color: colors.primary,
+    },
+    lockedPill: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 4,
+    },
+    premiumSectionBlur: {
+      opacity: 0.5,
+    },
+    premiumOverlay: {
+      alignItems: "center" as const,
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+    },
+    premiumOverlayText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.body.fontSize,
+      color: colors.primary,
+    },
+    summaryText: {
+      fontFamily: fonts.regular,
+      fontSize: typography.body.fontSize,
+      lineHeight: typography.body.lineHeight,
+      color: colors.textSecondary,
+    },
   });
 
   if (isLoading) {
@@ -414,6 +502,48 @@ export default function InsightsScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
+        {/* Time range selector */}
+        <View style={styles.timeRangeRow}>
+          {(["week", "month", "all"] as const).map((range) => {
+            const isActive = timeRange === range;
+            const isLocked = !settings.premium && range !== "week";
+            const labels = { week: "This week", month: "This month", all: "All time" };
+
+            return (
+              <TouchableOpacity
+                key={range}
+                style={[
+                  styles.timeRangePill,
+                  isActive && styles.timeRangePillActive,
+                ]}
+                onPress={() => {
+                  if (isLocked) {
+                    router.push("/paywall");
+                  } else {
+                    setTimeRange(range);
+                  }
+                }}
+              >
+                {isLocked ? (
+                  <View style={styles.lockedPill}>
+                    <Text style={styles.timeRangePillText}>{labels[range]}</Text>
+                    <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.timeRangePillText,
+                      isActive && styles.timeRangePillTextActive,
+                    ]}
+                  >
+                    {labels[range]}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <GlassCard glowColor="primary" style={styles.heroCard}>
           <View style={styles.heroBadge}>
             <Text style={styles.eyebrow}>Your week so far</Text>
@@ -542,6 +672,71 @@ export default function InsightsScreen() {
                 </GlassCard>
               </View>
             )}
+
+            {/* Premium: Per-app breakdown */}
+            {appBreakdown.length > 0 && (
+              <View style={styles.splitGrid}>
+                <Text style={styles.sectionTitle}>App breakdown</Text>
+                <GlassCard>
+                  <BarChart
+                    data={appBreakdown.slice(0, 6).map((app) => ({
+                      label: app.appLabel,
+                      value: app.totalPauses,
+                      rate: app.totalPauses > 0
+                        ? Math.round((app.calmCount / app.totalPauses) * 100)
+                        : 0,
+                    }))}
+                    primaryColor={colors.primary}
+                    accentColor={colors.accent}
+                    textColor={colors.text}
+                    mutedColor={colors.textMuted}
+                  />
+                </GlassCard>
+              </View>
+            )}
+
+            {/* Premium: Hourly heatmap */}
+            {heatmapData.length > 0 && (
+              <View style={styles.splitGrid}>
+                <Text style={styles.sectionTitle}>When you reach for your phone</Text>
+                <GlassCard>
+                  <HeatmapChart
+                    data={heatmapData}
+                    primaryColor={colors.primary}
+                    textColor={colors.text}
+                    mutedColor={colors.textMuted}
+                  />
+                </GlassCard>
+              </View>
+            )}
+
+            {/* Premium: Calm rate trend */}
+            {calmRateTrend.length > 1 && (
+              <View style={styles.splitGrid}>
+                <Text style={styles.sectionTitle}>Calm rate over time</Text>
+                <GlassCard>
+                  <LineChart
+                    data={calmRateTrend.map((p) => ({
+                      label: p.weekLabel,
+                      value: p.calmRate,
+                    }))}
+                    primaryColor={colors.primary}
+                    textColor={colors.text}
+                    mutedColor={colors.textMuted}
+                  />
+                </GlassCard>
+              </View>
+            )}
+
+            {/* Premium: Weekly summary */}
+            {weeklySummary && (
+              <View style={styles.splitGrid}>
+                <Text style={styles.sectionTitle}>Weekly summary</Text>
+                <GlassCard glowColor="secondary">
+                  <Text style={styles.summaryText}>{weeklySummary}</Text>
+                </GlassCard>
+              </View>
+            )}
           </>
         ) : (
           <GlassCard glowColor="accent" style={styles.premiumCard}>
@@ -558,16 +753,19 @@ export default function InsightsScreen() {
                 <Text style={styles.premiumPillText}>App breakdowns</Text>
               </View>
               <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>Trigger patterns</Text>
+                <Text style={styles.premiumPillText}>Hourly heatmap</Text>
               </View>
               <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>Deeper weekly context</Text>
+                <Text style={styles.premiumPillText}>Calm rate trend</Text>
+              </View>
+              <View style={styles.premiumPill}>
+                <Text style={styles.premiumPillText}>Monthly & all-time</Text>
               </View>
             </View>
 
             <View style={styles.ctaRow}>
               <Button
-                label={`Upgrade from ${PRICING.monthly}`}
+                label="Upgrade to Pro"
                 onPress={() => router.push("/paywall")}
                 variant="primary"
                 style={styles.ctaButton}

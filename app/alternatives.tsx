@@ -17,7 +17,6 @@ import {
   getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
-  startIOSCooldownForSelection,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import {
@@ -26,6 +25,7 @@ import {
   insertJournalEntry,
   JournalEntry,
 } from "@/src/services/storage/sqlite";
+import { updateStreak } from "@/src/services/streaks";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -289,6 +289,9 @@ export default function AlternativesScreen() {
         sessionId,
       });
 
+      // Update streak after recording alternative
+      updateStreak(settings.premium).catch(console.error);
+
       // Save journal entry if this was a reflection exercise
       if (type === "reflect" && journalEntry.trim().length > 0) {
         const entry = {
@@ -301,24 +304,11 @@ export default function AlternativesScreen() {
         };
 
         await insertJournalEntry(entry);
-        if (Platform.OS === "ios" && familyActivitySelectionId) {
-          await startIOSCooldownForSelection(
-            familyActivitySelectionId,
-            settings.cooldownMinutes || 15,
-          ).catch((e) => console.warn("[Alternatives] Cooldown error:", e));
-        }
         setPreviousEntries((entries) => [entry, ...entries].slice(0, 10));
         setSavedJournalEntry(entry);
         setJournalSaveError(null);
         setJournalEntry("");
         return;
-      }
-
-      if (Platform.OS === "ios" && familyActivitySelectionId) {
-        await startIOSCooldownForSelection(
-          familyActivitySelectionId,
-          settings.cooldownMinutes || 15,
-        ).catch((e) => console.warn("[Alternatives] Cooldown error:", e));
       }
 
       exitToHome();

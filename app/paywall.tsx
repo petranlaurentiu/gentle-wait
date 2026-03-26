@@ -21,8 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const BENEFITS = [
   { icon: "shield-checkmark-outline" as const, text: "Unlimited protected apps" },
-  { icon: "sparkles-outline" as const, text: "AI Companion & guided reflection" },
-  { icon: "trending-up-outline" as const, text: "Premium insights & personalization" },
+  { icon: "sparkles-outline" as const, text: "AI Companion & daily smart nudges" },
+  { icon: "trophy-outline" as const, text: "Streaks, badges & advanced analytics" },
 ];
 
 export default function PaywallScreen() {

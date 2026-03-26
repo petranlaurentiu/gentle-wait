@@ -9,7 +9,6 @@ import { COOLDOWN_OPTIONS, WheelPicker } from "@/src/components/WheelPicker";
 import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
-  PRICING,
 } from "@/src/constants/monetization";
 import type { IOSFamilyActivitySelection } from "@/src/domain/models";
 import {
@@ -2207,33 +2206,6 @@ export default function OnboardingScreen() {
       lineHeight: typography.body.lineHeight,
       color: colors.textSecondary,
     },
-    upgradePromptPriceRow: {
-      flexDirection: "row",
-      gap: spacing.sm,
-    },
-    upgradePromptPriceChip: {
-      flex: 1,
-      paddingVertical: spacing.sm + 2,
-      paddingHorizontal: spacing.md,
-      borderRadius: radius.button,
-      backgroundColor: "rgba(255, 255, 255, 0.06)",
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
-      alignItems: "center",
-      gap: 2,
-    },
-    upgradePromptPriceValue: {
-      fontFamily: fonts.semiBold,
-      fontSize: typography.body.fontSize,
-      color: colors.text,
-    },
-    upgradePromptPriceLabel: {
-      fontFamily: fonts.regular,
-      fontSize: typography.small.fontSize,
-      color: colors.textMuted,
-      textTransform: "uppercase",
-      letterSpacing: 0.7,
-    },
     upgradePromptActions: {
       flexDirection: "row",
       gap: spacing.sm,
@@ -3798,21 +3770,6 @@ export default function OnboardingScreen() {
               <Text style={styles.upgradePromptText}>
                 {upgradePromptMessage}
               </Text>
-
-              <View style={styles.upgradePromptPriceRow}>
-                <View style={styles.upgradePromptPriceChip}>
-                  <Text style={styles.upgradePromptPriceValue}>
-                    {PRICING.monthly}
-                  </Text>
-                  <Text style={styles.upgradePromptPriceLabel}>Monthly</Text>
-                </View>
-                <View style={styles.upgradePromptPriceChip}>
-                  <Text style={styles.upgradePromptPriceValue}>
-                    {PRICING.yearly}
-                  </Text>
-                  <Text style={styles.upgradePromptPriceLabel}>Best value</Text>
-                </View>
-              </View>
 
               <View style={styles.upgradePromptActions}>
                 <TouchableOpacity

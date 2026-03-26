@@ -25,7 +25,6 @@ import { Text as AppText } from "@/src/components/Typography";
 import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
-  PRICING,
 } from "@/src/constants/monetization";
 import {
   getCustomerInfo,
@@ -879,7 +878,7 @@ export default function SettingsScreen() {
                 <View style={styles.settingMain}>
                   <AppText variant="heading">Upgrade to Premium</AppText>
                   <AppText variant="caption" color="secondary">
-                    Unlimited apps, AI Companion, and deeper guidance from {PRICING.monthly}.
+                    Unlimited apps, AI Companion, and deeper guidance.
                   </AppText>
                 </View>
                 <Ionicons name="sparkles-outline" size={20} color={colors.primary} />

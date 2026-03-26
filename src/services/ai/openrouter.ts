@@ -7,6 +7,7 @@ import {
   sanitizeUserContext,
   sanitizeUserMessage,
 } from "@/src/services/ai/shared";
+import { getAiUsageState } from "@/src/services/ai/usage";
 
 const AI_API_PATH = "/api/ai";
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -15,6 +16,28 @@ let currentUserContext: UserContext | null = null;
 
 function getAiApiOrigin() {
   return Constants.expoConfig?.extra?.apiOrigin as string | undefined;
+}
+
+function getRequestSecret() {
+  return Constants.expoConfig?.extra?.aiRequestSecret as string | undefined;
+}
+
+async function computeHmac(
+  secret: string,
+  message: string,
+): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function getAiConfigurationError() {
@@ -81,15 +104,30 @@ export async function sendMessage(
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
+    const installId = getAiUsageState().aiInstallId;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    const secret = getRequestSecret();
+    if (secret) {
+      const timestamp = Date.now().toString();
+      const signature = await computeHmac(
+        secret,
+        `${timestamp}:${installId}:${trimmedMessage}`,
+      );
+      headers["X-GW-Signature"] = signature;
+      headers["X-GW-Timestamp"] = timestamp;
+    }
+
     const response = await fetch(getAiApiUrl(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         message: trimmedMessage,
         conversation: sanitizeConversationHistory(conversationHistory),
         contextSnapshot: sanitizeUserContext(context || currentUserContext || undefined),
+        deviceInstallId: installId,
       }),
       signal: controller.signal,
     });

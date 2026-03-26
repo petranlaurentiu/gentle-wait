@@ -102,6 +102,33 @@ export interface InterceptionEvent {
   sessionId?: string;
 }
 
+// Streak state (persisted in MMKV)
+export interface StreakState {
+  currentStreak: number;
+  longestStreak: number;
+  lastStreakDate: string; // ISO date "2026-03-26"
+  freezesUsedThisWeek: number;
+  freezeWeekStart: string; // ISO date of Monday
+}
+
+// Badge unlock record
+export interface BadgeUnlock {
+  id: string;
+  unlockedAt: number; // epoch ms
+}
+
+// Daily nudge (persisted in MMKV)
+export interface DailyNudge {
+  date: string; // ISO date
+  text: string;
+  dismissed: boolean;
+}
+
+export interface NudgeHistoryEntry {
+  date: string;
+  text: string;
+}
+
 // Weekly statistics
 export interface WeeklyStats {
   pausesTotal: number;

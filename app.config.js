@@ -3,6 +3,7 @@ const iosAppGroup =
   process.env.EXPO_PUBLIC_IOS_APP_GROUP ||
   "group.com.petran-laurentiu.gentlewait";
 const apiOrigin = process.env.EXPO_PUBLIC_API_ORIGIN || "";
+const aiRequestSecret = process.env.AI_REQUEST_SECRET || "";
 
 export default {
   expo: {
@@ -95,6 +96,7 @@ export default {
       appleTeamId,
       iosAppGroup,
       apiOrigin,
+      aiRequestSecret,
     },
   },
 };

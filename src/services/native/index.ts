@@ -203,7 +203,17 @@ function buildIOSShieldActions(cooldownMinutes: number) {
     primary: {
       behavior: "close" as const,
       actions: [
-        // 1. Persist interception data to shared UserDefaults (always succeeds)
+        // 1. Whitelist only this specific app (per-app, not entire selection)
+        { type: "addCurrentToWhitelist" as const },
+        // 2. Start cooldown timer to re-block this app after cooldown expires
+        {
+          type: "startMonitoring" as const,
+          activityName: IOS_COOLDOWN_ACTIVITY,
+          intervalStartDelayMs: 0,
+          intervalEndDelayMs: cooldownMs,
+          deviceActivityEvents: [],
+        },
+        // 3. Persist interception data to shared UserDefaults (always succeeds)
         {
           type: "writeUserDefaults" as any,
           key: "gentlewait.pendingShieldInterception",
@@ -216,7 +226,7 @@ function buildIOSShieldActions(cooldownMinutes: number) {
             ts: String(Date.now()),
           },
         },
-        // 2. Send notification (works if permitted, silently dropped otherwise)
+        // 4. Send notification (works if permitted, silently dropped otherwise)
         {
           type: "sendNotification" as const,
           payload: {
