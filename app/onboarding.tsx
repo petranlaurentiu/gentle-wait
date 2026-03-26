@@ -192,6 +192,7 @@ export default function OnboardingScreen() {
   const { width, height: screenHeight } = useWindowDimensions();
   const isNarrowPreviewLayout = width < 420;
   const isCompactPreviewViewport = width < 420 || screenHeight < 880;
+  const isTablet = width >= 768;
 
   // Check if we should skip to a specific step (e.g., from settings)
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
@@ -358,11 +359,7 @@ export default function OnboardingScreen() {
     setSelectedAppSet(
       new Set(Array.from(selectedAppSet).slice(0, FREE_PROTECTED_APPS_LIMIT)),
     );
-  }, [
-    hasProtectedAppsPremium,
-    isIOSFamilyControlsFlow,
-    selectedAppSet,
-  ]);
+  }, [hasProtectedAppsPremium, isIOSFamilyControlsFlow, selectedAppSet]);
 
   // Check accessibility/Family Controls permission status
   const checkPermissionStatus = async () => {
@@ -768,9 +765,11 @@ export default function OnboardingScreen() {
       if (Platform.OS === "android" && step === "select-apps") {
         const accessibilityEnabled = await isServiceEnabled();
         setPermissionEnabled(accessibilityEnabled);
-        setStep(accessibilityEnabled && nextStep === "permissions"
-          ? "duration"
-          : nextStep);
+        setStep(
+          accessibilityEnabled && nextStep === "permissions"
+            ? "duration"
+            : nextStep,
+        );
         return;
       }
 
@@ -1938,6 +1937,8 @@ export default function OnboardingScreen() {
       position: "relative",
       alignItems: "center",
       justifyContent: "center",
+      maxWidth: isTablet ? 580 : 260,
+      alignSelf: isTablet ? "center" : "center",
     },
     previewVideoFrame: {
       width: "100%",
@@ -2271,7 +2272,10 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <ScrollView
         style={styles.content}
         contentContainerStyle={[
