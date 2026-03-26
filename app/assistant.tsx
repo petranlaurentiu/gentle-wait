@@ -548,7 +548,7 @@ export default function AssistantScreen() {
               <View style={styles.lockedFeatureRow}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
                 <Text style={styles.lockedFeatureText}>
-                  Unlimited protected apps and richer support when focus slips.
+                  More protected apps and richer support when focus slips.
                 </Text>
               </View>
             </View>

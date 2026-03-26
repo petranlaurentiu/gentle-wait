@@ -122,12 +122,21 @@ func executeGenericAction(
       selection.webDomainTokens.insert(webdomainToken)
     }
 
-    if let categoryToken = categoryToken {
-      selection.categoryTokens.insert(categoryToken)
-    }
+    // Do NOT whitelist the categoryToken — it would remove category-level
+    // blocking for ALL apps in that category, not just the triggering one.
 
     saveCurrentWhitelist(whitelist: selection)
     updateBlock(triggeredBy: "shieldAction")
+  } else if type == "saveCurrentToPendingUnlock" {
+    var pendingSelection = FamilyActivitySelection()
+    if let applicationToken = applicationToken {
+      pendingSelection.applicationTokens.insert(applicationToken)
+    }
+    if let webdomainToken = webdomainToken {
+      pendingSelection.webDomainTokens.insert(webdomainToken)
+    }
+    let targetId = action["familyActivitySelectionId"] as? String ?? "gentlewait.pending-unlock"
+    setFamilyActivitySelectionById(id: targetId, activitySelection: pendingSelection)
   }
 
   if type == "blockSelection" {
@@ -342,23 +351,24 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?]) 
     }
   }
 
-  // Always use a unique threadIdentifier to prevent iOS thread-based coalescing
-  content.threadIdentifier = UUID().uuidString
-
   if let launchImageName = contents["launchImageName"] as? String {
     content.launchImageName = launchImageName
   }
 
-  let identifier = UUID().uuidString
+  let identifier = replacePlaceholders(
+    contents["identifier"] as? String ?? UUID().uuidString,
+    with: placeholders
+  )
+  content.threadIdentifier =
+    replacePlaceholders(
+      contents["threadIdentifier"] as? String ?? identifier,
+      with: placeholders
+    )
 
-  // Clear all previous notifications to ensure a clean slate
   let center = UNUserNotificationCenter.current()
-  center.removeAllDeliveredNotifications()
-  center.removeAllPendingNotificationRequests()
-
-  // Use a 1-second trigger instead of immediate delivery
-  let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+  center.removeDeliveredNotifications(withIdentifiers: [identifier])
+  center.removePendingNotificationRequests(withIdentifiers: [identifier])
+  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
 
   center.add(request, withCompletionHandler: nil)
 }

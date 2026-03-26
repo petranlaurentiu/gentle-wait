@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
+import { getIOSProtectionFootnote, IOS_MAX_PROTECTED_APPS } from "@/src/constants/iosProtection";
 import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
@@ -643,6 +644,12 @@ export default function SettingsScreen() {
                     <AppText variant="caption" color="secondary">
                       {getIOSSelectionSummary(iosSelection)}
                     </AppText>
+                    {iosSelection.selectedApplicationLabels &&
+                      iosSelection.selectedApplicationLabels.length > 0 && (
+                        <AppText variant="caption" color="secondary">
+                          {iosSelection.selectedApplicationLabels.join(", ")}
+                        </AppText>
+                      )}
                   </View>
                   <TouchableOpacity
                     style={styles.removeButton}
@@ -722,7 +729,10 @@ export default function SettingsScreen() {
           )}
           {!settings.premium && isIOSFamilyControlsFlow && (
             <AppText variant="caption" color="secondary" align="center">
-              Free plan: up to {FREE_PROTECTED_APPS_LIMIT} iPhone apps. Categories and websites require Premium.
+              {getIOSProtectionFootnote(
+                FREE_PROTECTED_APPS_LIMIT,
+                settings.premium,
+              )}
             </AppText>
           )}
         </Animated.View>
@@ -863,8 +873,12 @@ export default function SettingsScreen() {
                 <AppText variant="heading">Current plan</AppText>
                 <AppText variant="caption" color="secondary">
                   {settings.premium
-                    ? "Unlimited protected apps and AI Companion access."
-                    : `Free includes ${FREE_PROTECTED_APPS_LIMIT} protected apps and no AI Companion.`}
+                    ? isIOSFamilyControlsFlow
+                      ? `Protect up to ${IOS_MAX_PROTECTED_APPS} focused iPhone apps and unlock AI Companion access.`
+                      : "More protected apps and AI Companion access."
+                    : isIOSFamilyControlsFlow
+                      ? `Free includes ${FREE_PROTECTED_APPS_LIMIT} iPhone app and no AI Companion.`
+                      : `Free includes ${FREE_PROTECTED_APPS_LIMIT} protected apps and no AI Companion.`}
                 </AppText>
               </View>
               <AppText variant="heading" color="primary">{settings.premium ? "Premium" : "Free"}</AppText>

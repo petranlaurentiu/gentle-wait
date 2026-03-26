@@ -9,11 +9,15 @@ export interface SelectedApp {
 }
 
 export interface IOSFamilyActivitySelection {
-  familyActivitySelection: string;
+  familyActivitySelection?: string | null;
   applicationCount: number;
   categoryCount: number;
   webDomainCount: number;
   includeEntireCategory: boolean;
+  selectedApplicationLabels?: string[];
+  removedApplicationLabels?: string[];
+  removedWebDomains?: string[];
+  removedCategoryCount?: number;
   updatedAt: number;
 }
 

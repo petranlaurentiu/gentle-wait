@@ -25,9 +25,9 @@ import {
   ExerciseEntryPoint,
 } from "@/src/domain/models";
 import {
-  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
+  unlockPendingAppAndStartCooldown,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
@@ -79,8 +79,6 @@ export default function ExerciseScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
-  const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
   const entryParam = params.entry as ExerciseEntryPoint | undefined;
   const categoryParam = params.category as ExerciseCategory | undefined;
 
@@ -273,7 +271,13 @@ export default function ExerciseScreen() {
     }
   };
 
-  const navigateHome = () => {
+  const navigateHome = async () => {
+    if (Platform.OS === "ios") {
+      await unlockPendingAppAndStartCooldown(
+        settings.cooldownMinutes || 15,
+      );
+    }
+
     if (router.canDismiss()) {
       router.dismissAll();
     }
@@ -298,7 +302,7 @@ export default function ExerciseScreen() {
       // Update streak after recording alternative
       updateStreak(settings.premium).catch(console.error);
 
-      navigateHome();
+      await navigateHome();
 
       // Launch the app after a brief delay (pending interception already cleared)
       if (Platform.OS === "android" && appPackage) {
@@ -316,7 +320,7 @@ export default function ExerciseScreen() {
       }
     } catch (error) {
       console.error("[Exercise] Error completing exercise:", error);
-      navigateHome();
+      await navigateHome();
     }
   };
 

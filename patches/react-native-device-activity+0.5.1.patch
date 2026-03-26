@@ -1,8 +1,129 @@
+diff --git a/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
+index abce029..7f51796 100644
+--- a/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
++++ b/node_modules/react-native-device-activity/ios/ReactNativeDeviceActivityModule.swift
+@@ -691,6 +691,91 @@ public class ReactNativeDeviceActivityModule: Module {
+       )
+     }
+ 
++    Function("sanitizeSelection") {
++      (
++        sourceFamilyActivitySelectionId: String,
++        targetFamilyActivitySelectionId: String,
++        allowedLabelPatterns: [String],
++        blockedLabelPatterns: [String]
++      ) -> [String: Any] in
++      guard
++        let selection = getFamilyActivitySelectionById(
++          id: sourceFamilyActivitySelectionId
++        )
++      else {
++        removeFamilyActivitySelectionById(id: targetFamilyActivitySelectionId)
++        return [
++          "applicationCount": 0,
++          "categoryCount": 0,
++          "webDomainCount": 0,
++          "includeEntireCategory": false,
++          "applicationLabels": [],
++          "removedApplicationLabels": [],
++          "removedWebDomains": [],
++          "removedCategoryCount": 0,
++        ]
++      }
++
++      var sanitizedSelection = FamilyActivitySelection(includeEntireCategory: false)
++      var keptApplicationLabels: [String] = []
++      var removedApplicationLabels: [String] = []
++      let normalizedAllowedPatterns = allowedLabelPatterns.map { pattern in
++        pattern.lowercased()
++      }
++      let normalizedBlockedPatterns = blockedLabelPatterns.map { pattern in
++        pattern.lowercased()
++      }
++
++      for token in selection.applicationTokens {
++        let application = Application(token: token)
++        let label = application.localizedDisplayName ?? "App"
++        let normalizedLabel = label.lowercased()
++        let isExplicitlyAllowed = normalizedAllowedPatterns.contains { pattern in
++          if pattern.count <= 2 {
++            return normalizedLabel == pattern
++          }
++          return normalizedLabel.contains(pattern)
++        }
++        let isExplicitlyBlocked = normalizedBlockedPatterns.contains { pattern in
++          if pattern.count <= 2 {
++            return normalizedLabel == pattern
++          }
++          return normalizedLabel.contains(pattern)
++        }
++
++        if isExplicitlyAllowed || !isExplicitlyBlocked {
++          sanitizedSelection.applicationTokens.insert(token)
++          keptApplicationLabels.append(label)
++        } else {
++          removedApplicationLabels.append(label)
++        }
++      }
++
++      let removedWebDomains = selection.webDomainTokens.compactMap { token in
++        WebDomain(token: token).domain
++      }
++
++      if sanitizedSelection.applicationTokens.isEmpty {
++        removeFamilyActivitySelectionById(id: targetFamilyActivitySelectionId)
++      } else {
++        setFamilyActivitySelectionById(
++          id: targetFamilyActivitySelectionId,
++          activitySelection: sanitizedSelection
++        )
++      }
++
++      return [
++        "applicationCount": sanitizedSelection.applicationTokens.count,
++        "categoryCount": 0,
++        "webDomainCount": 0,
++        "includeEntireCategory": false,
++        "applicationLabels": keptApplicationLabels.sorted(),
++        "removedApplicationLabels": removedApplicationLabels.sorted(),
++        "removedWebDomains": removedWebDomains.sorted(),
++        "removedCategoryCount": selection.categoryTokens.count,
++      ]
++    }
++
+     Function("isShieldActive") {
+       return isShieldActive()
+     }
 diff --git a/node_modules/react-native-device-activity/ios/Shared.swift b/node_modules/react-native-device-activity/ios/Shared.swift
-index 44f48b6..c569820 100644
+index 44f48b6..decf3ad 100644
 --- a/node_modules/react-native-device-activity/ios/Shared.swift
 +++ b/node_modules/react-native-device-activity/ios/Shared.swift
-@@ -193,8 +193,9 @@ func executeGenericAction(
+@@ -122,12 +122,21 @@ func executeGenericAction(
+       selection.webDomainTokens.insert(webdomainToken)
+     }
+ 
+-    if let categoryToken = categoryToken {
+-      selection.categoryTokens.insert(categoryToken)
+-    }
++    // Do NOT whitelist the categoryToken — it would remove category-level
++    // blocking for ALL apps in that category, not just the triggering one.
+ 
+     saveCurrentWhitelist(whitelist: selection)
+     updateBlock(triggeredBy: "shieldAction")
++  } else if type == "saveCurrentToPendingUnlock" {
++    var pendingSelection = FamilyActivitySelection()
++    if let applicationToken = applicationToken {
++      pendingSelection.applicationTokens.insert(applicationToken)
++    }
++    if let webdomainToken = webdomainToken {
++      pendingSelection.webDomainTokens.insert(webdomainToken)
++    }
++    let targetId = action["familyActivitySelectionId"] as? String ?? "gentlewait.pending-unlock"
++    setFamilyActivitySelectionById(id: targetId, activitySelection: pendingSelection)
+   }
+ 
+   if type == "blockSelection" {
+@@ -193,8 +202,9 @@ func executeGenericAction(
    } else if type == "disableBlockAllMode" {
      disableBlockAllMode(triggeredBy: triggeredBy)
    } else if type == "openApp" {
@@ -14,7 +135,7 @@ index 44f48b6..c569820 100644
  
      sleep(ms: 1000)
    } else if type == "enableBlockAllMode" {
-@@ -252,6 +253,20 @@ func executeGenericAction(
+@@ -252,6 +262,20 @@ func executeGenericAction(
          triggeredBy: triggeredBy
        )
      }
@@ -35,7 +156,7 @@ index 44f48b6..c569820 100644
    } else if type == "stopMonitoring" {
      let activityNames = action["activityNames"] as? [String]
  
-@@ -304,7 +319,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+@@ -304,7 +328,7 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
    }
  
    if let userInfo = contents["userInfo"] as? [String: Any] {
@@ -44,38 +165,138 @@ index 44f48b6..c569820 100644
    }
  
    if #available(iOS 15.0, *) {
-@@ -327,19 +342,25 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
+@@ -327,19 +351,26 @@ func sendNotification(contents: [String: Any], placeholders: [String: String?])
      }
    }
  
 -  if let threadIdentifier = contents["threadIdentifier"] as? String {
 -    content.threadIdentifier = threadIdentifier
 -  }
-+  // Always use a unique threadIdentifier to prevent iOS thread-based coalescing
-+  content.threadIdentifier = UUID().uuidString
- 
+-
    if let launchImageName = contents["launchImageName"] as? String {
      content.launchImageName = launchImageName
    }
  
 -  let identifier = contents["identifier"] as? String ?? UUID().uuidString
-+  let identifier = UUID().uuidString
-+
-+  // Clear all previous notifications to ensure a clean slate
-+  let center = UNUserNotificationCenter.current()
-+  center.removeAllDeliveredNotifications()
-+  center.removeAllPendingNotificationRequests()
++  let identifier = replacePlaceholders(
++    contents["identifier"] as? String ?? UUID().uuidString,
++    with: placeholders
++  )
++  content.threadIdentifier =
++    replacePlaceholders(
++      contents["threadIdentifier"] as? String ?? identifier,
++      with: placeholders
++    )
  
--  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-+  // Use a 1-second trigger instead of immediate delivery
-+  let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
-+  let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
++  let center = UNUserNotificationCenter.current()
++  center.removeDeliveredNotifications(withIdentifiers: [identifier])
++  center.removePendingNotificationRequests(withIdentifiers: [identifier])
+   let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
  
 -  UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
 +  center.add(request, withCompletionHandler: nil)
  }
  
  // dataRequest which sends request to given URL and convert to Decodable Object
+diff --git a/node_modules/react-native-device-activity/src/ReactNativeDeviceActivity.types.ts b/node_modules/react-native-device-activity/src/ReactNativeDeviceActivity.types.ts
+index 1fae790..1bfe4a6 100644
+--- a/node_modules/react-native-device-activity/src/ReactNativeDeviceActivity.types.ts
++++ b/node_modules/react-native-device-activity/src/ReactNativeDeviceActivity.types.ts
+@@ -36,6 +36,13 @@ export type ActivitySelectionWithMetadata = {
+ 
+ export type DeviceActivitySelectionEvent = ActivitySelectionWithMetadata;
+ 
++export type SanitizedActivitySelection = ActivitySelectionMetadata & {
++  applicationLabels: string[];
++  removedApplicationLabels: string[];
++  removedWebDomains: string[];
++  removedCategoryCount: number;
++};
++
+ export type DeviceActivitySelectionViewProps = PropsWithChildren<{
+   style?: StyleProp<ViewStyle>;
+   onSelectionChange?: (
+@@ -431,6 +438,13 @@ export type ReactNativeDeviceActivityNativeModule = {
+     options: SetOperationOptions,
+   ) => ActivitySelectionWithMetadata;
+ 
++  sanitizeSelection: (
++    sourceFamilyActivitySelectionId: string,
++    targetFamilyActivitySelectionId: string,
++    allowedLabelPatterns: string[],
++    blockedLabelPatterns: string[],
++  ) => SanitizedActivitySelection;
++
+   renameActivitySelection: (
+     previousFamilyActivitySelectionId: string,
+     newFamilyActivitySelectionId: string,
+diff --git a/node_modules/react-native-device-activity/src/ReactNativeDeviceActivityModule.ts b/node_modules/react-native-device-activity/src/ReactNativeDeviceActivityModule.ts
+index 95f916c..2147578 100644
+--- a/node_modules/react-native-device-activity/src/ReactNativeDeviceActivityModule.ts
++++ b/node_modules/react-native-device-activity/src/ReactNativeDeviceActivityModule.ts
+@@ -55,6 +55,21 @@ const warnFnActivitySelectionMetadata = () => {
+   };
+ };
+ 
++const warnFnSanitizedActivitySelection = () => {
++  console.warn(warnText);
++
++  return {
++    applicationCount: 0,
++    categoryCount: 0,
++    webDomainCount: 0,
++    includeEntireCategory: false,
++    applicationLabels: [],
++    removedApplicationLabels: [],
++    removedWebDomains: [],
++    removedCategoryCount: 0,
++  };
++};
++
+ const mockModule: ReactNativeDeviceActivityNativeModule | null = {
+   requestAuthorization: warnFn,
+   userDefaultsClearWithPrefix: warnFn,
+@@ -72,6 +87,7 @@ const mockModule: ReactNativeDeviceActivityNativeModule | null = {
+   union: warnFnActivitySelectionWithMetadata,
+   difference: warnFnActivitySelectionWithMetadata,
+   symmetricDifference: warnFnActivitySelectionWithMetadata,
++  sanitizeSelection: warnFnSanitizedActivitySelection,
+   addSelectionToWhitelistAndUpdateBlock: warnFn,
+   clearAllManagedSettingsStoreSettings: warnFn,
+   clearWhitelistAndUpdateBlock: warnFn,
+diff --git a/node_modules/react-native-device-activity/src/index.ts b/node_modules/react-native-device-activity/src/index.ts
+index 938f02d..49a99f2 100644
+--- a/node_modules/react-native-device-activity/src/index.ts
++++ b/node_modules/react-native-device-activity/src/index.ts
+@@ -9,6 +9,7 @@ import {
+   ActivitySelectionInput,
+   ActivitySelectionInputWithBlocks,
+   ActivitySelectionMetadata,
++  SanitizedActivitySelection,
+   ActivitySelectionWithMetadata,
+   AuthorizationStatus,
+   AuthorizationStatusType,
+@@ -274,6 +275,20 @@ export const activitySelectionWithMetadata = (
+   );
+ };
+ 
++export const sanitizeSelection = (
++  sourceFamilyActivitySelectionId: string,
++  targetFamilyActivitySelectionId: string,
++  allowedLabelPatterns: string[],
++  blockedLabelPatterns: string[],
++): SanitizedActivitySelection | undefined => {
++  return ReactNativeDeviceActivityModule?.sanitizeSelection(
++    sourceFamilyActivitySelectionId,
++    targetFamilyActivitySelectionId,
++    allowedLabelPatterns,
++    blockedLabelPatterns,
++  );
++};
++
+ export const configureActions = ({
+   activityName,
+   callbackName,
 diff --git a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift b/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift
 index 48d628e..63fca8e 100644
 --- a/node_modules/react-native-device-activity/targets/ShieldConfiguration/ShieldConfigurationExtension.swift

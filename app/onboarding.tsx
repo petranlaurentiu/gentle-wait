@@ -7,6 +7,12 @@ import { Checkbox } from "@/src/components/Checkbox";
 import { GlassCard } from "@/src/components/GlassCard";
 import { COOLDOWN_OPTIONS, WheelPicker } from "@/src/components/WheelPicker";
 import {
+  getIOSProtectionFootnote,
+  getIOSSanitizationNotice,
+  getIOSSelectionValidationMessage,
+  hasIOSProtectedApps,
+} from "@/src/constants/iosProtection";
+import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
 } from "@/src/constants/monetization";
@@ -21,13 +27,13 @@ import {
   getSuggestedApps,
 } from "@/src/services/apps";
 import {
-  clearIOSFamilyControlsSelection,
   configureIOSProtection,
-  exceedsFreeIOSSelectionLimit,
+  getIOSFamilyControlsRawSelection,
   getIOSSelectionSummary,
   isIOSFamilyControlsAvailable,
   isServiceEnabled,
   requestServiceAuthorization,
+  saveIOSFamilyControlsSelection,
   setSelectedApps as syncSelectedAppsToNative,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
@@ -234,6 +240,8 @@ export default function OnboardingScreen() {
   const billingAvailable = useAppStore((state) => state.billingAvailable);
   const [notificationsGranted, setNotificationsGranted] = useState(false);
   const [stepKey, setStepKey] = useState(0);
+  const [iosPickerKey, setIOSPickerKey] = useState(0);
+  const [iosRawSelection, setIOSRawSelection] = useState<string | null>(null);
 
   // Onboarding state - initialize from current settings if in complete-profile mode
   const [userName, setUserName] = useState(
@@ -324,10 +332,11 @@ export default function OnboardingScreen() {
     (async () => {
       try {
         if (isIOSFamilyControlsFlow) {
-          if (
-            skipToStep === "select-apps" &&
-            currentSettings.iosFamilyActivitySelection
-          ) {
+          const existingRaw = getIOSFamilyControlsRawSelection();
+          if (existingRaw) {
+            setIOSRawSelection(existingRaw);
+          }
+          if (currentSettings.iosFamilyActivitySelection) {
             setIOSFamilyActivitySelection(
               currentSettings.iosFamilyActivitySelection,
             );
@@ -355,6 +364,8 @@ export default function OnboardingScreen() {
     isIOSFamilyControlsFlow,
     skipToStep,
   ]);
+
+  // No cleanup needed — non-persisted view manages selection in React state
 
   useEffect(() => {
     if (
@@ -549,20 +560,28 @@ export default function OnboardingScreen() {
   };
 
   const validateIOSSelectionForPlan = () => {
-    if (hasProtectedAppsPremium) {
-      return true;
-    }
+    const message = getIOSSelectionValidationMessage(
+      iosFamilyActivitySelection,
+      {
+        freeLimit: FREE_PROTECTED_APPS_LIMIT,
+        hasPremiumAccess: hasProtectedAppsPremium,
+      },
+    );
 
-    if (
-      exceedsFreeIOSSelectionLimit(
-        iosFamilyActivitySelection,
-        FREE_PROTECTED_APPS_LIMIT,
-      )
-    ) {
-      setValidationMessage(null);
-      setUpgradePromptMessage(
-        `On iPhone, the free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} individual apps. Categories, websites, and larger selections are part of Premium.`,
-      );
+    if (message) {
+      setUpgradePromptMessage(null);
+
+      const totalSelected =
+        (iosFamilyActivitySelection?.applicationCount ?? 0) +
+        (iosFamilyActivitySelection?.categoryCount ?? 0) +
+        (iosFamilyActivitySelection?.webDomainCount ?? 0);
+      if (!hasProtectedAppsPremium && totalSelected > FREE_PROTECTED_APPS_LIMIT) {
+        setValidationMessage(null);
+        setUpgradePromptMessage(message);
+      } else {
+        setValidationMessage(message);
+      }
+
       return false;
     }
 
@@ -618,7 +637,7 @@ export default function OnboardingScreen() {
       step === "select-apps" &&
       !isSimulatorScreenshotMode &&
       ((isIOSFamilyControlsFlow &&
-        !iosFamilyActivitySelection?.familyActivitySelection) ||
+        !hasIOSProtectedApps(iosFamilyActivitySelection)) ||
         (!isIOSFamilyControlsFlow && selectedAppSet.size === 0))
     ) {
       Alert.alert(
@@ -674,13 +693,24 @@ export default function OnboardingScreen() {
       const selectedApps = availableApps.filter((app) =>
         selectedAppSet.has(app.packageName),
       );
+      let nextIOSSelection = iosFamilyActivitySelection;
+
+      try {
+        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
+          nextIOSSelection = await saveIOSFamilyControlsSelection(
+            iosFamilyActivitySelection,
+          );
+        }
+      } catch (error) {
+        console.error("[Settings] Failed to save iOS app selection:", error);
+      }
 
       updateSettings({
         selectedApps: isIOSFamilyControlsFlow
           ? currentSettings.selectedApps
           : selectedApps,
         iosFamilyActivitySelection: isIOSFamilyControlsFlow
-          ? iosFamilyActivitySelection
+          ? nextIOSSelection
           : currentSettings.iosFamilyActivitySelection,
         // Preserve other settings
         pauseDurationSec: currentSettings.pauseDurationSec || pauseDuration,
@@ -696,9 +726,9 @@ export default function OnboardingScreen() {
       });
 
       try {
-        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
+        if (isIOSFamilyControlsFlow && nextIOSSelection) {
           await configureIOSProtection(
-            iosFamilyActivitySelection,
+            nextIOSSelection,
             currentSettings.cooldownMinutes || cooldownMinutes,
           );
         } else {
@@ -736,6 +766,17 @@ export default function OnboardingScreen() {
       const selectedApps = availableApps.filter((app) =>
         selectedAppSet.has(app.packageName),
       );
+      let nextIOSSelection = iosFamilyActivitySelection;
+
+      try {
+        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
+          nextIOSSelection = await saveIOSFamilyControlsSelection(
+            iosFamilyActivitySelection,
+          );
+        }
+      } catch (error) {
+        console.error("[Onboarding] Failed to save iOS app selection:", error);
+      }
 
       updateSettings({
         selectedApps: isIOSFamilyControlsFlow ? [] : selectedApps,
@@ -748,17 +789,14 @@ export default function OnboardingScreen() {
         targetScreenTimeHours: targetScreenTime,
         ageRange: selectedAge || undefined,
         iosFamilyActivitySelection: isIOSFamilyControlsFlow
-          ? iosFamilyActivitySelection
+          ? nextIOSSelection
           : null,
         onboardingCompleted: true,
       });
 
       try {
-        if (isIOSFamilyControlsFlow && iosFamilyActivitySelection) {
-          await configureIOSProtection(
-            iosFamilyActivitySelection,
-            cooldownMinutes,
-          );
+        if (isIOSFamilyControlsFlow && nextIOSSelection) {
+          await configureIOSProtection(nextIOSSelection, cooldownMinutes);
         } else {
           await syncSelectedAppsToNative(selectedApps);
         }
@@ -1055,6 +1093,11 @@ export default function OnboardingScreen() {
       backgroundColor: colors.glassFill,
       borderWidth: 1,
       borderColor: colors.glassStroke,
+    },
+    iosGuidanceCard: {
+      gap: spacing.xs,
+      marginTop: spacing.md,
+      paddingVertical: spacing.md,
     },
     iosPickerContent: {
       padding: spacing.lg,
@@ -3203,32 +3246,34 @@ export default function OnboardingScreen() {
               {isIOSFamilyControlsFlow ? (
                 <>
                   <Text style={styles.description}>
-                    Select the apps you reach for most — we&apos;ll add a{" "}
-                    <Text style={styles.descriptionAccent}>gentle pause</Text>{" "}
-                    before they open.
+                    Pick only the apps that pull you into doom scrolling
+                    (Instagram, TikTok, YouTube, etc.). Ignore any websites or
+                    categories you see — GentleWait will filter those out
+                    automatically.
                   </Text>
 
                   <View style={styles.iosPickerCard}>
                     {isIOSFamilyControlsAvailable() ? (
                       <DeviceActivitySelectionView
+                        key={iosPickerKey}
                         style={styles.iosSelectionView}
-                        familyActivitySelection={
-                          iosFamilyActivitySelection?.familyActivitySelection ||
-                          null
-                        }
-                        headerText="Choose apps to pause before"
-                        footerText="You can change this anytime in Settings."
+                        familyActivitySelection={iosRawSelection}
+                        headerText="Tap the apps you doom-scroll (up to 6)"
+                        footerText="Only apps with icons count. Websites and categories are ignored."
                         onSelectionChange={(event) => {
-                          const nextSelection = event.nativeEvent;
+                          const {
+                            familyActivitySelection,
+                            applicationCount,
+                            categoryCount,
+                            webDomainCount,
+                          } = event.nativeEvent;
+                          setIOSRawSelection(familyActivitySelection);
                           setIOSFamilyActivitySelection({
-                            familyActivitySelection:
-                              nextSelection.familyActivitySelection || "",
-                            applicationCount:
-                              nextSelection.applicationCount || 0,
-                            categoryCount: nextSelection.categoryCount || 0,
-                            webDomainCount: nextSelection.webDomainCount || 0,
-                            includeEntireCategory:
-                              nextSelection.includeEntireCategory || false,
+                            familyActivitySelection,
+                            applicationCount,
+                            categoryCount,
+                            webDomainCount,
+                            includeEntireCategory: false,
                             updatedAt: Date.now(),
                           });
                         }}
@@ -3244,31 +3289,45 @@ export default function OnboardingScreen() {
                   </View>
 
                   {iosFamilyActivitySelection && (
-                    <View style={styles.iosSelectionSummaryRow}>
-                      <Text style={styles.selectedCount}>
-                        {getIOSSelectionSummary(iosFamilyActivitySelection)}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={async () => {
-                          setIOSFamilyActivitySelection(null);
-                          await clearIOSFamilyControlsSelection();
-                        }}
-                      >
-                        <Text style={styles.selectAllText}>Clear</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <>
+                      <View style={styles.iosSelectionSummaryRow}>
+                        <Text style={styles.selectedCount}>
+                          {getIOSSelectionSummary(iosFamilyActivitySelection)}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setIOSFamilyActivitySelection(null);
+                            setIOSRawSelection(null);
+                            setIOSPickerKey((current) => current + 1);
+                          }}
+                        >
+                          <Text style={styles.selectAllText}>Clear</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {iosFamilyActivitySelection.selectedApplicationLabels &&
+                        iosFamilyActivitySelection.selectedApplicationLabels
+                          .length > 0 && (
+                          <Text style={styles.descriptionSmall}>
+                            Kept:{" "}
+                            {iosFamilyActivitySelection.selectedApplicationLabels.join(
+                              ", ",
+                            )}
+                          </Text>
+                        )}
+                      {getIOSSanitizationNotice(iosFamilyActivitySelection) && (
+                        <Text style={styles.descriptionSmall}>
+                          {getIOSSanitizationNotice(iosFamilyActivitySelection)}
+                        </Text>
+                      )}
+                    </>
                   )}
 
-                  {!hasProtectedAppsPremium &&
-                    exceedsFreeIOSSelectionLimit(
-                      iosFamilyActivitySelection,
+                  <Text style={styles.descriptionSmall}>
+                    {getIOSProtectionFootnote(
                       FREE_PROTECTED_APPS_LIMIT,
-                    ) && (
-                      <Text style={styles.descriptionSmall}>
-                        Free plan: up to {FREE_PROTECTED_APPS_LIMIT} apps.
-                        Upgrade for categories and websites.
-                      </Text>
+                      hasProtectedAppsPremium,
                     )}
+                  </Text>
                   {isSimulatorScreenshotMode && (
                     <Text style={styles.descriptionSmall}>
                       Screenshot mode: selection is optional so you can continue

@@ -14,9 +14,9 @@ import {
 } from "@/src/data/mindfulness";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
 import {
-  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
+  unlockPendingAppAndStartCooldown,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import {
@@ -65,9 +65,6 @@ export default function AlternativesScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
-  const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
-
   const [startTime] = useState(Date.now());
   const [isComplete, setIsComplete] = useState(false);
   const isCompactScreen = screenHeight < 860;
@@ -311,18 +308,24 @@ export default function AlternativesScreen() {
         return;
       }
 
-      exitToHome();
+      await exitToHome();
     } catch (error) {
       console.error("[Alternatives] Error completing exercise:", error);
       if (type === "reflect") {
         setJournalSaveError("Your reflection could not be saved. Please try again.");
         return;
       }
-      exitToHome();
+      await exitToHome();
     }
   };
 
-  const exitToHome = () => {
+  const exitToHome = async () => {
+    if (Platform.OS === "ios") {
+      await unlockPendingAppAndStartCooldown(
+        settings.cooldownMinutes || 15,
+      );
+    }
+
     if (router.canDismiss()) {
       router.dismissAll();
     }

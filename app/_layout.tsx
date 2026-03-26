@@ -18,6 +18,7 @@ import "react-native-reanimated";
 
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { ErrorBoundary } from "@/src/components/ErrorBoundary";
+import { hasIOSProtectedApps } from "@/src/constants/iosProtection";
 import {
   addBillingCustomerInfoListener,
   getBillingDebugSnapshot,
@@ -133,7 +134,7 @@ export default function RootLayout() {
     return () => {
       notificationResponseRef.current?.remove();
     };
-  }, [router]);
+  }, [router, setNotificationsDenied]);
 
   // Handle pending interception (Android: accessibility service, iOS: shield UserDefaults)
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function RootLayout() {
     return () => {
       subscription.remove();
     };
-  }, [setCurrentInterceptionEvent, router]);
+  }, [router, setCurrentInterceptionEvent, setNotificationsDenied]);
 
   useEffect(() => {
     // Initialize database on app load
@@ -235,9 +236,11 @@ export default function RootLayout() {
         return;
       }
 
-      if (settings.iosFamilyActivitySelection?.familyActivitySelection) {
+      const iosSelection = settings.iosFamilyActivitySelection;
+
+      if (hasIOSProtectedApps(iosSelection) && iosSelection) {
         await configureIOSProtection(
-          settings.iosFamilyActivitySelection,
+          iosSelection,
           settings.cooldownMinutes || 15,
         );
       } else {

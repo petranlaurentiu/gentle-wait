@@ -19,6 +19,7 @@ import {
   copyFile,
   getAppGroupFileDirectory,
   getAuthorizationStatus,
+  getFamilyActivitySelectionId,
   isAvailable as isDeviceActivityAvailable,
   pollAuthorizationStatus,
   requestAuthorization,
@@ -35,11 +36,13 @@ import {
 const GentleWaitModule = NativeModules.GentleWaitModule ?? null;
 
 const IOS_SELECTION_ID = "gentlewait.protected-selection";
+const IOS_SELECTION_DRAFT_ID = `${IOS_SELECTION_ID}.draft`;
 const IOS_SELECTION_METADATA_KEY = "gentlewait.protected-selection.metadata";
 const FAMILY_ACTIVITY_SELECTION_IDS_KEY = "familyActivitySelectionIds";
 const IOS_SHIELD_ID = "gentlewait-default";
 const IOS_MAIN_ACTIVITY = `gentlewait-monitor-${IOS_SELECTION_ID}`;
 const IOS_COOLDOWN_ACTIVITY = `gentlewait-cooldown-${IOS_SELECTION_ID}`;
+const IOS_PENDING_UNLOCK_ID = "gentlewait.pending-unlock";
 const IOS_SHIELD_ICON_FILENAME = "shield-mascot.png";
 // DeviceActivitySchedule requires a minimum 15-minute monitoring interval on iOS
 const IOS_MIN_COOLDOWN_MINUTES = 15;
@@ -65,6 +68,24 @@ export function getIOSFamilyControlsSelectionId(): string {
   return IOS_SELECTION_ID;
 }
 
+function getStoredFamilyActivitySelectionIds(): Record<string, string> {
+  return (
+    userDefaultsGet<Record<string, string>>(FAMILY_ACTIVITY_SELECTION_IDS_KEY) ??
+    {}
+  );
+}
+
+function removeStoredFamilyActivitySelectionId(id: string): void {
+  const currentSelectionIds = getStoredFamilyActivitySelectionIds();
+
+  if (!currentSelectionIds[id]) {
+    return;
+  }
+
+  const { [id]: _removed, ...remaining } = currentSelectionIds;
+  userDefaultsSet(FAMILY_ACTIVITY_SELECTION_IDS_KEY, remaining);
+}
+
 export function getIOSFamilyControlsSelection(): IOSFamilyActivitySelection | null {
   if (!isIOSFamilyControlsAvailable()) {
     return null;
@@ -74,26 +95,45 @@ export function getIOSFamilyControlsSelection(): IOSFamilyActivitySelection | nu
     IOS_SELECTION_METADATA_KEY,
   );
 
-  if (!metadata?.familyActivitySelection) {
+  if ((metadata?.applicationCount ?? 0) === 0) {
     return null;
   }
 
-  return metadata;
+  return metadata ?? null;
+}
+
+export function getIOSFamilyControlsRawSelection(): string | null {
+  if (!isIOSFamilyControlsAvailable()) {
+    return null;
+  }
+  return getFamilyActivitySelectionId(IOS_SELECTION_ID)?.trim() || null;
 }
 
 export async function saveIOSFamilyControlsSelection(
   selection: IOSFamilyActivitySelection,
-): Promise<void> {
+): Promise<IOSFamilyActivitySelection> {
   if (!isIOSFamilyControlsAvailable()) {
-    return;
+    return selection;
+  }
+
+  const rawSelection = selection.familyActivitySelection?.trim();
+  const totalCount =
+    (selection.applicationCount ?? 0) +
+    (selection.categoryCount ?? 0) +
+    (selection.webDomainCount ?? 0);
+
+  if (!rawSelection || totalCount === 0) {
+    throw new Error("Missing iOS Family Controls selection.");
   }
 
   setFamilyActivitySelectionId({
     id: IOS_SELECTION_ID,
-    familyActivitySelection: selection.familyActivitySelection,
+    familyActivitySelection: rawSelection,
   });
 
-  userDefaultsSet(IOS_SELECTION_METADATA_KEY, selection);
+  const { familyActivitySelection: _raw, ...metadata } = selection;
+  userDefaultsSet(IOS_SELECTION_METADATA_KEY, metadata);
+  return selection;
 }
 
 export async function clearIOSFamilyControlsSelection(): Promise<void> {
@@ -101,17 +141,11 @@ export async function clearIOSFamilyControlsSelection(): Promise<void> {
     return;
   }
 
-  const currentSelectionIds =
-    userDefaultsGet<Record<string, string>>(
-      FAMILY_ACTIVITY_SELECTION_IDS_KEY,
-    ) ?? {};
-
-  if (currentSelectionIds[IOS_SELECTION_ID]) {
-    const { [IOS_SELECTION_ID]: _removed, ...remaining } = currentSelectionIds;
-    userDefaultsSet(FAMILY_ACTIVITY_SELECTION_IDS_KEY, remaining);
-  }
+  removeStoredFamilyActivitySelectionId(IOS_SELECTION_ID);
+  removeStoredFamilyActivitySelectionId(IOS_SELECTION_DRAFT_ID);
 
   userDefaultsRemove(IOS_SELECTION_METADATA_KEY);
+  userDefaultsRemove("gentlewait.pendingShieldInterception");
 
   stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
   resetBlocks("clearIOSFamilyControlsSelection");
@@ -122,7 +156,7 @@ export async function clearIOSFamilyControlsSelection(): Promise<void> {
 export function getIOSSelectionSummary(
   selection: IOSFamilyActivitySelection | null | undefined,
 ): string {
-  if (!selection) {
+  if (!selection || selection.applicationCount === 0) {
     return "No apps selected yet.";
   }
 
@@ -137,8 +171,7 @@ export function getIOSSelectionSummary(
       ? `${selection.webDomainCount} website${selection.webDomainCount === 1 ? "" : "s"}`
       : null,
   ].filter(Boolean);
-
-  return parts.length > 0 ? parts.join(" \u2022 ") : "Selection saved.";
+  return parts.length > 0 ? parts.join(" \u2022 ") : "No apps selected yet.";
 }
 
 async function ensureIOSShieldIcon(): Promise<string | null> {
@@ -180,7 +213,7 @@ function buildIOSShieldConfig(iconAppGroupRelativePath: string | null) {
     title: "A gentle pause",
     titleColor: { red: 245, green: 247, blue: 251, alpha: 1 },
     subtitle:
-      "You opened this without thinking — and noticing that is already a win. Tap below, then open GentleWait.",
+      "You opened this without thinking — and noticing that is already a win. Tap below, then open the GentleWait notification to complete a quick exercise before this app unlocks.",
     subtitleColor: { red: 226, green: 232, blue: 240, alpha: 0.78 },
     iconAppGroupRelativePath: iconAppGroupRelativePath ?? undefined,
     iconSystemName: iconAppGroupRelativePath ? undefined : "leaf.circle.fill",
@@ -203,17 +236,12 @@ function buildIOSShieldActions(cooldownMinutes: number) {
     primary: {
       behavior: "close" as const,
       actions: [
-        // 1. Whitelist only this specific app (per-app, not entire selection)
-        { type: "addCurrentToWhitelist" as const },
-        // 2. Start cooldown timer to re-block this app after cooldown expires
+        // 1. Save just this app's token for per-app unlock after the exercise
         {
-          type: "startMonitoring" as const,
-          activityName: IOS_COOLDOWN_ACTIVITY,
-          intervalStartDelayMs: 0,
-          intervalEndDelayMs: cooldownMs,
-          deviceActivityEvents: [],
+          type: "saveCurrentToPendingUnlock" as any,
+          familyActivitySelectionId: IOS_PENDING_UNLOCK_ID,
         },
-        // 3. Persist interception data to shared UserDefaults (always succeeds)
+        // 2. Persist interception data for the pause screen
         {
           type: "writeUserDefaults" as any,
           key: "gentlewait.pendingShieldInterception",
@@ -226,14 +254,16 @@ function buildIOSShieldActions(cooldownMinutes: number) {
             ts: String(Date.now()),
           },
         },
-        // 4. Send notification (works if permitted, silently dropped otherwise)
+        // 3. Send notification — ShieldAction extensions cannot open the app directly.
         {
           type: "sendNotification" as const,
           payload: {
-            title: "Nice choice — you paused",
-            body: "Tap to start a quick exercise. You'll feel the difference.",
+            title: "Ready for a quick exercise?",
+            body: "Tap to open GentleWait. {applicationName} unlocks after you finish.",
             sound: "default" as const,
             interruptionLevel: "timeSensitive" as unknown as "active",
+            identifier: "gentlewait.shield.pause",
+            threadIdentifier: "gentlewait.shield.pause",
             userInfo: {
               source: "shield",
               action: "pause",
@@ -243,16 +273,12 @@ function buildIOSShieldActions(cooldownMinutes: number) {
             },
           },
         },
-        // 3. Open app directly (guaranteed fallback, no permission needed)
-        {
-          type: "openApp" as any,
-          url: "gentlewait://shield-pause",
-        },
       ],
     },
     secondary: {
-      behavior: "defer" as const,
+      behavior: "close" as const,
       actions: [
+        // Whitelist this app and start cooldown — user can use it temporarily
         { type: "addCurrentToWhitelist" as const },
         {
           type: "startMonitoring" as const,
@@ -286,6 +312,15 @@ export async function configureIOSProtection(
     return;
   }
 
+  const familyActivitySelection =
+    selection.familyActivitySelection?.trim() ||
+    getFamilyActivitySelectionId(IOS_SELECTION_ID)?.trim();
+
+  if (!familyActivitySelection) {
+    console.warn("[NativeService] Missing active iOS Family Controls selection.");
+    return;
+  }
+
   stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
   cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
   cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
@@ -296,9 +331,10 @@ export async function configureIOSProtection(
 
   setFamilyActivitySelectionId({
     id: IOS_SELECTION_ID,
-    familyActivitySelection: selection.familyActivitySelection,
+    familyActivitySelection,
   });
-  userDefaultsSet(IOS_SELECTION_METADATA_KEY, selection);
+  const { familyActivitySelection: _ignored, ...selectionMetadata } = selection;
+  userDefaultsSet(IOS_SELECTION_METADATA_KEY, selectionMetadata);
 
   updateShieldWithId(shieldConfiguration, shieldActions, IOS_SHIELD_ID);
 
@@ -341,11 +377,12 @@ export function exceedsFreeIOSSelectionLimit(
     return false;
   }
 
-  return (
-    selection.applicationCount > freeLimit ||
-    selection.categoryCount > 0 ||
-    selection.webDomainCount > 0
-  );
+  const totalCount =
+    (selection.applicationCount ?? 0) +
+    (selection.categoryCount ?? 0) +
+    (selection.webDomainCount ?? 0);
+
+  return totalCount > freeLimit;
 }
 
 export async function isServiceEnabled(): Promise<boolean> {
@@ -600,26 +637,29 @@ export async function launchApp(packageName: string): Promise<boolean> {
   }
 }
 
-export async function startIOSCooldownForSelection(
-  familyActivitySelectionId: string,
+export async function unlockPendingAppAndStartCooldown(
   cooldownMinutes: number,
 ): Promise<void> {
   if (!isIOSFamilyControlsAvailable()) {
     return;
   }
 
-  const normalizedSelectionId = familyActivitySelectionId.trim();
-  if (!normalizedSelectionId) {
+  const pendingId = getFamilyActivitySelectionId(IOS_PENDING_UNLOCK_ID);
+  if (!pendingId) {
+    if (__DEV__) {
+      console.warn("[NativeService] No pending unlock found, skipping per-app unlock");
+    }
     return;
   }
 
+  addSelectionToWhitelistAndUpdateBlock(
+    { activitySelectionId: IOS_PENDING_UNLOCK_ID },
+    "unlockPendingApp",
+  );
+  removeStoredFamilyActivitySelectionId(IOS_PENDING_UNLOCK_ID);
+
   const cooldownMs =
     Math.max(cooldownMinutes, IOS_MIN_COOLDOWN_MINUTES) * 60 * 1000;
-
-  addSelectionToWhitelistAndUpdateBlock(
-    { activitySelectionId: normalizedSelectionId },
-    "startIOSCooldownForSelection",
-  );
 
   configureActions({
     activityName: IOS_COOLDOWN_ACTIVITY,

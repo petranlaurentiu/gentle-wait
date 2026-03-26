@@ -11,6 +11,7 @@ import { Button } from "@/src/components/Button";
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
+import { hasIOSProtectedApps } from "@/src/constants/iosProtection";
 import {
   FREE_PROTECTED_APPS_LIMIT,
   getUpgradePitch,
@@ -18,6 +19,7 @@ import {
 import { getDailyAffirmation, getDailyQuote } from "@/src/data/mindfulness";
 import { getAiConfigurationError } from "@/src/services/ai/openrouter";
 import { generateDailyNudge } from "@/src/services/ai/nudges";
+import { getIOSSelectionSummary } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { updateStreak } from "@/src/services/streaks";
@@ -65,8 +67,17 @@ export default function HomeScreen() {
   const actionsAnimation = useStaggeredFadeIn(6, 8);
   const footerAnimation = useStaggeredFadeIn(7, 8);
   const logoFloat = useLoopAnimation(1, 1.015, 9000);
+  const iosSelection = settings.iosFamilyActivitySelection;
+  const protectedAppsCount =
+    Platform.OS === "ios"
+      ? iosSelection?.applicationCount ?? 0
+      : settings.selectedApps.length;
+  const hasProtectedApps =
+    Platform.OS === "ios"
+      ? hasIOSProtectedApps(iosSelection)
+      : settings.selectedApps.length > 0;
   const protectedAppsRemaining = Math.max(
-    FREE_PROTECTED_APPS_LIMIT - settings.selectedApps.length,
+    FREE_PROTECTED_APPS_LIMIT - protectedAppsCount,
     0,
   );
 
@@ -333,7 +344,7 @@ export default function HomeScreen() {
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}
         >
-        {Platform.OS === "ios" && notificationsDenied && settings.selectedApps.length > 0 && (
+        {Platform.OS === "ios" && notificationsDenied && hasProtectedApps && (
           <TouchableOpacity
             style={styles.notifBanner}
             activeOpacity={0.8}
@@ -468,29 +479,53 @@ export default function HomeScreen() {
           </GlassCard>
         </Animated.View>
 
-        {settings.selectedApps.length > 0 && (
+        {hasProtectedApps && (
           <Animated.View style={weeklyCardAnimation}>
             <GlassCard glowColor="secondary">
               <AppText variant="eyebrow" color="secondary">Protected space</AppText>
               <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
                 <AppText variant="sectionTitle">Apps under your care</AppText>
                 <AppText variant="body" color="secondary">
-                  {settings.selectedApps.length} app{settings.selectedApps.length !== 1 ? "s" : ""} now open with a reflective pause.
+                  {protectedAppsCount} app{protectedAppsCount !== 1 ? "s" : ""} now open with a reflective pause.
                 </AppText>
               </View>
               <View style={styles.appsList}>
-                <View style={styles.appChipsWrap}>
-                  {settings.selectedApps.slice(0, 4).map((app) => (
-                    <View key={app.packageName} style={styles.appChip}>
-                      <AppText variant="body" color="secondary">{app.label}</AppText>
+                {Platform.OS === "ios" && iosSelection ? (
+                  iosSelection.selectedApplicationLabels &&
+                  iosSelection.selectedApplicationLabels.length > 0 ? (
+                    <View style={styles.appChipsWrap}>
+                      {iosSelection.selectedApplicationLabels.slice(0, 4).map((label) => (
+                        <View key={label} style={styles.appChip}>
+                          <AppText variant="body" color="secondary">{label}</AppText>
+                        </View>
+                      ))}
+                      {iosSelection.selectedApplicationLabels.length > 4 && (
+                        <View style={styles.appChip}>
+                          <AppText variant="body" color="primary">
+                            +{iosSelection.selectedApplicationLabels.length - 4} more
+                          </AppText>
+                        </View>
+                      )}
                     </View>
-                  ))}
-                  {settings.selectedApps.length > 4 && (
-                    <View style={styles.appChip}>
-                      <AppText variant="body" color="primary">+{settings.selectedApps.length - 4} more</AppText>
-                    </View>
-                  )}
-                </View>
+                  ) : (
+                    <AppText variant="body" color="secondary">
+                      {getIOSSelectionSummary(iosSelection)} selected for mindful pauses on iPhone.
+                    </AppText>
+                  )
+                ) : (
+                  <View style={styles.appChipsWrap}>
+                    {settings.selectedApps.slice(0, 4).map((app) => (
+                      <View key={app.packageName} style={styles.appChip}>
+                        <AppText variant="body" color="secondary">{app.label}</AppText>
+                      </View>
+                    ))}
+                    {settings.selectedApps.length > 4 && (
+                      <View style={styles.appChip}>
+                        <AppText variant="body" color="primary">+{settings.selectedApps.length - 4} more</AppText>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             </GlassCard>
           </Animated.View>

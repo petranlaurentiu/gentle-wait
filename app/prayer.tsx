@@ -6,9 +6,9 @@ import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
 import {
-  getIOSFamilyControlsSelectionId,
   launchApp,
   markAppHandled,
+  unlockPendingAppAndStartCooldown,
 } from "@/src/services/native";
 import { useAppStore } from "@/src/services/storage";
 import { insertEvent } from "@/src/services/storage/sqlite";
@@ -55,9 +55,6 @@ export default function PrayerScreen() {
   const sessionId = (params.sessionId as string) || "";
   const appPackage = (params.appPackage as string) || "";
   const appLabel = (params.appLabel as string) || "App";
-  const familyActivitySelectionId =
-    (params.familyActivitySelectionId as string) || getIOSFamilyControlsSelectionId();
-
   const [startTime] = useState(Date.now());
   const [phase, setPhase] = useState<PrayerPhase>("prayer");
   
@@ -114,7 +111,13 @@ export default function PrayerScreen() {
     transform: [{ scale: glowScale.value }],
   }));
 
-  const navigateHome = () => {
+  const navigateHome = async () => {
+    if (Platform.OS === "ios") {
+      await unlockPendingAppAndStartCooldown(
+        settings.cooldownMinutes || 15,
+      );
+    }
+
     if (router.canDismiss()) {
       router.dismissAll();
     }
@@ -139,7 +142,7 @@ export default function PrayerScreen() {
       // Update streak after recording alternative
       updateStreak(settings.premium).catch(console.error);
 
-      navigateHome();
+      await navigateHome();
 
       // Launch the app after a brief delay (pending interception already cleared)
       if (Platform.OS === "android" && appPackage) {
@@ -157,7 +160,7 @@ export default function PrayerScreen() {
       }
     } catch (error) {
       console.error("[Prayer] Error completing prayer:", error);
-      navigateHome();
+      await navigateHome();
     }
   };
 

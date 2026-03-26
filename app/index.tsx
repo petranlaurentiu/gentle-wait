@@ -5,6 +5,7 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
+import { hasIOSProtectedApps } from "@/src/constants/iosProtection";
 import { useAppStore } from "@/src/services/storage";
 import { useTheme } from "@/src/theme/ThemeProvider";
 
@@ -16,7 +17,9 @@ export default function EntryPoint() {
   useEffect(() => {
     const navigate = () => {
       const hasCompletedOnboarding =
-        settings.onboardingCompleted === true || settings.selectedApps.length > 0;
+        settings.onboardingCompleted === true ||
+        settings.selectedApps.length > 0 ||
+        hasIOSProtectedApps(settings.iosFamilyActivitySelection);
       if (hasCompletedOnboarding) {
         router.replace("/home");
       } else {
@@ -26,7 +29,12 @@ export default function EntryPoint() {
 
     const timer = setTimeout(navigate, 100);
     return () => clearTimeout(timer);
-  }, [settings.onboardingCompleted, settings.selectedApps.length, router]);
+  }, [
+    settings.iosFamilyActivitySelection,
+    settings.onboardingCompleted,
+    settings.selectedApps.length,
+    router,
+  ]);
 
   return (
     <View
