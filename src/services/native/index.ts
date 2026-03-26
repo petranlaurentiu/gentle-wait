@@ -86,6 +86,19 @@ function removeStoredFamilyActivitySelectionId(id: string): void {
   userDefaultsSet(FAMILY_ACTIVITY_SELECTION_IDS_KEY, remaining);
 }
 
+function copyStoredFamilyActivitySelectionId(
+  fromId: string,
+  toId: string,
+): void {
+  const currentSelectionIds = getStoredFamilyActivitySelectionIds();
+  const value = currentSelectionIds[fromId];
+  if (!value) return;
+  userDefaultsSet(FAMILY_ACTIVITY_SELECTION_IDS_KEY, {
+    ...currentSelectionIds,
+    [toId]: value,
+  });
+}
+
 export function getIOSFamilyControlsSelection(): IOSFamilyActivitySelection | null {
   if (!isIOSFamilyControlsAvailable()) {
     return null;
@@ -147,7 +160,8 @@ export async function clearIOSFamilyControlsSelection(): Promise<void> {
   userDefaultsRemove(IOS_SELECTION_METADATA_KEY);
   userDefaultsRemove("gentlewait.pendingShieldInterception");
 
-  stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
+  // Stop all monitoring (main + any per-app cooldowns)
+  stopMonitoring();
   resetBlocks("clearIOSFamilyControlsSelection");
   cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
   cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
@@ -321,7 +335,8 @@ export async function configureIOSProtection(
     return;
   }
 
-  stopMonitoring([IOS_MAIN_ACTIVITY, IOS_COOLDOWN_ACTIVITY]);
+  // Stop all monitoring (main + any per-app cooldowns)
+  stopMonitoring();
   cleanUpAfterActivity(IOS_MAIN_ACTIVITY);
   cleanUpAfterActivity(IOS_COOLDOWN_ACTIVITY);
 
@@ -350,6 +365,8 @@ export async function configureIOSProtection(
     ],
   });
 
+  // Configure cooldown end actions for the "Continue anyway" (secondary button)
+  // flow, which uses the shared IOS_COOLDOWN_ACTIVITY name.
   configureActions({
     activityName: IOS_COOLDOWN_ACTIVITY,
     callbackName: "intervalDidEnd",
@@ -656,30 +673,41 @@ export async function unlockPendingAppAndStartCooldown(
     { activitySelectionId: IOS_PENDING_UNLOCK_ID },
     "unlockPendingApp",
   );
+
+  // Generate a unique cooldown activity per app so multiple apps can have
+  // independent cooldown timers running simultaneously.
+  const cooldownId = `gentlewait-cooldown-${Date.now()}`;
+  const cooldownSelectionKey = `gentlewait.cooldown-selection.${cooldownId}`;
+
+  // Copy the pending app's selection to a cooldown-specific key so the
+  // DeviceActivityMonitor extension can remove only this app when the cooldown
+  // expires, rather than clearing the entire whitelist.
+  copyStoredFamilyActivitySelectionId(IOS_PENDING_UNLOCK_ID, cooldownSelectionKey);
   removeStoredFamilyActivitySelectionId(IOS_PENDING_UNLOCK_ID);
 
   const cooldownMs =
     Math.max(cooldownMinutes, IOS_MIN_COOLDOWN_MINUTES) * 60 * 1000;
 
   configureActions({
-    activityName: IOS_COOLDOWN_ACTIVITY,
+    activityName: cooldownId,
     callbackName: "intervalDidEnd",
     actions: [
-      { type: "clearWhitelistAndUpdateBlock" as const },
+      {
+        type: "removeSelectionByIdFromWhitelistAndUpdateBlock" as any,
+        familyActivitySelectionId: cooldownSelectionKey,
+      },
       {
         type: "stopMonitoring" as const,
-        activityNames: [IOS_COOLDOWN_ACTIVITY],
+        activityNames: [cooldownId],
       },
     ],
   });
-
-  stopMonitoring([IOS_COOLDOWN_ACTIVITY]);
 
   const now = new Date();
   const endAt = new Date(now.getTime() + cooldownMs);
 
   await startMonitoring(
-    IOS_COOLDOWN_ACTIVITY,
+    cooldownId,
     {
       intervalStart: {
         year: now.getFullYear(),
