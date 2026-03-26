@@ -2368,7 +2368,6 @@ export default function OnboardingScreen() {
                         style={styles.previewVideo}
                         contentFit="cover"
                         nativeControls={false}
-                        allowsFullscreen={false}
                         allowsPictureInPicture={false}
                       />
                     </View>

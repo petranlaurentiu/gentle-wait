@@ -306,9 +306,7 @@ export default function ExerciseScreen() {
           try {
             await markAppHandled(appPackage);
             const launched = await launchApp(appPackage);
-            if (launched) {
-              console.log("[Exercise] Launched app:", appPackage);
-            } else {
+            if (!launched && __DEV__) {
               console.warn("[Exercise] Could not relaunch app:", appPackage);
             }
           } catch (error) {

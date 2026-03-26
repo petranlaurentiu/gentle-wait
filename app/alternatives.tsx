@@ -336,9 +336,7 @@ export default function AlternativesScreen() {
         try {
           await markAppHandled(appPackage);
           const launched = await launchApp(appPackage);
-          if (launched) {
-            console.log("[Alternatives] Launched app:", appPackage);
-          } else {
+          if (!launched && __DEV__) {
             console.warn("[Alternatives] Could not relaunch app:", appPackage);
           }
         } catch (error) {

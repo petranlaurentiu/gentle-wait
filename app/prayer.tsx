@@ -147,9 +147,7 @@ export default function PrayerScreen() {
           try {
             await markAppHandled(appPackage);
             const launched = await launchApp(appPackage);
-            if (launched) {
-              console.log("[Prayer] Launched app:", appPackage);
-            } else {
+            if (!launched && __DEV__) {
               console.warn("[Prayer] Could not relaunch app:", appPackage);
             }
           } catch (error) {
