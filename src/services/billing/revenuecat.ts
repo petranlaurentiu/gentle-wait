@@ -210,6 +210,13 @@ export async function getBillingDebugSnapshot() {
 }
 
 export function hasPremiumAccess(customerInfo: RevenueCatCustomerInfo | null) {
+  if (__DEV__) {
+    console.log("[Billing] Checking premium access:", {
+      expectedEntitlement: PREMIUM_ENTITLEMENT_ID,
+      activeEntitlements: Object.keys(customerInfo?.entitlements?.active ?? {}),
+      hasAccess: Boolean(customerInfo?.entitlements.active[PREMIUM_ENTITLEMENT_ID]),
+    });
+  }
   return Boolean(customerInfo?.entitlements.active[PREMIUM_ENTITLEMENT_ID]);
 }
 

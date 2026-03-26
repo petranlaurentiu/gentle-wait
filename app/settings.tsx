@@ -497,9 +497,9 @@ export default function SettingsScreen() {
       gap: spacing.sm,
       paddingVertical: spacing.md,
       borderRadius: radius.button,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: colors.primary,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: colors.primary,
     },
     settingItem: {
       flexDirection: "row",

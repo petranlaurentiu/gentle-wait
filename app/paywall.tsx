@@ -38,6 +38,10 @@ export default function PaywallScreen() {
     const result = await presentBillingPaywall();
     setIsProcessing(false);
 
+    if (__DEV__) {
+      console.log("[Billing] Paywall result:", JSON.stringify(result, null, 2));
+    }
+
     if (!result.success) {
       if (result.cancelled) return;
       Alert.alert(

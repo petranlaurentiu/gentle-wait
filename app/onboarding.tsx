@@ -68,7 +68,7 @@ import ReanimatedAnimated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const mainLogo = require("@/assets/images/main_logo.png");
-const lumiMascotVideo = require("@/assets/lumi/video/lumi-mascot.mp4");
+const lumiMascotVideo = require("@/assets/lumi/video/lumi.mp4");
 
 const PROGRAM_PREVIEW_STEPS = [
   {
@@ -269,6 +269,16 @@ export default function OnboardingScreen() {
     !hasProtectedAppsPremium &&
     selectedAppSet.size >= FREE_PROTECTED_APPS_LIMIT;
   const isIOSFamilyControlsFlow = Platform.OS === "ios";
+
+  if (__DEV__) {
+    console.log("[Billing] App selection premium check:", {
+      premium: currentSettings.premium,
+      billingAvailable,
+      hasProtectedAppsPremium,
+      hasReachedFreeAppLimit,
+      selectedAppsCount: selectedAppSet.size,
+    });
+  }
   const isCompactCooldownViewport = width < 420 || screenHeight < 820;
 
   // Animation hooks
