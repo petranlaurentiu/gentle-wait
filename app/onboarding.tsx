@@ -3489,7 +3489,7 @@ export default function OnboardingScreen() {
                   {!hasProtectedAppsPremium && hasReachedFreeAppLimit && (
                     <Text style={styles.descriptionSmall}>
                       You&apos;ve reached the free plan limit. Upgrade to
-                      protect more apps and unlock the AI Companion.
+                      protect more apps and unlock Lumi.
                     </Text>
                   )}
                   {isSimulatorScreenshotMode && (
@@ -3821,7 +3821,7 @@ export default function OnboardingScreen() {
                   style={{ marginTop: 2 }}
                 />
                 <Text style={styles.upgradePromptTitle}>
-                  Unlock more protected apps and the AI Companion
+                  Unlock more protected apps and Lumi
                 </Text>
               </View>
 

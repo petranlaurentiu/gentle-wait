@@ -1,6 +1,6 @@
 /**
- * AI Assistant Screen
- * Powered by OpenRouter - Your mindful companion
+ * Lumi screen
+ * Powered by OpenRouter - your warm guide
  */
 import { Button } from "@/src/components/Button";
 import {
@@ -10,7 +10,6 @@ import {
 import {
   type AiQuotaSnapshot,
   getAiQuotaSnapshot,
-  recordAiRequestAttempt,
   recordAiResponseSuccess,
 } from "@/src/services/ai/usage";
 import {
@@ -61,8 +60,8 @@ function buildWelcomeMessage(userName?: string): Message {
     id: "welcome",
     role: "assistant",
     content: userName
-      ? `Hello, ${userName}! I'm your mindful companion. I know your goals and progress. Ask me anything about building healthier digital habits, or try one of the prompts below.`
-      : "Hello! I'm your mindful companion. I'm here to help you build a healthier relationship with technology.\n\nYou can ask me anything about digital wellbeing, or try one of the suggested prompts below.",
+      ? `Hi ${userName}, I’m Lumi. I’m here to gently help you understand your habits, reconnect with what you need, and make screen time feel more intentional.\n\nAsk me anything, or start with one of the prompts below.`
+      : "Hi, I’m Lumi. I’m here to help you build a calmer relationship with technology through gentle reflection, encouragement, and simple next steps.\n\nAsk me anything, or start with one of the prompts below.",
   };
 }
 
@@ -157,7 +156,6 @@ export default function AssistantScreen() {
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
     setIsLoading(true);
-    setQuotaSnapshot(recordAiRequestAttempt());
 
     // Scroll to bottom
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -180,7 +178,7 @@ export default function AssistantScreen() {
       role: "assistant",
       content: response.success
         ? response.message
-        : response.error || "I'm having trouble connecting. Please try again.",
+        : response.error || "I’m having trouble connecting right now. Please try again.",
     };
 
     setMessages((prev) => [...prev, assistantMessage]);
@@ -520,7 +518,7 @@ export default function AssistantScreen() {
             >
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>AI Companion</Text>
+            <Text style={styles.title}>Lumi</Text>
           </View>
         </View>
 
@@ -531,10 +529,10 @@ export default function AssistantScreen() {
             </View>
 
             <View style={styles.lockedTextGroup}>
-              <Text style={styles.lockedTitle}>Premium guided reflection</Text>
+              <Text style={styles.lockedTitle}>Lumi is part of Premium</Text>
               <Text style={styles.lockedDescription}>
-                The AI Companion is a premium feature so the core app can stay
-                free while covering live model costs.
+                Lumi is included with Premium so GentleWait can keep the core
+                experience free while covering live model costs.
               </Text>
             </View>
 
@@ -580,7 +578,7 @@ export default function AssistantScreen() {
             >
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.title}>AI Companion</Text>
+            <Text style={styles.title}>Lumi</Text>
           </View>
         </View>
 
@@ -591,10 +589,10 @@ export default function AssistantScreen() {
             </View>
 
             <View style={styles.lockedTextGroup}>
-              <Text style={styles.lockedTitle}>AI setup incomplete</Text>
+              <Text style={styles.lockedTitle}>Lumi setup incomplete</Text>
               <Text style={styles.lockedDescription}>
                 {aiConfigurationError} Add a production API origin before shipping
-                premium AI on Android.
+                Lumi on Android.
               </Text>
             </View>
 
@@ -602,13 +600,13 @@ export default function AssistantScreen() {
               <View style={styles.lockedFeatureRow}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
                 <Text style={styles.lockedFeatureText}>
-                  The rest of GentleWait can still work without the AI backend.
+                  The rest of GentleWait can still work without the Lumi backend.
                 </Text>
               </View>
               <View style={styles.lockedFeatureRow}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
                 <Text style={styles.lockedFeatureText}>
-                  Set `EXPO_PUBLIC_API_ORIGIN` for native builds to enable this screen.
+                  Set `EXPO_PUBLIC_API_ORIGIN` for native builds to enable Lumi.
                 </Text>
               </View>
             </View>
@@ -631,7 +629,7 @@ export default function AssistantScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>AI Companion</Text>
+          <Text style={styles.title}>Lumi</Text>
         </View>
         {messages.length > 1 && (
           <TouchableOpacity
@@ -676,7 +674,7 @@ export default function AssistantScreen() {
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.loadingText}>Thinking...</Text>
+            <Text style={styles.loadingText}>Lumi is thinking...</Text>
           </View>
         )}
       </ScrollView>
@@ -731,7 +729,7 @@ export default function AssistantScreen() {
             style={styles.textInput}
             value={inputText}
             onChangeText={(value) => setInputText(value.slice(0, MAX_USER_MESSAGE_CHARS))}
-            placeholder="Ask me anything..."
+            placeholder="Ask Lumi anything..."
             placeholderTextColor={colors.textMuted}
             multiline
             returnKeyType="send"
@@ -764,7 +762,7 @@ export default function AssistantScreen() {
             <Text style={styles.modalTitle}>Clear conversation?</Text>
             <Text style={styles.modalText}>
               This removes the current chat and starts fresh, while keeping your
-              personalized assistant.
+              personalized Lumi chat.
             </Text>
             <View style={styles.modalActions}>
               <View style={styles.modalAction}>

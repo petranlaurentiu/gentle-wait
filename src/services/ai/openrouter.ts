@@ -7,7 +7,8 @@ import {
   sanitizeUserContext,
   sanitizeUserMessage,
 } from "@/src/services/ai/shared";
-import { getAiUsageState } from "@/src/services/ai/usage";
+import { getAiUsageState, recordAiRequestAttempt } from "@/src/services/ai/usage";
+import { hmacSha256Hex } from "@/src/utils/hmacSha256";
 
 const AI_API_PATH = "/api/ai";
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -26,18 +27,7 @@ async function computeHmac(
   secret: string,
   message: string,
 ): Promise<string> {
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
-  return Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return hmacSha256Hex(secret, message);
 }
 
 export function getAiConfigurationError() {
@@ -47,7 +37,7 @@ export function getAiConfigurationError() {
 
   return getAiApiOrigin()
     ? null
-    : "AI Companion is not configured for this build yet.";
+    : "Lumi is not configured for this build yet.";
 }
 
 export function isAiConfigured() {
@@ -112,13 +102,27 @@ export async function sendMessage(
     const secret = getRequestSecret();
     if (secret) {
       const timestamp = Date.now().toString();
-      const signature = await computeHmac(
-        secret,
-        `${timestamp}:${installId}:${trimmedMessage}`,
-      );
+      let signature = "";
+
+      try {
+        signature = await computeHmac(
+          secret,
+          `${timestamp}:${installId}:${trimmedMessage}`,
+        );
+      } catch {
+        return {
+          success: false,
+          message: "",
+          error: "Lumi couldn't prepare a secure request. Please try again.",
+          requestDispatched: false,
+        };
+      }
+
       headers["X-GW-Signature"] = signature;
       headers["X-GW-Timestamp"] = timestamp;
     }
+
+    recordAiRequestAttempt();
 
     const response = await fetch(getAiApiUrl(), {
       method: "POST",
@@ -138,8 +142,9 @@ export async function sendMessage(
       return {
         success: false,
         message: "",
-        error: data.error || "Unable to connect to AI. Please try again later.",
+        error: data.error || "Unable to connect to Lumi. Please try again later.",
         limitedReason: data.limitedReason,
+        requestDispatched: true,
       };
     }
 
@@ -149,6 +154,7 @@ export async function sendMessage(
       quotaRemainingDay: data.quotaRemainingDay,
       quotaRemainingMonth: data.quotaRemainingMonth,
       resetAt: data.resetAt,
+      requestDispatched: true,
     };
   } catch (error) {
     return {
@@ -156,10 +162,11 @@ export async function sendMessage(
       message: "",
       error:
         error instanceof Error && error.name === "AbortError"
-          ? "AI request timed out. Please try again."
+          ? "Lumi took too long to respond. Please try again."
           : error instanceof Error
             ? error.message
             : "Network error",
+      requestDispatched: true,
     };
   } finally {
     clearTimeout(timeoutId);

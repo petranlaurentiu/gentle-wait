@@ -1,10 +1,12 @@
 /**
  * Home screen - Main dashboard.
  */
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, Image, Linking, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/src/components/Button";
@@ -28,6 +30,8 @@ import { radius, spacing } from "@/src/theme/theme";
 import { useFadeInAnimation, useLoopAnimation, useStaggeredFadeIn } from "@/src/utils/animations";
 
 const mainLogo = require("@/assets/images/main_logo.png");
+const lumiAiVideo = require("@/assets/lumi/video/lumi_ai.mp4");
+const lumiAiImage = require("@/assets/lumi/lumi_ai.png");
 
 const QUICK_ACTIONS = [
   { label: "Breathe", icon: "flower-outline", onPress: "/alternatives", params: { type: "breathe" } },
@@ -53,6 +57,7 @@ export default function HomeScreen() {
   const streakState = useAppStore((state) => state.streakState);
   const dailyNudge = useAppStore((state) => state.dailyNudge);
   const dismissNudge = useAppStore((state) => state.dismissNudge);
+  const lumiLoopResetRef = useRef(false);
 
   const dailyQuote = getDailyQuote();
   const dailyAffirmation = getDailyAffirmation();
@@ -67,6 +72,12 @@ export default function HomeScreen() {
   const actionsAnimation = useStaggeredFadeIn(6, 8);
   const footerAnimation = useStaggeredFadeIn(7, 8);
   const logoFloat = useLoopAnimation(1, 1.015, 9000);
+  const lumiPreviewPlayer = useVideoPlayer(lumiAiVideo, (player) => {
+    player.loop = false;
+    player.muted = true;
+    player.timeUpdateEventInterval = 0.05;
+    player.play();
+  });
   const iosSelection = settings.iosFamilyActivitySelection;
   const protectedAppsCount =
     Platform.OS === "ios"
@@ -117,6 +128,27 @@ export default function HomeScreen() {
       })();
     }, [settings.premium])
   );
+
+  useEffect(() => {
+    const subscription = lumiPreviewPlayer.addListener("timeUpdate", (event) => {
+      if (event.currentTime < 0.25) {
+        lumiLoopResetRef.current = false;
+        return;
+      }
+
+      if (
+        lumiPreviewPlayer.duration > 0 &&
+        event.currentTime >= lumiPreviewPlayer.duration - 0.08 &&
+        !lumiLoopResetRef.current
+      ) {
+        lumiLoopResetRef.current = true;
+        lumiPreviewPlayer.currentTime = 0.02;
+        lumiPreviewPlayer.play();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [lumiPreviewPlayer]);
 
   const styles = StyleSheet.create({
     container: {
@@ -247,18 +279,74 @@ export default function HomeScreen() {
       marginBottom: spacing.md,
     },
     assistantButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: spacing.lg,
+      position: "relative",
+      overflow: "hidden",
       borderRadius: radius.glass,
       borderWidth: 1,
       borderColor: colors.glassStroke,
       backgroundColor: colors.glassFillStrong,
-      gap: spacing.md,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: 0.18,
+      shadowRadius: 28,
+      minHeight: 320,
+    },
+    assistantBackgroundImage: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.3,
+    },
+    assistantBackgroundVideo: {
+      ...StyleSheet.absoluteFillObject,
     },
     assistantTextContainer: {
       flex: 1,
-      gap: 4,
+      gap: spacing.sm,
+    },
+    assistantGlow: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 1,
+    },
+    assistantInner: {
+      flex: 1,
+      padding: spacing.lg,
+      justifyContent: "space-between",
+      gap: spacing.lg,
+    },
+    assistantHeaderRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    assistantEyebrowChip: {
+      alignSelf: "flex-start",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(15, 23, 36, 0.66)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.14)",
+      marginBottom: spacing.xs,
+    },
+    assistantFooterRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "flex-start",
+    },
+    assistantCTA: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      alignSelf: "flex-start",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(15, 23, 36, 0.74)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.12)",
     },
     buttonRow: {
       flexDirection: "row",
@@ -571,34 +659,79 @@ export default function HomeScreen() {
               if (settings.premium) {
                 const aiConfigurationError = getAiConfigurationError();
                 if (aiConfigurationError) {
-                  Alert.alert("AI Companion unavailable", aiConfigurationError);
+                  Alert.alert("Lumi unavailable", aiConfigurationError);
                   return;
                 }
                 router.push("/assistant");
                 return;
               }
 
-              Alert.alert("AI Companion is Premium", getUpgradePitch(), [
+              Alert.alert("Lumi is Premium", getUpgradePitch(), [
                 { text: "Not now", style: "cancel" },
                 { text: "View Premium", onPress: () => router.push("/paywall") },
               ]);
             }}
             activeOpacity={0.86}
           >
-            <View style={styles.iconBadge}>
-              <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
+            <Image
+              source={lumiAiImage}
+              style={styles.assistantBackgroundImage}
+              resizeMode="cover"
+            />
+            <VideoView
+              player={lumiPreviewPlayer}
+              style={styles.assistantBackgroundVideo}
+              contentFit="cover"
+              nativeControls={false}
+              allowsPictureInPicture={false}
+            />
+            <LinearGradient
+              colors={[
+                "rgba(7, 12, 22, 0.58)",
+                "rgba(10, 18, 28, 0.34)",
+                "rgba(15, 23, 36, 0.82)",
+              ]}
+              start={{ x: 0.15, y: 0 }}
+              end={{ x: 0.85, y: 1 }}
+              style={styles.assistantGlow}
+            />
+
+            <View style={styles.assistantInner}>
+              <View style={styles.assistantHeaderRow}>
+                <View style={styles.assistantTextContainer}>
+                  <View style={styles.assistantEyebrowChip}>
+                    {!settings.premium && (
+                      <Ionicons name="sparkles" size={12} color="#FFD7B8" />
+                    )}
+                    <AppText variant="eyebrow" style={{ color: "#FFD7B8" }}>
+                      {settings.premium ? "AI companion" : "Most loved premium"}
+                    </AppText>
+                  </View>
+                  <AppText variant="sectionTitle" style={{ color: "#F8FBFF" }}>
+                    {settings.premium ? "Talk to Lumi" : "Lumi Companion"}
+                  </AppText>
+                  <AppText variant="body" style={{ color: "rgba(245, 247, 251, 0.92)" }}>
+                    {settings.premium
+                      ? "Gentle reflection, clarity, and support when your focus drifts."
+                      : "Meet Lumi, your warm AI companion for reflection and support."}
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color="rgba(248, 251, 255, 0.86)" />
+              </View>
+
+              <View style={styles.assistantFooterRow}>
+                <View style={styles.assistantCTA}>
+                  <Ionicons
+                    name={settings.premium ? "sparkles" : "lock-closed-outline"}
+                    size={16}
+                    color="#FFD7B8"
+                  />
+                  <AppText variant="label" style={{ color: "#F8FBFF" }}>
+                    {settings.premium ? "Open conversation" : "Unlock with Premium"}
+                  </AppText>
+                </View>
+              </View>
             </View>
-            <View style={styles.assistantTextContainer}>
-              <AppText variant="heading">
-                {settings.premium ? "AI Companion" : "AI Companion Premium"}
-              </AppText>
-              <AppText variant="body" color="secondary">
-                {settings.premium
-                  ? "Personalized prompts, reflection, and support when your focus slips."
-                  : "Upgrade to unlock guided reflection and personalized AI support."}
-              </AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
 
           {!settings.premium && (
