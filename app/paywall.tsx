@@ -1,10 +1,7 @@
 import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
-import {
-  PRIVACY_POLICY_URL,
-  TERMS_OF_USE_URL,
-} from "@/src/constants/legal";
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from "@/src/constants/legal";
 import {
   BillingPackage,
   getBillingPackages,
@@ -20,6 +17,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Linking,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -29,7 +27,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const BENEFITS = [
   { icon: "shield-checkmark-outline" as const, text: "More protected apps" },
   { icon: "sparkles-outline" as const, text: "Lumi & daily smart nudges" },
-  { icon: "trophy-outline" as const, text: "Streaks, badges & advanced analytics" },
+  {
+    icon: "trophy-outline" as const,
+    text: "Streaks, badges & advanced analytics",
+  },
 ];
 
 export default function PaywallScreen() {
@@ -128,10 +129,9 @@ export default function PaywallScreen() {
       borderColor: colors.glassStroke,
     },
     body: {
-      flex: 1,
-      justifyContent: "space-between",
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.lg,
+      gap: spacing.lg,
     },
     heroSection: {
       alignItems: "center",
@@ -184,9 +184,13 @@ export default function PaywallScreen() {
     },
     ctaSection: {
       gap: spacing.md,
+      paddingBottom: spacing.md,
     },
     finePrint: {
       textAlign: "center",
+    },
+    scrollView: {
+      flex: 1,
     },
     successOverlay: {
       position: "absolute",
@@ -232,7 +236,11 @@ export default function PaywallScreen() {
     <SafeAreaView style={styles.container}>
       {successMessage && (
         <View style={styles.successOverlay}>
-          <GlassCard intensity="strong" glowColor="primary" style={styles.successCard}>
+          <GlassCard
+            intensity="strong"
+            glowColor="primary"
+            style={styles.successCard}
+          >
             <View style={styles.successIconWrap}>
               <Ionicons
                 name="checkmark-circle-outline"
@@ -270,7 +278,12 @@ export default function PaywallScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.heroSection}>
           <View style={styles.heroIconWrap}>
             <Ionicons
@@ -328,11 +341,7 @@ export default function PaywallScreen() {
             activeOpacity={0.82}
           >
             <AppText variant="body">Privacy Policy</AppText>
-            <Ionicons
-              name="open-outline"
-              size={18}
-              color={colors.secondary}
-            />
+            <Ionicons name="open-outline" size={18} color={colors.secondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.legalLink}
@@ -340,11 +349,7 @@ export default function PaywallScreen() {
             activeOpacity={0.82}
           >
             <AppText variant="body">Terms of Use</AppText>
-            <Ionicons
-              name="open-outline"
-              size={18}
-              color={colors.secondary}
-            />
+            <Ionicons name="open-outline" size={18} color={colors.secondary} />
           </TouchableOpacity>
         </GlassCard>
 
@@ -366,7 +371,7 @@ export default function PaywallScreen() {
             account settings.
           </AppText>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

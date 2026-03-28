@@ -45,6 +45,7 @@ export function GlassCard({
           style={styles.glowEffect}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
+          pointerEvents="none"
         />
       )}
 
@@ -62,8 +63,12 @@ export function GlassCard({
               start={{ x: 0.05, y: 0 }}
               end={{ x: 0.8, y: 0.7 }}
               style={styles.specularSweep}
+              pointerEvents="none"
             />
-            <View style={[styles.topHighlight, { backgroundColor: colors.glassSpecular }]} />
+            <View
+              style={[styles.topHighlight, { backgroundColor: colors.glassSpecular }]}
+              pointerEvents="none"
+            />
             <View style={[styles.content, noPadding && styles.noPadding]}>{children}</View>
           </LinearGradient>
         </BlurView>
