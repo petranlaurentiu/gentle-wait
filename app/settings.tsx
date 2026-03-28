@@ -28,6 +28,10 @@ import {
   getUpgradePitch,
 } from "@/src/constants/monetization";
 import {
+  PRIVACY_POLICY_URL,
+  TERMS_OF_USE_URL,
+} from "@/src/constants/legal";
+import {
   getCustomerInfo,
   hasPremiumAccess,
   presentBillingCustomerCenter,
@@ -986,7 +990,7 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={styles.settingItem}
-              onPress={() => Linking.openURL("https://www.notion.so/Privacy-Policy-for-GentleWait-31c9ac52ab9580da81a4dec495c3cf9f")}
+              onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
               activeOpacity={0.82}
             >
               <View style={styles.settingMain}>
@@ -997,11 +1001,11 @@ export default function SettingsScreen() {
 
             <TouchableOpacity
               style={styles.settingItem}
-              onPress={() => Linking.openURL("https://www.notion.so/Terms-of-Service-for-GentleWait-31c9ac52ab95803aa568c39cd0b11b89")}
+              onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
               activeOpacity={0.82}
             >
               <View style={styles.settingMain}>
-                <AppText variant="heading">Terms of Service</AppText>
+                <AppText variant="heading">Terms of Use</AppText>
               </View>
               <Ionicons name="reader-outline" size={20} color={colors.secondary} />
             </TouchableOpacity>

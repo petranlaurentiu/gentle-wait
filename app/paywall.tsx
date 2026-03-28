@@ -2,6 +2,12 @@ import { Button } from "@/src/components/Button";
 import { GlassCard } from "@/src/components/GlassCard";
 import { Text as AppText } from "@/src/components/Typography";
 import {
+  PRIVACY_POLICY_URL,
+  TERMS_OF_USE_URL,
+} from "@/src/constants/legal";
+import {
+  BillingPackage,
+  getBillingPackages,
   presentBillingPaywall,
   restoreBillingPurchases,
 } from "@/src/services/billing";
@@ -10,9 +16,10 @@ import { useTheme } from "@/src/theme/ThemeProvider";
 import { spacing } from "@/src/theme/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
+  Linking,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -32,6 +39,25 @@ export default function PaywallScreen() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [packages, setPackages] = useState<BillingPackage[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void getBillingPackages()
+      .then((nextPackages) => {
+        if (isMounted) {
+          setPackages(nextPackages);
+        }
+      })
+      .catch((error) => {
+        console.warn("[Billing] Failed to load packages:", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleOpenPaywall = async () => {
     setIsProcessing(true);
@@ -127,6 +153,28 @@ export default function PaywallScreen() {
       alignItems: "center",
     },
     benefitsCard: {
+      gap: spacing.sm,
+    },
+    packageCard: {
+      gap: spacing.sm,
+    },
+    packageRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: spacing.md,
+      alignItems: "center",
+    },
+    packageMeta: {
+      flex: 1,
+      gap: 2,
+    },
+    legalCard: {
+      gap: spacing.sm,
+    },
+    legalLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       gap: spacing.sm,
     },
     benefitRow: {
@@ -248,6 +296,56 @@ export default function PaywallScreen() {
               <AppText variant="body">{b.text}</AppText>
             </View>
           ))}
+        </GlassCard>
+
+        {packages.length > 0 && (
+          <GlassCard intensity="light" style={styles.packageCard}>
+            <AppText variant="heading">Subscriptions</AppText>
+            {packages.map((pkg) => (
+              <View key={pkg.productIdentifier} style={styles.packageRow}>
+                <View style={styles.packageMeta}>
+                  <AppText variant="body">{pkg.title}</AppText>
+                  <AppText variant="caption" color="secondary">
+                    {pkg.description}
+                  </AppText>
+                </View>
+                <AppText variant="body">{pkg.priceString}</AppText>
+              </View>
+            ))}
+          </GlassCard>
+        )}
+
+        <GlassCard intensity="light" style={styles.legalCard}>
+          <AppText variant="caption" color="secondary" align="center">
+            Payment will be charged to your Apple ID account at confirmation of
+            purchase. Subscriptions renew automatically unless canceled at least
+            24 hours before the end of the current period. You can manage and
+            cancel subscriptions in your App Store account settings.
+          </AppText>
+          <TouchableOpacity
+            style={styles.legalLink}
+            onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+            activeOpacity={0.82}
+          >
+            <AppText variant="body">Privacy Policy</AppText>
+            <Ionicons
+              name="open-outline"
+              size={18}
+              color={colors.secondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.legalLink}
+            onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
+            activeOpacity={0.82}
+          >
+            <AppText variant="body">Terms of Use</AppText>
+            <Ionicons
+              name="open-outline"
+              size={18}
+              color={colors.secondary}
+            />
+          </TouchableOpacity>
         </GlassCard>
 
         <View style={styles.ctaSection}>

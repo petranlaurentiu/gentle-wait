@@ -3703,12 +3703,12 @@ export default function OnboardingScreen() {
               <Text style={styles.title}>
                 {notificationsGranted
                   ? "Notifications enabled"
-                  : "Stay connected to your pauses"}
+                  : "Notifications are optional"}
               </Text>
               <Text style={styles.description}>
                 {notificationsGranted
                   ? "You'll receive a gentle notification each time you choose calm. Tap it to start a guided breathing exercise."
-                  : "When you choose calm over a blocked app, GentleWait sends a notification to guide you to a breathing exercise. Without notifications, the shield closes but nothing happens."}
+                  : "GentleWait works without notifications. If you turn them on, you'll get a gentle reminder that can take you into a breathing exercise after a pause."}
               </Text>
 
               {!notificationsGranted && (
@@ -3910,15 +3910,14 @@ export default function OnboardingScreen() {
                       : skipToStep === "select-apps" && step === "select-apps"
                         ? "Save"
                         : step === "notifications" && !notificationsGranted
-                          ? "Enable notifications to continue"
+                          ? "Continue without notifications"
                           : "Continue"
           }
           onPress={handleNext}
           variant="primary"
           disabled={
             (step === "setup-choice" && setupPath === null) ||
-            (step === "permissions" && !permissionEnabled) ||
-            (step === "notifications" && !notificationsGranted)
+            (step === "permissions" && !permissionEnabled)
           }
         />
       </View>
