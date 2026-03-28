@@ -61,7 +61,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { DeviceActivitySelectionView } from "react-native-device-activity";
 import ReanimatedAnimated, {
   Easing,
   interpolate,
@@ -71,6 +70,11 @@ import ReanimatedAnimated, {
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const DeviceActivitySelectionView =
+  Platform.OS === "ios"
+    ? require("react-native-device-activity").DeviceActivitySelectionView
+    : null;
 
 const mainLogo = require("@/assets/images/main_logo.png");
 const lumiMascotVideo = require("@/assets/lumi/video/lumi.mp4");
