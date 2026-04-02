@@ -123,9 +123,15 @@ export default function SettingsScreen() {
     (settings.emotions && settings.emotions.length > 0);
   const isIOSFamilyControlsFlow = Platform.OS === "ios";
   const iosSelection = settings.iosFamilyActivitySelection;
+  const iosSelectionCount =
+    (iosSelection?.applicationCount ?? 0) +
+    (iosSelection?.categoryCount ?? 0) +
+    (iosSelection?.webDomainCount ?? 0);
   const hasReachedFreeAppLimit =
     !settings.premium &&
-    settings.selectedApps.length >= FREE_PROTECTED_APPS_LIMIT;
+    (Platform.OS === "ios"
+      ? iosSelectionCount >= FREE_PROTECTED_APPS_LIMIT
+      : settings.selectedApps.length >= FREE_PROTECTED_APPS_LIMIT);
   const hiddenProtectedAppsCount = Math.max(settings.selectedApps.length - 3, 0);
   const visibleProtectedApps = showAllProtectedApps
     ? settings.selectedApps
@@ -364,17 +370,17 @@ export default function SettingsScreen() {
 
   const handleRateApp = async () => {
     try {
-      if (Platform.OS === "android" && await StoreReview.hasAction()) {
+      if (await StoreReview.hasAction()) {
         await StoreReview.requestReview();
         return;
       }
 
-      const androidPackage =
-        Constants.expoConfig?.android?.package ||
-        Constants.manifest2?.extra?.expoClient?.android?.package ||
-        "com.petran_laurentiu.gentlewait";
-
       if (Platform.OS === "android") {
+        const androidPackage =
+          Constants.expoConfig?.android?.package ||
+          Constants.manifest2?.extra?.expoClient?.android?.package ||
+          "com.petran_laurentiu.gentlewait";
+
         const marketUrl = `market://details?id=${androidPackage}`;
         const playWebUrl =
           `https://play.google.com/store/apps/details?id=${androidPackage}`;

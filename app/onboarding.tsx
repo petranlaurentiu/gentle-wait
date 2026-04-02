@@ -690,6 +690,25 @@ export default function OnboardingScreen() {
       return;
     }
 
+    // Final iOS limit enforcement before save (safety net)
+    if (
+      step === "select-apps" &&
+      isIOSFamilyControlsFlow &&
+      !hasProtectedAppsPremium
+    ) {
+      const hasCategories = (iosFamilyActivitySelection?.categoryCount ?? 0) > 0;
+      const hasWebDomains = (iosFamilyActivitySelection?.webDomainCount ?? 0) > 0;
+      const appCount = iosFamilyActivitySelection?.applicationCount ?? 0;
+      if (hasCategories || hasWebDomains || appCount > FREE_PROTECTED_APPS_LIMIT) {
+        setUpgradePromptMessage(
+          hasCategories || hasWebDomains
+            ? `Free plan: pick individual apps only (up to ${FREE_PROTECTED_APPS_LIMIT}). Categories and websites are a Pro feature.\n\n${getUpgradePitch()}`
+            : `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} app on the free plan.\n\n${getUpgradePitch()}`,
+        );
+        return;
+      }
+    }
+
     // If coming from settings and on select-apps step, save and go back
     const isAddingApps = skipToStep === "select-apps";
     if (isAddingApps && step === "select-apps") {

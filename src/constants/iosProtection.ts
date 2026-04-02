@@ -104,7 +104,7 @@ export const IOS_DOOM_SCROLL_BLOCK_PATTERNS = [
   "ads manager",
 ] as const;
 
-function getTotalSelectionCount(
+export function getTotalSelectionCount(
   selection: IOSFamilyActivitySelection | null | undefined,
 ): number {
   if (!selection) return 0;
@@ -141,8 +141,14 @@ export function getIOSSelectionValidationMessage(
     return `Keep iPhone protection to ${maxProtectedApps} items or fewer so the shield stays fast and reliable.`;
   }
 
-  if (!options.hasPremiumAccess && totalCount > options.freeLimit) {
-    return `Free plan: protect up to ${options.freeLimit} item${options.freeLimit === 1 ? "" : "s"}. GentleWait Pro increases that to ${maxProtectedApps}.`;
+  if (!options.hasPremiumAccess) {
+    // Free users: categories and web domains require premium
+    if ((selection?.categoryCount ?? 0) > 0 || (selection?.webDomainCount ?? 0) > 0) {
+      return `Free plan: pick individual apps only (up to ${options.freeLimit}). Categories and websites are a Pro feature.`;
+    }
+    if ((selection?.applicationCount ?? 0) > options.freeLimit) {
+      return `Free plan: protect up to ${options.freeLimit} app${options.freeLimit === 1 ? "" : "s"}. GentleWait Pro increases that to ${maxProtectedApps}.`;
+    }
   }
 
   return null;
@@ -156,7 +162,7 @@ export function getIOSProtectionFootnote(
     return `Pick up to ${IOS_MAX_PROTECTED_APPS} items — apps, categories, or websites.`;
   }
 
-  return `Free plan: up to ${freeLimit} item${freeLimit === 1 ? "" : "s"}. GentleWait Pro increases that to ${IOS_MAX_PROTECTED_APPS}.`;
+  return `Free plan: up to ${freeLimit} app${freeLimit === 1 ? "" : "s"} (no categories). GentleWait Pro increases that to ${IOS_MAX_PROTECTED_APPS}.`;
 }
 
 export function getIOSSanitizationNotice(
