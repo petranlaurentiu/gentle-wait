@@ -161,3 +161,19 @@ export const mmkvStorage = {
     }
   },
 };
+
+// Chat message persistence
+const CHAT_MESSAGES_KEY = "lumi_chat_messages";
+const MAX_STORED_MESSAGES = 50;
+
+export const getChatMessages = <T = any>(): T[] => {
+  return mmkvStorage.getJSON<T[]>(CHAT_MESSAGES_KEY) ?? [];
+};
+
+export const setChatMessages = <T = any>(messages: T[]): void => {
+  mmkvStorage.setJSON(CHAT_MESSAGES_KEY, messages.slice(-MAX_STORED_MESSAGES));
+};
+
+export const clearChatMessages = (): void => {
+  mmkvStorage.delete(CHAT_MESSAGES_KEY);
+};

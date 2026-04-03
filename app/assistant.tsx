@@ -22,6 +22,7 @@ import {
 import { MAX_USER_MESSAGE_CHARS } from "@/src/services/ai/shared";
 import { getTodayStats, getWeeklyStats } from "@/src/services/stats";
 import { useAppStore } from "@/src/services/storage";
+import { clearChatMessages, getChatMessages, setChatMessages } from "@/src/services/storage/mmkv";
 import { getRecentJournalEntries } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
@@ -69,6 +70,8 @@ export default function AssistantScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
+  const hasHydratedMessagesRef = useRef(false);
+  const skipNextPersistenceRef = useRef(false);
   const settings = useAppStore((state) => state.settings);
   const aiConfigurationError = settings.premium
     ? getAiConfigurationError()
@@ -82,7 +85,7 @@ export default function AssistantScreen() {
     getAiQuotaSnapshot(),
   );
 
-  // Load user context and set welcome message on mount
+  // Load user context and restore chat history on mount.
   useEffect(() => {
     if (!settings.premium || aiConfigurationError) {
       return;
@@ -125,17 +128,40 @@ export default function AssistantScreen() {
 
         // Set context for AI
         setUserContext(context);
-        setMessages([buildWelcomeMessage(settings.userName)]);
+
+        // Restore persisted messages or show welcome
+        const saved = getChatMessages<Message>();
+        setMessages(
+          saved.length > 0 ? saved : [buildWelcomeMessage(settings.userName)],
+        );
+        hasHydratedMessagesRef.current = true;
         setQuotaSnapshot(getAiQuotaSnapshot());
       } catch (error) {
         console.error("Failed to load user context:", error);
-        setMessages([buildWelcomeMessage(settings.userName)]);
+        const saved = getChatMessages<Message>();
+        setMessages(
+          saved.length > 0 ? saved : [buildWelcomeMessage(settings.userName)],
+        );
+        hasHydratedMessagesRef.current = true;
         setQuotaSnapshot(getAiQuotaSnapshot());
       }
     }
 
     loadContext();
   }, [aiConfigurationError, settings]);
+
+  useEffect(() => {
+    if (!hasHydratedMessagesRef.current) {
+      return;
+    }
+
+    if (skipNextPersistenceRef.current) {
+      skipNextPersistenceRef.current = false;
+      return;
+    }
+
+    setChatMessages(messages);
+  }, [messages]);
 
   const handleSend = async (text?: string) => {
     const messageText = (text || inputText).trim().slice(0, MAX_USER_MESSAGE_CHARS);
@@ -215,6 +241,8 @@ export default function AssistantScreen() {
   };
 
   const confirmClearChat = () => {
+    skipNextPersistenceRef.current = true;
+    clearChatMessages();
     setMessages([buildWelcomeMessage(settings.userName)]);
     setInputText("");
     setShowClearPrompt(false);
