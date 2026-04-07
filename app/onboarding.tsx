@@ -157,6 +157,8 @@ const getStepOrder = (
   ];
 
   const isIOS = Platform.OS === "ios";
+  // Family Controls is unavailable on macOS (Mac Catalyst) — skip permissions step there
+  const iosFamilyControlsAvailable = isIOS && isIOSFamilyControlsAvailable();
 
   if (setupPath === "personalized") {
     return [
@@ -171,9 +173,11 @@ const getStepOrder = (
       "projection",
       "summary",
       // iOS needs authorization before the picker can show real apps
-      ...(isIOS
+      ...(iosFamilyControlsAvailable
         ? (["permissions", "select-apps"] as const)
-        : (["select-apps", "permissions"] as const)),
+        : isIOS
+          ? (["select-apps"] as const)
+          : (["select-apps", "permissions"] as const)),
       "duration",
       "cooldown",
       ...(isIOS ? (["notifications"] as const) : []),
@@ -184,9 +188,11 @@ const getStepOrder = (
   // Quick setup path - skip all personalized questions
   return [
     ...baseSteps,
-    ...(isIOS
+    ...(iosFamilyControlsAvailable
       ? (["permissions", "select-apps"] as const)
-      : (["select-apps", "permissions"] as const)),
+      : isIOS
+        ? (["select-apps"] as const)
+        : (["select-apps", "permissions"] as const)),
     "duration",
     "cooldown",
     ...(isIOS ? (["notifications"] as const) : []),
