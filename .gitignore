@@ -52,3 +52,6 @@ app-example
 /android/.gradle
 /android/app/.cxx
 # Keep android source files (MainActivity.kt, GentleWaitModule.kt, etc.)
+
+#campaign
+campaign/
