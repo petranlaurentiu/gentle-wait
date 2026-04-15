@@ -81,6 +81,8 @@ export interface Exercise {
   reps?: number;
   instructions: string;
   imagePlaceholder: string;
+  /** Actual exercise demonstration image — optional until assets are generated */
+  image?: number; // require() returns number
 }
 
 export interface ExerciseProgram {

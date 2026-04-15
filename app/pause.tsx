@@ -4,6 +4,7 @@
  */
 import { Button } from "@/src/components/Button";
 import { BackgroundWrapper } from "@/src/components/BackgroundWrapper";
+import { LUMI_ASSETS } from "@/src/data/lumi";
 import { insertEvent } from "@/src/services/storage/sqlite";
 import { useTheme } from "@/src/theme/ThemeProvider";
 import {
@@ -17,7 +18,7 @@ import {
   triggerSelectionFeedback,
   triggerSuccessNotification,
 } from "@/src/utils/haptics";
-import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated, {
   Easing,
   interpolate,
@@ -42,7 +44,8 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
-const CIRCLE_SIZE = width * 0.55;
+const CIRCLE_SIZE = width * 0.45;
+const LUMI_BREATHE_SIZE = CIRCLE_SIZE * 0.7;
 
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -348,6 +351,32 @@ export default function PauseScreen() {
       textAlign: "center",
       marginBottom: spacing.sm,
     },
+    actionGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: spacing.sm + 2,
+      width: "100%",
+    },
+    actionCard: {
+      width: "30%",
+      paddingVertical: spacing.md + 4,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.button,
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.1)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      minHeight: 80,
+    },
+    actionCardLabel: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center" as const,
+      marginTop: 6,
+    },
     divider: {
       height: 1,
       backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -366,6 +395,15 @@ export default function PauseScreen() {
       fontSize: typography.caption.fontSize,
       color: colors.primary,
     },
+    lumiBreathImage: {
+      width: LUMI_BREATHE_SIZE,
+      height: LUMI_BREATHE_SIZE,
+    },
+    lumiQuestionImage: {
+      width: 100,
+      height: 100,
+      marginBottom: spacing.md,
+    },
   });
 
   const reasonChoices: { label: string; value: string; icon: React.ComponentProps<typeof Ionicons>["name"] }[] = [
@@ -375,6 +413,20 @@ export default function PauseScreen() {
     { label: "Quick Info", value: "info", icon: "phone-portrait-outline" },
     { label: "Just Habit", value: "habit", icon: "refresh-outline" },
     { label: "Not Sure", value: "unsure", icon: "help-circle-outline" },
+  ];
+
+  const actionChoices: {
+    label: string;
+    value: "breathe" | "eye-reset" | "grounding" | "reflect" | "move" | "prayer";
+    icon: string;
+    iconSet?: "material";
+  }[] = [
+    { label: "Breathe", value: "breathe", icon: "flower-outline" },
+    { label: "Eye Reset", value: "eye-reset", icon: "eye-outline" },
+    { label: "Ground", value: "grounding", icon: "leaf-outline" },
+    { label: "Journal", value: "reflect", icon: "journal-outline" },
+    { label: "Move", value: "move", icon: "fitness-outline" },
+    { label: "Pray", value: "prayer", icon: "hands-pray", iconSet: "material" },
   ];
 
   return (
@@ -401,6 +453,32 @@ export default function PauseScreen() {
               >
                 <Text style={styles.timerText}>{timer}</Text>
 
+                <View style={styles.circleContainer}>
+                  {/* Glow backdrop */}
+                  <Animated.View style={[styles.glowOuter, glowAnimatedStyle]}>
+                    <LinearGradient
+                      colors={["rgba(0, 212, 255, 0.3)", "rgba(0, 212, 255, 0)"]}
+                      style={{ width: "100%", height: "100%", borderRadius: (CIRCLE_SIZE + 60) / 2 }}
+                    />
+                  </Animated.View>
+
+                  {/* Breathing circle with Lumi inside */}
+                  <Animated.View style={[styles.glassCircle, circleAnimatedStyle]}>
+                    <LinearGradient
+                      colors={["rgba(0, 212, 255, 0.08)", "rgba(0, 212, 255, 0.02)"]}
+                      style={styles.circleGradient}
+                    >
+                      <Image
+                        source={LUMI_ASSETS.breathe}
+                        style={styles.lumiBreathImage}
+                        contentFit="contain"
+                        contentPosition="center"
+                        cachePolicy="memory-disk"
+                      />
+                    </LinearGradient>
+                  </Animated.View>
+                </View>
+
                 <Text style={styles.breathText}>{breathText}</Text>
 
                 <Text style={styles.breathMessage}>
@@ -413,6 +491,15 @@ export default function PauseScreen() {
               <Animated.View
                 style={[phaseAnimatedStyle, styles.questionContainer]}
               >
+                {/* Small Lumi mascot above the question */}
+                <Image
+                  source={LUMI_ASSETS.mascot}
+                  style={styles.lumiQuestionImage}
+                  contentFit="contain"
+                  contentPosition="center"
+                  cachePolicy="memory-disk"
+                />
+
                 <Text style={styles.questionTitle}>
                   What brought you <Text style={styles.questionAccent}>here</Text>
                   ?
@@ -451,43 +538,31 @@ export default function PauseScreen() {
 
           <View style={styles.actionContainer}>
             <Text style={styles.actionTitle}>What would you like to do?</Text>
-            <Button
-              label="Take a Moment to Pray"
-              onPress={() => handleAlternative("prayer")}
-              variant="primary"
-              iconName="hands-pray"
-              iconSet="material"
-            />
-            <Button
-              label="Breathe"
-              onPress={() => handleAlternative("breathe")}
-              variant="secondary"
-              iconName="flower-outline"
-            />
-            <Button
-              label="Ground Yourself"
-              onPress={() => handleAlternative("grounding")}
-              variant="secondary"
-              iconName="leaf-outline"
-            />
-            <Button
-              label="Move"
-              onPress={() => handleAlternative("move")}
-              variant="secondary"
-              iconName="fitness-outline"
-            />
-            <Button
-              label="Eye Reset"
-              onPress={() => handleAlternative("eye-reset")}
-              variant="secondary"
-              iconName="eye-outline"
-            />
-            <Button
-              label="Journal This Moment"
-              onPress={() => handleAlternative("reflect")}
-              variant="secondary"
-              iconName="journal-outline"
-            />
+            <View style={styles.actionGrid}>
+              {actionChoices.map((choice) => (
+                <TouchableOpacity
+                  key={choice.value}
+                  style={styles.actionCard}
+                  onPress={() => handleAlternative(choice.value)}
+                  activeOpacity={0.7}
+                >
+                  {choice.iconSet === "material" ? (
+                    <MaterialCommunityIcons
+                      name={choice.icon as never}
+                      size={26}
+                      color={colors.textSecondary}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={choice.icon as never}
+                      size={26}
+                      color={colors.textSecondary}
+                    />
+                  )}
+                  <Text style={styles.actionCardLabel}>{choice.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <View style={styles.divider} />
             <Button
               label="I don't need this right now"

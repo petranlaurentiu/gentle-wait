@@ -13,6 +13,7 @@ import {
   EXERCISE_ENTRY_METADATA,
   getCategoryMeta,
   getExerciseById,
+  getExerciseImage,
   getExercisesByCategory,
   getEyeResetExercisePool,
   getMoveExercisePool,
@@ -58,6 +59,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 
 const { width } = Dimensions.get("window");
 
@@ -414,6 +416,25 @@ export default function ExerciseScreen() {
       fontSize: typography.heading.fontSize,
       color: colors.textMuted,
     },
+    // Exercise image with Lumi overlay
+    exerciseImageWrap: {
+      width: "100%",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      marginBottom: spacing.lg,
+      position: "relative" as const,
+    },
+    exerciseImage: {
+      width: width * 0.6,
+      height: isCompactScreen ? 140 : 180,
+    },
+    lumiOverlay: {
+      position: "absolute" as const,
+      bottom: -8,
+      right: width * 0.12,
+      width: 60,
+      height: 60,
+    },
     // Exercise phase
     exerciseHeader: {
       alignItems: "center",
@@ -677,13 +698,35 @@ export default function ExerciseScreen() {
             style={styles.scrollArea}
             contentContainerStyle={scrollContentStyle}
           >
-            <LumiIllustration
-              source={getLumiAssetForExercise({
-                entry: entryParam,
-                category: exercise.category,
-              })}
-              maxHeight={activeHeroHeight}
-            />
+            {/* Exercise image with Lumi overlay, or Lumi alone as fallback */}
+            {getExerciseImage(exercise.id) ? (
+              <View style={styles.exerciseImageWrap}>
+                <Image
+                  source={getExerciseImage(exercise.id)}
+                  style={styles.exerciseImage}
+                  contentFit="contain"
+                  contentPosition="center"
+                  cachePolicy="memory-disk"
+                />
+                <Image
+                  source={getLumiAssetForExercise({
+                    entry: entryParam,
+                    category: exercise.category,
+                  })}
+                  style={styles.lumiOverlay}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                />
+              </View>
+            ) : (
+              <LumiIllustration
+                source={getLumiAssetForExercise({
+                  entry: entryParam,
+                  category: exercise.category,
+                })}
+                maxHeight={activeHeroHeight}
+              />
+            )}
 
             <View style={styles.exerciseHeader}>
               <Text style={styles.exerciseCategory}>{categoryLabel}</Text>

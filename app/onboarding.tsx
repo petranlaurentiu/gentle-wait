@@ -45,7 +45,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -77,23 +77,79 @@ const DeviceActivitySelectionView =
     : null;
 
 const mainLogo = require("@/assets/images/main_logo.png");
-const lumiMascotVideo = require("@/assets/lumi/video/lumi.mp4");
+const lumiStoryVideo = require("@/assets/lumi/video/lumi_video.mp4");
+const lumiPreviewVideo = require("@/assets/lumi/video/lumi_ai.mp4");
 
 const PROGRAM_PREVIEW_STEPS = [
   {
-    label: "Breathe",
+    label: "Choose apps",
+    icon: "apps-outline",
+    description: "Pick the apps that pull you in.",
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.62)",
+    surface: "rgba(39, 92, 78, 0.94)",
+  },
+  {
+    label: "Pause first",
     icon: "flower-outline",
-    description: "Pause the urge with one calm inhale and a softer exhale.",
+    description: "Get a breath before opening.",
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.64)",
+    surface: "rgba(29, 74, 104, 0.94)",
   },
   {
-    label: "Reflect",
+    label: "Choose next",
+    icon: "compass-outline",
+    description: "Continue or choose a calmer step.",
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.64)",
+    surface: "rgba(93, 78, 31, 0.94)",
+  },
+  {
+    label: "See rhythm",
+    icon: "analytics-outline",
+    description: "Build streaks and spot patterns.",
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.62)",
+    surface: "rgba(91, 43, 70, 0.94)",
+  },
+] as const;
+
+const HERO_VALUE_PROPS = [
+  {
+    icon: "flower-outline",
+    text: "Breathe",
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.42)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    icon: "fitness-outline",
+    text: "Move",
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.44)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+  {
     icon: "pencil-outline",
-    description: "Notice what you need before habit takes over.",
+    text: "Reflect",
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.42)",
+    surface: "rgba(244, 211, 94, 0.1)",
   },
   {
-    label: "Grow",
+    icon: "journal-outline",
+    text: "Journal",
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.42)",
+    surface: "rgba(255, 122, 182, 0.1)",
+  },
+  {
     icon: "leaf-outline",
-    description: "Return with a steadier sense of time, focus, and energy.",
+    text: "Ground",
+    accent: "#A78BFA",
+    glow: "rgba(167, 139, 250, 0.42)",
+    surface: "rgba(167, 139, 250, 0.1)",
   },
 ] as const;
 
@@ -205,9 +261,9 @@ export default function OnboardingScreen() {
   const params = useLocalSearchParams();
   const { colors } = useTheme();
   const { width, height: screenHeight } = useWindowDimensions();
-  const isNarrowPreviewLayout = width < 420;
   const isCompactPreviewViewport = width < 420 || screenHeight < 880;
   const isTablet = width >= 768;
+  const isLaptopPreviewLayout = width >= 1024;
 
   // Check if we should skip to a specific step (e.g., from settings)
   const skipToStep = params.skipToStep as OnboardingStep | undefined;
@@ -585,7 +641,10 @@ export default function OnboardingScreen() {
         (iosFamilyActivitySelection?.applicationCount ?? 0) +
         (iosFamilyActivitySelection?.categoryCount ?? 0) +
         (iosFamilyActivitySelection?.webDomainCount ?? 0);
-      if (!hasProtectedAppsPremium && totalSelected > FREE_PROTECTED_APPS_LIMIT) {
+      if (
+        !hasProtectedAppsPremium &&
+        totalSelected > FREE_PROTECTED_APPS_LIMIT
+      ) {
         setValidationMessage(null);
         setUpgradePromptMessage(message);
       } else {
@@ -702,10 +761,16 @@ export default function OnboardingScreen() {
       isIOSFamilyControlsFlow &&
       !hasProtectedAppsPremium
     ) {
-      const hasCategories = (iosFamilyActivitySelection?.categoryCount ?? 0) > 0;
-      const hasWebDomains = (iosFamilyActivitySelection?.webDomainCount ?? 0) > 0;
+      const hasCategories =
+        (iosFamilyActivitySelection?.categoryCount ?? 0) > 0;
+      const hasWebDomains =
+        (iosFamilyActivitySelection?.webDomainCount ?? 0) > 0;
       const appCount = iosFamilyActivitySelection?.applicationCount ?? 0;
-      if (hasCategories || hasWebDomains || appCount > FREE_PROTECTED_APPS_LIMIT) {
+      if (
+        hasCategories ||
+        hasWebDomains ||
+        appCount > FREE_PROTECTED_APPS_LIMIT
+      ) {
         setUpgradePromptMessage(
           hasCategories || hasWebDomains
             ? `Free plan: pick individual apps only (up to ${FREE_PROTECTED_APPS_LIMIT}). Categories and websites are a Pro feature.\n\n${getUpgradePitch()}`
@@ -890,37 +955,17 @@ export default function OnboardingScreen() {
     transform: [{ translateY: toastTranslateY.value }],
   }));
 
-  const lumiLoopResetRef = useRef(false);
-  const lumiPreviewPlayer = useVideoPlayer(lumiMascotVideo, (player) => {
-    player.loop = false;
+  const lumiStoryPlayer = useVideoPlayer(lumiStoryVideo, (player) => {
+    player.loop = true;
     player.muted = true;
-    player.timeUpdateEventInterval = 0.05;
     player.play();
   });
 
-  useEffect(() => {
-    const subscription = lumiPreviewPlayer.addListener(
-      "timeUpdate",
-      (event) => {
-        if (event.currentTime < 0.25) {
-          lumiLoopResetRef.current = false;
-          return;
-        }
-
-        if (
-          lumiPreviewPlayer.duration > 0 &&
-          event.currentTime >= lumiPreviewPlayer.duration - 0.08 &&
-          !lumiLoopResetRef.current
-        ) {
-          lumiLoopResetRef.current = true;
-          lumiPreviewPlayer.currentTime = 0.02;
-          lumiPreviewPlayer.play();
-        }
-      },
-    );
-
-    return () => subscription.remove();
-  }, [lumiPreviewPlayer]);
+  const lumiPreviewPlayer = useVideoPlayer(lumiPreviewVideo, (player) => {
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
 
   const styles = StyleSheet.create({
     container: {
@@ -935,11 +980,109 @@ export default function OnboardingScreen() {
       justifyContent: "center",
       paddingBottom: spacing.xxl * 4,
     },
+    heroContentContainer: {
+      justifyContent: "flex-start" as const,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+    },
     previewContentContainer: {
       justifyContent: "flex-start",
-      paddingBottom: spacing.xl,
+      alignItems: "stretch",
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.sm,
     },
-    // Hero styles
+    // Hero — top row (logo + brand name)
+    heroTopRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: spacing.sm,
+      marginBottom: screenHeight < 750 ? spacing.sm : spacing.md,
+    },
+    heroTopBrand: {
+      fontFamily: fonts.semiBold,
+      fontSize: typography.heading.fontSize,
+      color: colors.text,
+      letterSpacing: 0.5,
+    },
+    // Hero — headline
+    heroHeadline: {
+      fontFamily: fonts.light,
+      fontSize: screenHeight < 750 ? 22 : 26,
+      color: colors.text,
+      textAlign: "center" as const,
+      lineHeight: screenHeight < 750 ? 30 : 34,
+      marginBottom: screenHeight < 750 ? spacing.md : spacing.lg,
+      letterSpacing: 0.2,
+    },
+    heroHeadlineAccent: {
+      fontFamily: fonts.semiBold,
+      color: colors.primary,
+    },
+    // Hero — video
+    heroVideoContainer: {
+      alignItems: "center" as const,
+      marginBottom: screenHeight < 750 ? spacing.md : spacing.lg,
+    },
+    heroVideoFrame: {
+      width: width * 0.65,
+      height: screenHeight * 0.35,
+      borderRadius: radius.glass + 4,
+      overflow: "hidden" as const,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.15)",
+      backgroundColor: "rgba(0, 0, 0, 0.2)",
+    },
+    heroVideo: {
+      width: "100%" as const,
+      height: "100%" as const,
+    },
+    // Hero — value prop chips
+    heroValueProps: {
+      flexDirection: "column" as const,
+      justifyContent: "center" as const,
+      alignItems: "center" as const,
+      gap: spacing.xs,
+      marginBottom: screenHeight < 750 ? spacing.sm : spacing.md,
+    },
+    heroValuePropRow: {
+      flexDirection: "row" as const,
+      justifyContent: "center" as const,
+      alignItems: "center" as const,
+      gap: spacing.xs,
+      width: "100%" as const,
+    },
+    heroValueChip: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 5,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm + 2,
+      borderRadius: 100,
+      backgroundColor: "rgba(0, 212, 255, 0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(0, 212, 255, 0.15)",
+    },
+    heroValueChipText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: colors.primary,
+    },
+    // Hero — tagline
+    heroTagline: {
+      fontFamily: fonts.regular,
+      fontSize:
+        screenHeight < 750
+          ? typography.body.fontSize
+          : typography.bodyLarge.fontSize,
+      color: colors.textSecondary,
+      textAlign: "center" as const,
+      lineHeight:
+        screenHeight < 750
+          ? typography.body.lineHeight
+          : typography.bodyLarge.lineHeight,
+    },
+    // Hero styles (used by program-preview glow)
     heroContainer: {
       alignItems: "center",
       marginBottom: spacing.xxl,
@@ -1976,14 +2119,16 @@ export default function OnboardingScreen() {
     },
     previewIntro: {
       alignItems: "center",
-      gap: spacing.sm,
+      gap: spacing.xs,
+      alignSelf: "center",
+      maxWidth: isLaptopPreviewLayout ? 760 : 520,
     },
     previewBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
-      paddingVertical: spacing.xs + 2,
-      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm + 2,
       borderRadius: radius.pills,
       backgroundColor: colors.surfaceElevated,
       borderWidth: 1,
@@ -1998,73 +2143,133 @@ export default function OnboardingScreen() {
     },
     previewIntroText: {
       fontFamily: fonts.regular,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      fontSize: isLaptopPreviewLayout
+        ? typography.bodyLarge.fontSize
+        : typography.caption.fontSize,
+      lineHeight: isLaptopPreviewLayout
+        ? typography.bodyLarge.lineHeight
+        : typography.caption.lineHeight,
       color: colors.textSecondary,
       textAlign: "center",
-      maxWidth: 340,
+      maxWidth: isLaptopPreviewLayout ? 560 : 340,
     },
     previewShowcaseCard: {
-      marginTop: spacing.md,
-      marginBottom: spacing.sm,
-      overflow: "hidden",
-      gap: spacing.lg,
+      flex: 1,
+      justifyContent: "flex-start",
+      gap: isLaptopPreviewLayout ? spacing.xxl : spacing.lg,
+      width: "100%",
+      maxWidth: isLaptopPreviewLayout ? 900 : isTablet ? 680 : undefined,
+      alignSelf: "center",
+      paddingTop: isLaptopPreviewLayout ? spacing.xl : spacing.sm,
+      paddingHorizontal: isLaptopPreviewLayout ? spacing.xxl : 0,
     },
-    previewShowcaseGlow: {
-      ...StyleSheet.absoluteFillObject,
-      opacity: 0.9,
-    },
-    previewVideoShell: {
-      position: "relative",
-      alignItems: "center",
+    previewShowcaseBody: {
+      gap: isLaptopPreviewLayout ? spacing.xl : spacing.lg,
       justifyContent: "center",
-      maxWidth: isTablet ? 580 : 260,
-      alignSelf: isTablet ? "center" : "center",
+      flex: 1,
+    },
+    previewInfoColumn: {
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: isLaptopPreviewLayout ? 760 : 430,
+      gap: isLaptopPreviewLayout ? spacing.xl : spacing.md,
+      minWidth: 0,
+    },
+    previewFloatingChip: {
+      alignSelf: "center",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm + 2,
+      borderRadius: radius.pills,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(126, 230, 198, 0.24)",
+    },
+    previewFloatingChipText: {
+      fontFamily: fonts.medium,
+      fontSize: typography.small.fontSize,
+      color: colors.primary,
+    },
+    previewOverlayTextBlock: {
+      gap: spacing.xs,
+      maxWidth: isLaptopPreviewLayout ? 620 : 350,
+      alignSelf: "center",
+    },
+    previewOverlayTitle: {
+      fontFamily: fonts.semiBold,
+      fontSize: isLaptopPreviewLayout
+        ? 34
+        : screenHeight < 750
+          ? typography.heading.fontSize
+          : typography.title.fontSize,
+      lineHeight: isLaptopPreviewLayout
+        ? 40
+        : screenHeight < 750
+          ? typography.heading.lineHeight
+          : typography.title.lineHeight,
+      color: colors.text,
+      textAlign: "center",
+    },
+    previewOverlayDescription: {
+      fontFamily: fonts.regular,
+      fontSize: isLaptopPreviewLayout
+        ? typography.body.fontSize
+        : typography.caption.fontSize,
+      lineHeight: isLaptopPreviewLayout
+        ? typography.body.lineHeight
+        : typography.caption.lineHeight,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    previewVideoPanel: {
+      position: "relative",
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: isLaptopPreviewLayout ? 420 : isTablet ? 360 : 270,
+      borderRadius: 28,
+      overflow: "hidden",
+      backgroundColor: "rgba(9, 17, 22, 0.72)",
+      shadowColor: colors.primary,
+      shadowOpacity: 0.28,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 16 },
     },
     previewVideoFrame: {
       width: "100%",
-      borderRadius: 28,
-      padding: isCompactPreviewViewport ? 10 : 12,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.18)",
-      shadowColor: colors.primary,
-      shadowOpacity: 0.2,
-      shadowRadius: 24,
-      shadowOffset: { width: 0, height: 12 },
-    },
-    previewVideoInner: {
-      width: "100%",
-      aspectRatio: isCompactPreviewViewport ? 0.82 : 0.9,
-      borderRadius: 20,
+      aspectRatio: isLaptopPreviewLayout ? 1.72 : 1.55,
       overflow: "hidden",
-      backgroundColor: "rgba(13, 19, 26, 0.78)",
     },
     previewVideo: {
       width: "100%",
       height: "100%",
     },
-    previewFloatingChip: {
+    previewVideoFade: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    previewVideoBadge: {
       position: "absolute",
-      right: isCompactPreviewViewport ? 16 : 20,
-      bottom: isCompactPreviewViewport ? 16 : 20,
+      left: spacing.sm,
+      bottom: spacing.sm,
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
-      paddingVertical: spacing.xs + 2,
-      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: 6,
+      paddingHorizontal: spacing.sm,
       borderRadius: radius.pills,
-      backgroundColor: "rgba(12, 22, 28, 0.74)",
+      backgroundColor: "rgba(8, 17, 22, 0.78)",
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.14)",
+      borderColor: "rgba(126, 230, 198, 0.32)",
     },
-    previewFloatingChipText: {
-      fontFamily: fonts.medium,
+    previewVideoBadgeText: {
+      fontFamily: fonts.semiBold,
       fontSize: typography.small.fontSize,
       color: colors.text,
     },
     previewNarrativeBlock: {
-      alignItems: "center",
-      gap: spacing.xs,
+      alignItems: isLaptopPreviewLayout ? "flex-start" : "center",
+      gap: 2,
       paddingHorizontal: spacing.xs,
     },
     previewNarrativeEyebrow: {
@@ -2073,97 +2278,110 @@ export default function OnboardingScreen() {
       color: colors.secondary,
       letterSpacing: 1,
       textTransform: "uppercase",
-      marginTop: spacing.md,
+      marginTop: 0,
     },
     previewHeroTitle: {
       fontFamily: fonts.semiBold,
-      fontSize: isCompactPreviewViewport
-        ? typography.heading.fontSize
-        : isNarrowPreviewLayout
-          ? typography.title.fontSize
-          : 30,
-      lineHeight: isCompactPreviewViewport
-        ? typography.heading.lineHeight
-        : isNarrowPreviewLayout
-          ? typography.title.lineHeight
-          : 36,
-      letterSpacing: -0.4,
+      fontSize: isLaptopPreviewLayout
+        ? 30
+        : isCompactPreviewViewport
+          ? typography.heading.fontSize
+          : typography.title.fontSize,
+      lineHeight: isLaptopPreviewLayout
+        ? 36
+        : isCompactPreviewViewport
+          ? typography.heading.lineHeight
+          : typography.title.lineHeight,
+      letterSpacing: 0,
       color: colors.text,
-      textAlign: "center",
-      maxWidth: 340,
+      textAlign: isLaptopPreviewLayout ? "left" : "center",
+      maxWidth: isLaptopPreviewLayout ? 460 : 340,
     },
     previewHeroDescription: {
       fontFamily: fonts.regular,
       fontSize: isCompactPreviewViewport
         ? typography.caption.fontSize
-        : typography.body.fontSize,
-      lineHeight: isCompactPreviewViewport ? 20 : typography.body.lineHeight,
+        : typography.caption.fontSize,
+      lineHeight: typography.caption.lineHeight,
       color: colors.textSecondary,
-      textAlign: "center",
-      maxWidth: 330,
+      textAlign: isLaptopPreviewLayout ? "left" : "center",
+      maxWidth: isLaptopPreviewLayout ? 480 : 330,
     },
     programDays: {
-      flexDirection: isNarrowPreviewLayout ? "column" : "row",
-      alignItems: isNarrowPreviewLayout ? "stretch" : "center",
+      flexDirection: isTablet ? "row" : "column",
+      flexWrap: isTablet ? "wrap" : "nowrap",
+      alignItems: "stretch",
       justifyContent: "center",
-      gap: spacing.sm,
+      gap: isTablet ? spacing.md : spacing.xs,
     },
     programDay: {
       flex: 1,
+      flexBasis: isTablet ? "47%" : undefined,
+      minWidth: 0,
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.sm,
-      paddingVertical: spacing.md,
-      paddingHorizontal: isCompactPreviewViewport
-        ? spacing.sm
-        : isNarrowPreviewLayout
-          ? spacing.sm + 2
-          : spacing.md,
-      backgroundColor: "rgba(255, 255, 255, 0.06)",
-      borderRadius: 24,
+      paddingVertical: isLaptopPreviewLayout ? spacing.md : spacing.sm,
+      paddingHorizontal: isLaptopPreviewLayout ? spacing.md : spacing.sm,
+      borderRadius: 18,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+      shadowColor: colors.primary,
+      shadowOpacity: 0.24,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 12 },
     },
     programDayHeader: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      gap: spacing.sm,
+      justifyContent: "flex-start",
+      gap: spacing.xs,
+      flexShrink: 0,
     },
     programDayIndex: {
-      minWidth: isCompactPreviewViewport ? 38 : 42,
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: radius.pills,
-      backgroundColor: "rgba(255,255,255,0.08)",
+      width: isLaptopPreviewLayout ? 52 : 42,
+      height: isLaptopPreviewLayout ? 52 : 42,
+      borderRadius: isLaptopPreviewLayout ? 18 : 15,
       alignItems: "center",
+      justifyContent: "center",
       flexShrink: 0,
+      borderWidth: 1,
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
     programDayIndexText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.caption.fontSize,
-      color: colors.textMuted,
-      letterSpacing: 1,
+      letterSpacing: 0,
     },
     programDayContent: {
-      gap: spacing.xs,
+      gap: 2,
+      flex: 1,
     },
     programDayLabel: {
       fontFamily: fonts.semiBold,
-      fontSize: typography.body.fontSize,
-      lineHeight: typography.body.lineHeight,
+      fontSize: isCompactPreviewViewport
+        ? typography.caption.fontSize
+        : typography.body.fontSize,
+      lineHeight: isCompactPreviewViewport
+        ? typography.caption.lineHeight
+        : typography.body.lineHeight,
       color: colors.text,
     },
     programDayDescription: {
       fontFamily: fonts.regular,
       fontSize: typography.small.fontSize,
-      lineHeight: typography.small.lineHeight,
-      color: colors.textSecondary,
+      lineHeight: 16,
+      color: colors.text,
+      opacity: 0.86,
     },
     programConnector: {
-      flexDirection: isNarrowPreviewLayout ? "column" : "row",
+      display: "none",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      opacity: 0.72,
-      paddingVertical: isNarrowPreviewLayout ? 0 : spacing.md,
+      opacity: 0.55,
+      paddingVertical: 0,
+      paddingHorizontal: spacing.sm,
     },
     textInput: {
       marginVertical: spacing.lg,
@@ -2334,7 +2552,7 @@ export default function OnboardingScreen() {
         style={styles.content}
         contentContainerStyle={[
           styles.contentContainer,
-
+          step === "welcome-hero" && styles.heroContentContainer,
           step === "program-preview" && styles.previewContentContainer,
         ]}
         contentInsetAdjustmentBehavior="automatic"
@@ -2342,176 +2560,204 @@ export default function OnboardingScreen() {
         <ReanimatedAnimated.View key={stepKey} style={stepAnimation}>
           {step === "welcome-hero" && (
             <>
-              <View style={styles.heroContainer}>
-                {/* Animated glow behind logo */}
-                <View style={styles.heroGlowContainer}>
-                  <ReanimatedAnimated.View style={[styles.heroGlow, glowStyle]}>
-                    <LinearGradient
-                      colors={[
-                        colors.gradientAccent1,
-                        colors.gradientAccent2,
-                        "transparent",
-                      ]}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: width * 0.35,
-                      }}
-                      start={{ x: 0.5, y: 0.5 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  </ReanimatedAnimated.View>
-
-                  {/* Logo */}
-                  <Image
-                    source={mainLogo}
-                    style={{ width: 120, height: 120 }}
-                    resizeMode="contain"
-                  />
-                </View>
-
-                {/* App name */}
-                <Text style={styles.appNameLarge}>
+              {/* Top: Logo + Brand */}
+              <View style={styles.heroTopRow}>
+                <Image
+                  source={mainLogo}
+                  style={{ width: 44, height: 44 }}
+                  resizeMode="contain"
+                />
+                <Text style={styles.heroTopBrand}>
                   Gentle<Text style={styles.appNameAccent}>Wait</Text>
                 </Text>
               </View>
 
-              <Text style={styles.subtitle}>
-                Take a moment.{"\n"}
-                <Text style={styles.subtitleAccent}>Breathe.</Text>
+              {/* Headline */}
+              <Text style={styles.heroHeadline}>
+                Your phone interrupts.{"\n"}
+                <Text style={styles.heroHeadlineAccent}>
+                  We help you pause.
+                </Text>
               </Text>
-              <Text style={styles.description}>
-                Before you scroll, we&apos;ll help you pause.{"\n"}A gentle
-                moment to{" "}
-                <Text style={styles.descriptionAccent}>choose mindfully</Text>
-                {"\n"}instead of reaching out of habit.
+
+              {/* Center: Lumi story video */}
+              <View style={styles.heroVideoContainer}>
+                <View style={styles.heroVideoFrame}>
+                  <VideoView
+                    player={lumiStoryPlayer}
+                    style={styles.heroVideo}
+                    contentFit="cover"
+                    nativeControls={false}
+                    allowsPictureInPicture={false}
+                  />
+                </View>
+              </View>
+
+              {/* Value props */}
+              <View style={styles.heroValueProps}>
+                {[HERO_VALUE_PROPS.slice(0, 2), HERO_VALUE_PROPS.slice(2)].map(
+                  (row, rowIndex) => (
+                    <View
+                      key={`hero-value-row-${rowIndex}`}
+                      style={styles.heroValuePropRow}
+                    >
+                      {row.map((item) => (
+                        <View
+                          key={item.text}
+                          style={[
+                            styles.heroValueChip,
+                            {
+                              backgroundColor: item.surface,
+                              borderColor: item.glow,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={16}
+                            color={item.accent}
+                          />
+                          <Text
+                            style={[
+                              styles.heroValueChipText,
+                              { color: item.accent },
+                            ]}
+                          >
+                            {item.text}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ),
+                )}
+              </View>
+
+              {/* Tagline */}
+              <Text style={styles.heroTagline}>
+                Not blocking. Not guilt.{"\n"}Just a{" "}
+                <Text style={styles.descriptionAccent}>gentle moment</Text> to
+                choose.
               </Text>
             </>
           )}
 
           {step === "program-preview" && (
             <>
-              <View style={styles.previewIntro}>
-                <View style={styles.previewBadge}>
-                  <Ionicons
-                    name="sparkles-outline"
-                    size={14}
-                    color={colors.secondary}
-                  />
-                  <Text style={styles.previewBadgeText}>
-                    A calmer ritual in 3 moves
-                  </Text>
-                </View>
-
-                <Text style={styles.title}>
-                  Meet <Text style={styles.titleAccent}>Lumi.</Text>
-                </Text>
-                <Text style={styles.previewIntroText}>
-                  A gentle pause before the scroll.
-                </Text>
-              </View>
-
-              <GlassCard glowColor="primary" style={styles.previewShowcaseCard}>
-                <LinearGradient
-                  colors={[
-                    "rgba(126, 230, 198, 0.32)",
-                    "rgba(82, 192, 255, 0.14)",
-                    "transparent",
-                  ]}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.previewShowcaseGlow}
-                />
-
-                <View style={styles.previewVideoShell}>
-                  <LinearGradient
-                    colors={[
-                      "rgba(255,255,255,0.2)",
-                      "rgba(255,255,255,0.02)",
-                      "rgba(255,255,255,0.12)",
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.previewVideoFrame}
-                  >
-                    <View style={styles.previewVideoInner}>
-                      <VideoView
-                        player={lumiPreviewPlayer}
-                        style={styles.previewVideo}
-                        contentFit="cover"
-                        nativeControls={false}
-                        allowsPictureInPicture={false}
+              <View style={styles.previewShowcaseCard}>
+                <View style={styles.previewShowcaseBody}>
+                  <View style={styles.previewInfoColumn}>
+                    <View style={styles.previewFloatingChip}>
+                      <Ionicons
+                        name="sparkles"
+                        size={14}
+                        color={colors.secondary}
                       />
+                      <Text style={styles.previewFloatingChipText}>
+                        What happens next
+                      </Text>
                     </View>
-                  </LinearGradient>
 
-                  <View style={styles.previewFloatingChip}>
-                    <Ionicons
-                      name="sparkles"
-                      size={14}
-                      color={colors.secondary}
-                    />
-                    <Text style={styles.previewFloatingChipText}>
-                      Lumi greets the urge
-                    </Text>
+                    <View style={styles.previewOverlayTextBlock}>
+                      <Text style={styles.previewOverlayTitle}>
+                        A pause before{" "}
+                        <Text style={styles.titleAccent}>autopilot.</Text>
+                      </Text>
+                      <Text style={styles.previewOverlayDescription}>
+                        Choose apps. Get a pause. Continue mindfully.
+                      </Text>
+                    </View>
+
+                    <View style={styles.previewVideoPanel}>
+                      <View style={styles.previewVideoFrame}>
+                        <VideoView
+                          player={lumiPreviewPlayer}
+                          style={styles.previewVideo}
+                          contentFit="cover"
+                          nativeControls={false}
+                          allowsPictureInPicture={false}
+                        />
+                      </View>
+                      <LinearGradient
+                        colors={[
+                          "rgba(4, 10, 13, 0)",
+                          "rgba(4, 10, 13, 0.18)",
+                          "rgba(4, 10, 13, 0.72)",
+                        ]}
+                        locations={[0, 0.52, 1]}
+                        style={styles.previewVideoFade}
+                      />
+                      <View style={styles.previewVideoBadge}>
+                        <Ionicons
+                          name="sparkles"
+                          size={14}
+                          color={colors.primary}
+                        />
+                        <Text style={styles.previewVideoBadgeText}>
+                          Before the app opens
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.programDays}>
+                      {PROGRAM_PREVIEW_STEPS.map((item) => (
+                        <LinearGradient
+                          key={item.label}
+                          colors={[
+                            item.surface,
+                            "rgba(18, 25, 32, 0.98)",
+                            "rgba(11, 18, 24, 0.96)",
+                          ]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[
+                            styles.programDay,
+                            {
+                              borderColor: item.glow,
+                              shadowColor: item.accent,
+                            },
+                          ]}
+                        >
+                          <View style={styles.programDayHeader}>
+                            <LinearGradient
+                              colors={[item.glow, "rgba(255,255,255,0.035)"]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={[
+                                styles.programDayIndex,
+                                { borderColor: item.glow },
+                              ]}
+                            >
+                              <Ionicons
+                                name={item.icon}
+                                size={isLaptopPreviewLayout ? 24 : 20}
+                                color={item.accent}
+                              />
+                            </LinearGradient>
+                          </View>
+                          <View style={styles.programDayContent}>
+                            <Text style={styles.programDayLabel}>
+                              {item.label}
+                            </Text>
+                            <View style={{ flexDirection: "row", gap: 6 }}>
+                              <Text
+                                style={[
+                                  styles.programDayIndexText,
+                                  { color: item.accent },
+                                ]}
+                              >
+                                |
+                              </Text>
+                              <Text style={styles.programDayDescription}>
+                                {item.description}
+                              </Text>
+                            </View>
+                          </View>
+                        </LinearGradient>
+                      ))}
+                    </View>
                   </View>
                 </View>
-
-                <View style={styles.previewNarrativeBlock}>
-                  <Text style={styles.previewNarrativeEyebrow}>
-                    Softer interruption
-                  </Text>
-                  <Text style={styles.previewHeroTitle}>Slow the reflex.</Text>
-                  <Text style={styles.previewHeroDescription}>
-                    Lumi makes the pause feel calm, not harsh.
-                  </Text>
-                </View>
-
-                <View style={styles.programDays}>
-                  {PROGRAM_PREVIEW_STEPS.map((item, index) => (
-                    <Fragment key={item.label}>
-                      <View style={styles.programDay}>
-                        <View style={styles.programDayHeader}>
-                          <View style={styles.programDayIndex}>
-                            <Text style={styles.programDayIndexText}>
-                              0{index + 1}
-                            </Text>
-                          </View>
-                          <Ionicons
-                            name={item.icon}
-                            size={isCompactPreviewViewport ? 16 : 18}
-                            color={
-                              index === 1 ? colors.secondary : colors.primary
-                            }
-                          />
-                        </View>
-                        <View style={styles.programDayContent}>
-                          <Text style={styles.programDayLabel}>
-                            {item.label}
-                          </Text>
-                          <Text style={styles.programDayDescription}>
-                            {item.description}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {index < PROGRAM_PREVIEW_STEPS.length - 1 && (
-                        <View style={styles.programConnector}>
-                          <Ionicons
-                            name={
-                              isNarrowPreviewLayout
-                                ? "arrow-down"
-                                : "arrow-forward"
-                            }
-                            size={14}
-                            color={colors.textMuted}
-                          />
-                        </View>
-                      )}
-                    </Fragment>
-                  ))}
-                </View>
-              </GlassCard>
+              </View>
             </>
           )}
 
@@ -3289,7 +3535,7 @@ export default function OnboardingScreen() {
                         familyActivitySelection={iosRawSelection}
                         headerText="Tap the apps you doom-scroll (up to 6)"
                         footerText="Only apps with icons count. Websites and categories are ignored."
-                        onSelectionChange={(event) => {
+                        onSelectionChange={(event: any) => {
                           const {
                             familyActivitySelection,
                             applicationCount,
@@ -3931,7 +4177,7 @@ export default function OnboardingScreen() {
               : step === "welcome-hero"
                 ? "Get Started"
                 : step === "program-preview"
-                  ? "Let's Begin"
+                  ? "Set Up My Pauses"
                   : step === "setup-choice"
                     ? "Continue"
                     : step === "summary"

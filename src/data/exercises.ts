@@ -41,6 +41,43 @@ export const EXERCISE_ENTRY_METADATA: Record<
   },
 };
 
+/**
+ * Exercise image assets — map exercise IDs to their demonstration images.
+ * Images are generated externally (Nano Banana Pro 2) and placed in assets/exercises/.
+ * Uncomment entries as images are added. The app renders a text fallback when no image exists.
+ */
+export const EXERCISE_IMAGES: Partial<Record<string, number>> = {
+  // Desk Stretches
+  // "desk-stretch-1": require("@/assets/exercises/desk-stretch-1.png"),
+  // "desk-stretch-2": require("@/assets/exercises/desk-stretch-2.png"),
+  // "desk-stretch-3": require("@/assets/exercises/desk-stretch-3.png"),
+  // "desk-stretch-4": require("@/assets/exercises/desk-stretch-4.png"),
+  // "desk-stretch-5": require("@/assets/exercises/desk-stretch-5.png"),
+  // Standing
+  // "standing-1": require("@/assets/exercises/standing-1.png"),
+  // "standing-2": require("@/assets/exercises/standing-2.png"),
+  // "standing-3": require("@/assets/exercises/standing-3.png"),
+  // "standing-4": require("@/assets/exercises/standing-4.png"),
+  // "standing-5": require("@/assets/exercises/standing-5.png"),
+  // Energy Boost
+  // "energy-1": require("@/assets/exercises/energy-1.png"),
+  // "energy-2": require("@/assets/exercises/energy-2.png"),
+  // "energy-3": require("@/assets/exercises/energy-3.png"),
+  // "energy-4": require("@/assets/exercises/energy-4.png"),
+  // "energy-5": require("@/assets/exercises/energy-5.png"),
+  // Eye & Posture
+  // "eye-posture-1": require("@/assets/exercises/eye-posture-1.png"),
+  // "eye-posture-2": require("@/assets/exercises/eye-posture-2.png"),
+  // "eye-posture-3": require("@/assets/exercises/eye-posture-3.png"),
+  // "eye-posture-4": require("@/assets/exercises/eye-posture-4.png"),
+  // "eye-posture-5": require("@/assets/exercises/eye-posture-5.png"),
+};
+
+/** Get exercise image if available, otherwise returns undefined */
+export const getExerciseImage = (exerciseId: string): number | undefined => {
+  return EXERCISE_IMAGES[exerciseId];
+};
+
 export const EXERCISE_CATEGORY_METADATA: {
   id: ExerciseCategory;
   label: string;
