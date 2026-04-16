@@ -96,6 +96,70 @@ export const GROUNDING_EXERCISES = [
       "Make tight fists with both hands. Squeeze for 5 seconds. Then release completely. Notice the difference. Repeat 3 times.",
     icon: "fitness-outline",
   },
+  {
+    id: "counting-breaths",
+    name: "Counting Breaths",
+    durationSec: 30,
+    instructions:
+      "Breathe naturally and count each exhale. Count up to 10, then start over. If you lose count, gently start again from 1. Focus only on the numbers.",
+    icon: "cloudy-outline",
+  },
+  {
+    id: "texture-touch",
+    name: "Texture Touch",
+    durationSec: 20,
+    instructions:
+      "Find three different textures near you. Touch each one slowly. Notice if it's smooth, rough, warm, or cool. Let the sensation anchor you here.",
+    icon: "finger-print-outline",
+  },
+  {
+    id: "listen-deeply",
+    name: "Listen Deeply",
+    durationSec: 30,
+    instructions:
+      "Close your eyes and listen. What's the farthest sound you can hear? The closest? Count as many distinct sounds as you can. Just listen.",
+    icon: "ear-outline",
+  },
+  {
+    id: "palming",
+    name: "Palming",
+    durationSec: 20,
+    instructions:
+      "Rub your palms together briskly for 10 seconds until they feel warm. Then place them gently over your closed eyes. Breathe and feel the warmth.",
+    icon: "eye-outline",
+  },
+  {
+    id: "anchor-breath",
+    name: "Anchor Breath",
+    durationSec: 30,
+    instructions:
+      "Place one hand on your chest and one on your belly. Breathe slowly. Feel which hand rises more. Try to send your breath down to the belly hand.",
+    icon: "heart-outline",
+  },
+  {
+    id: "name-the-feeling",
+    name: "Name the Feeling",
+    durationSec: 20,
+    instructions:
+      "Pause and ask yourself: what am I feeling right now? Name it without judgment. Anxious? Bored? Restless? Just naming it takes away some of its power.",
+    icon: "chatbubble-outline",
+  },
+  {
+    id: "shoulder-drop",
+    name: "Shoulder Drop",
+    durationSec: 20,
+    instructions:
+      "Notice where your shoulders are right now. Inhale and lift them up to your ears. Hold for 3 seconds. Exhale and let them drop completely. Repeat 3 times.",
+    icon: "arrow-down-outline",
+  },
+  {
+    id: "room-scan",
+    name: "Room Scan",
+    durationSec: 30,
+    instructions:
+      "Slowly look around the room. Name 5 objects and their colors out loud or silently. This simple act pulls your attention into the present moment.",
+    icon: "scan-outline",
+  },
 ];
 
 // Breathing techniques
@@ -143,6 +207,72 @@ export const BREATHING_EXERCISES = [
     hold2: 0,
     description: "Quick energy boost when feeling sluggish",
     icon: "flash-outline",
+  },
+  {
+    id: "calming-breath",
+    name: "Calming Breath",
+    cycles: 4,
+    inhale: 4,
+    hold1: 2,
+    exhale: 6,
+    hold2: 0,
+    description: "Longer exhale activates your rest-and-digest response",
+    icon: "water-outline",
+  },
+  {
+    id: "triangle-breathing",
+    name: "Triangle Breathing",
+    cycles: 5,
+    inhale: 4,
+    hold1: 4,
+    exhale: 4,
+    hold2: 0,
+    description: "Simple three-step rhythm to steady your mind",
+    icon: "triangle-outline",
+  },
+  {
+    id: "belly-breathing",
+    name: "Belly Breathing",
+    cycles: 5,
+    inhale: 4,
+    hold1: 0,
+    exhale: 6,
+    hold2: 0,
+    description: "Deep diaphragmatic breathing to release tension",
+    icon: "body-outline",
+  },
+  {
+    id: "resonant-breathing",
+    name: "Resonant Breathing",
+    cycles: 5,
+    inhale: 6,
+    hold1: 0,
+    exhale: 6,
+    hold2: 0,
+    description: "Slow rhythm that syncs heart and breath for deep calm",
+    icon: "heart-outline",
+  },
+  {
+    id: "staircase-breath",
+    name: "Staircase Breath",
+    cycles: 3,
+    inhale: 5,
+    hold1: 3,
+    exhale: 7,
+    hold2: 2,
+    description: "Gradual pattern that eases you into relaxation step by step",
+    icon: "bar-chart-outline",
+  },
+  {
+    id: "quick-reset",
+    name: "Quick Reset",
+    cycles: 6,
+    inhale: 3,
+    hold1: 0,
+    exhale: 3,
+    hold2: 0,
+    description: "A fast, even rhythm to recentre in under a minute",
+    icon: "refresh-outline",
   },
 ];
 

@@ -15,6 +15,7 @@ import {
   getExerciseById,
   getExerciseImage,
   getExercisesByCategory,
+  getExerciseVideo,
   getEyeResetExercisePool,
   getMoveExercisePool,
   getRandomExercise,
@@ -60,6 +61,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 const { width } = Dimensions.get("window");
 
@@ -111,6 +113,42 @@ export default function ExerciseScreen() {
       ? 132
       : 188;
   const completionHeroHeight = isCompactScreen ? 150 : 220;
+
+  // Video player for exercise demonstrations
+  const videoSource = exercise ? getExerciseVideo(exercise.id) : undefined;
+  console.log("[Exercise] Video debug:", {
+    exerciseId: exercise?.id,
+    videoSource,
+    videoSourceType: typeof videoSource,
+    hasExercise: !!exercise,
+  });
+
+  const videoPlayer = useVideoPlayer(videoSource ?? null, (player) => {
+    console.log("[Exercise] VideoPlayer setup callback called");
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
+
+  console.log("[Exercise] VideoPlayer instance:", {
+    hasPlayer: !!videoPlayer,
+    playerStatus: videoPlayer?.status,
+  });
+
+  // When exercise changes, update the video source and replay
+  useEffect(() => {
+    console.log("[Exercise] Video useEffect triggered:", { videoSource, hasPlayer: !!videoPlayer });
+    if (!videoSource || !videoPlayer) return;
+    try {
+      videoPlayer.replace(videoSource);
+      videoPlayer.loop = true;
+      videoPlayer.muted = true;
+      videoPlayer.play();
+      console.log("[Exercise] Video replaced and playing");
+    } catch (e) {
+      console.warn("[Exercise] Video replace failed:", e);
+    }
+  }, [videoSource]);
 
   // Animation
   const progressWidth = useSharedValue(0);
@@ -363,7 +401,7 @@ export default function ExerciseScreen() {
     exerciseScrollContent: {
       flexGrow: 1,
       justifyContent: "flex-start",
-      paddingTop: isCompactScreen ? spacing.xs : spacing.sm,
+      paddingTop: isCompactScreen ? spacing.sm : spacing.md,
     },
     header: {
       marginBottom: isCompactScreen ? spacing.md : spacing.xl,
@@ -416,53 +454,75 @@ export default function ExerciseScreen() {
       fontSize: typography.heading.fontSize,
       color: colors.textMuted,
     },
-    // Exercise image with Lumi overlay
-    exerciseImageWrap: {
+    // Video exercise phase
+    videoContainer: {
       width: "100%",
+      borderRadius: radius.glass,
+      overflow: "hidden",
+      position: "relative" as const,
+      marginBottom: isCompactScreen ? spacing.sm : spacing.md,
+    },
+    videoPlayer: {
+      width: "100%",
+      height: "100%",
+    },
+    videoFallback: {
+      backgroundColor: "#f5f5f5",
       alignItems: "center" as const,
       justifyContent: "center" as const,
-      marginBottom: spacing.lg,
-      position: "relative" as const,
     },
-    exerciseImage: {
-      width: width * 0.6,
-      height: isCompactScreen ? 140 : 180,
+    videoFallbackText: {
+      fontSize: 48,
     },
-    lumiOverlay: {
+    videoOverlayTop: {
       position: "absolute" as const,
-      bottom: -8,
-      right: width * 0.12,
-      width: 60,
-      height: 60,
+      top: 0,
+      left: 0,
+      right: 0,
+      paddingTop: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: "center" as const,
     },
-    // Exercise phase
-    exerciseHeader: {
-      alignItems: "center",
-      marginBottom: isEyeResetFlow
-        ? spacing.xs
-        : isCompactScreen
-          ? spacing.xs
-          : spacing.md,
-    },
-    exerciseCategory: {
+    videoCategory: {
       fontFamily: fonts.semiBold,
       fontSize: typography.label.fontSize,
-      color: colors.primary,
+      color: "#666",
       textTransform: "uppercase",
       letterSpacing: 1.5,
-      marginBottom: isCompactScreen ? spacing.xs : spacing.sm,
+      marginBottom: spacing.xs,
     },
-    exerciseName: {
-      fontFamily: fonts.light,
-      fontSize: isEyeResetFlow
-        ? isCompactScreen
-          ? typography.heading.fontSize
-          : typography.sectionTitle.fontSize
-        : isCompactScreen
-          ? typography.sectionTitle.fontSize
-          : typography.title.fontSize,
-      color: colors.text,
+    videoExerciseName: {
+      fontFamily: fonts.semiBold,
+      fontSize: isCompactScreen
+        ? typography.sectionTitle.fontSize
+        : typography.title.fontSize,
+      color: "#1a1a1a",
       textAlign: "center",
+    },
+    videoOverlayBottom: {
+      position: "absolute" as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "rgba(255, 255, 255, 0.85)",
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    videoInstructions: {
+      fontFamily: fonts.regular,
+      fontSize: isCompactScreen
+        ? typography.caption.fontSize
+        : typography.body.fontSize,
+      color: "#333",
+      lineHeight: isCompactScreen ? 18 : 22,
+      textAlign: "center",
+    },
+    videoDetails: {
+      fontFamily: fonts.medium,
+      fontSize: typography.caption.fontSize,
+      color: "#666",
+      textAlign: "center",
+      marginTop: spacing.xs,
     },
     timerContainer: {
       alignItems: "center",
@@ -690,49 +750,52 @@ export default function ExerciseScreen() {
   if (phase === "exercise" && exercise) {
     const categoryLabel =
       getCategoryMeta(exercise.category)?.label || exercise.category;
+    const videoHeight = isCompactScreen ? screenHeight * 0.45 : screenHeight * 0.55;
 
     return (
       <BackgroundWrapper>
-        <SafeAreaView style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top + spacing.xs }]}>
           <ScrollView
             style={styles.scrollArea}
             contentContainerStyle={scrollContentStyle}
           >
-            {/* Exercise image with Lumi overlay, or Lumi alone as fallback */}
-            {getExerciseImage(exercise.id) ? (
-              <View style={styles.exerciseImageWrap}>
-                <Image
-                  source={getExerciseImage(exercise.id)}
-                  style={styles.exerciseImage}
-                  contentFit="contain"
-                  contentPosition="center"
-                  cachePolicy="memory-disk"
+            {/* Video with overlaid text */}
+            <View style={[styles.videoContainer, { height: videoHeight }]}>
+              {videoSource ? (
+                <VideoView
+                  player={videoPlayer}
+                  style={styles.videoPlayer}
+                  contentFit="cover"
+                  nativeControls={false}
                 />
-                <Image
-                  source={getLumiAssetForExercise({
-                    entry: entryParam,
-                    category: exercise.category,
-                  })}
-                  style={styles.lumiOverlay}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                />
-              </View>
-            ) : (
-              <LumiIllustration
-                source={getLumiAssetForExercise({
-                  entry: entryParam,
-                  category: exercise.category,
-                })}
-                maxHeight={activeHeroHeight}
-              />
-            )}
+              ) : (
+                <View style={[styles.videoPlayer, styles.videoFallback]}>
+                  <Text style={styles.videoFallbackText}>
+                    {exercise.imagePlaceholder}
+                  </Text>
+                </View>
+              )}
 
-            <View style={styles.exerciseHeader}>
-              <Text style={styles.exerciseCategory}>{categoryLabel}</Text>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              {/* Exercise name overlay at top */}
+              <View style={styles.videoOverlayTop}>
+                <Text style={styles.videoCategory}>{categoryLabel}</Text>
+                <Text style={styles.videoExerciseName}>{exercise.name}</Text>
+              </View>
+
+              {/* Instructions overlay at bottom */}
+              <View style={styles.videoOverlayBottom}>
+                <Text style={styles.videoInstructions}>
+                  {exercise.instructions}
+                </Text>
+                {exercise.reps && (
+                  <Text style={styles.videoDetails}>
+                    {exercise.durationSec}s · {exercise.reps} reps
+                  </Text>
+                )}
+              </View>
             </View>
 
+            {/* Timer and progress below video */}
             <View style={styles.timerContainer}>
               <View style={styles.timerCircle}>
                 <Text style={styles.timerText}>{timeLeft}</Text>
@@ -745,30 +808,9 @@ export default function ExerciseScreen() {
                 style={[styles.progressFill, progressAnimatedStyle]}
               />
             </View>
-
-            <GlassCard glowColor="primary" style={styles.instructionsCard}>
-              <Text style={styles.instructionsText}>
-                {exercise.instructions}
-              </Text>
-
-              {exercise.reps && (
-                <View style={styles.detailsRow}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Duration</Text>
-                    <Text style={styles.detailValue}>
-                      {exercise.durationSec}s
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Reps</Text>
-                    <Text style={styles.detailValue}>{exercise.reps}</Text>
-                  </View>
-                </View>
-              )}
-            </GlassCard>
           </ScrollView>
 
-          <View style={styles.buttonContainer} onLayout={handleFooterLayout}>
+          <View style={[styles.buttonContainer, { paddingBottom: insets.bottom || spacing.md }]} onLayout={handleFooterLayout}>
             <Button
               label="Try Different Exercise"
               onPress={handleGetNewExercise}
@@ -776,7 +818,7 @@ export default function ExerciseScreen() {
             />
             <Button label="Skip" onPress={handleSkip} variant="ghost" />
           </View>
-        </SafeAreaView>
+        </View>
       </BackgroundWrapper>
     );
   }

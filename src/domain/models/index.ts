@@ -33,7 +33,12 @@ export type EyeResetExercisePreference =
   | "eye-posture-2"
   | "eye-posture-3"
   | "eye-posture-4"
-  | "eye-posture-5";
+  | "eye-posture-5"
+  | "eye-posture-6"
+  | "eye-posture-7"
+  | "eye-posture-8"
+  | "eye-posture-9"
+  | "eye-posture-10";
 
 export interface UserSettings {
   id: string; // singleton

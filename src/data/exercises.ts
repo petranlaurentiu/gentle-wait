@@ -78,6 +78,41 @@ export const getExerciseImage = (exerciseId: string): number | undefined => {
   return EXERCISE_IMAGES[exerciseId];
 };
 
+/**
+ * Exercise video assets — map exercise IDs to their demonstration videos.
+ * Videos are 6-second clips of a wooden mannequin demonstrating each exercise.
+ */
+const EXERCISE_VIDEOS: Record<string, number> = {
+  "desk-stretch-1": require("@/assets/video/figurine/Neck-Rolls.mp4"),
+  "desk-stretch-2": require("@/assets/video/figurine/Shoulder-Shrugs.mp4"),
+  "desk-stretch-3": require("@/assets/video/figurine/Wrist-Stretches.mp4"),
+  "desk-stretch-4": require("@/assets/video/figurine/Seated-Spinal-Twist.mp4"),
+  "desk-stretch-5": require("@/assets/video/figurine/Chest-Opener.mp4"),
+  "standing-1": require("@/assets/video/figurine/Bodyweight-Squats.mp4"),
+  "standing-2": require("@/assets/video/figurine/Standing-Side-Bends.mp4"),
+  "standing-3": require("@/assets/video/figurine/Calf-Raises.mp4"),
+  "standing-4": require("@/assets/video/figurine/Arm-Circles.mp4"),
+  "standing-5": require("@/assets/video/figurine/Forward-Fold.mp4"),
+  "energy-1": require("@/assets/video/figurine/Jumping-Jacks.mp4"),
+  "energy-2": require("@/assets/video/figurine/High-Knees.mp4"),
+  "energy-3": require("@/assets/video/figurine/Desk-Push-ups.mp4"),
+  "energy-4": require("@/assets/video/figurine/Burpees.mp4"),
+  "energy-5": require("@/assets/video/figurine/Mountain-Climbers.mp4"),
+  "eye-posture-2": require("@/assets/video/figurine/Chin-Tucks.mp4"),
+  "eye-posture-3": require("@/assets/video/figurine/Wall-Angels.mp4"),
+  "eye-posture-4": require("@/assets/video/figurine/Breathing-with-Posture-Check.mp4"),
+  "eye-posture-6": require("@/assets/video/figurine/Palming.mp4"),
+  "eye-posture-7": require("@/assets/video/figurine/Neck-Side-Stretch.mp4"),
+  "eye-posture-8": require("@/assets/video/figurine/Shoulder-Rolls-(Seated).mp4"),
+  "eye-posture-9": require("@/assets/video/figurine/Temple-Massage.mp4"),
+  "eye-posture-10": require("@/assets/video/figurine/Look-Up-Stretch.mp4"),
+};
+
+/** Get exercise video source for a given exercise ID */
+export const getExerciseVideo = (exerciseId: string): number | undefined => {
+  return EXERCISE_VIDEOS[exerciseId];
+};
+
 export const EXERCISE_CATEGORY_METADATA: {
   id: ExerciseCategory;
   label: string;
@@ -250,7 +285,7 @@ export const EXERCISES: Exercise[] = [
   },
   {
     id: "energy-4",
-    name: "Burpees (Modified)",
+    name: "Burpees",
     category: "energy",
     durationSec: 20,
     reps: 5,
@@ -314,6 +349,52 @@ export const EXERCISES: Exercise[] = [
     instructions:
       "Look straight ahead. Slowly move your eyes in a large circle without moving your head. Do 5 circles one direction, then 5 the other way. This relaxes eye muscles.",
     imagePlaceholder: "🔄 Eye Circles",
+  },
+  {
+    id: "eye-posture-6",
+    name: "Palming",
+    category: "eye-posture",
+    durationSec: 30,
+    instructions:
+      "Rub your palms together until warm. Cup them gently over your closed eyes without pressing. Rest your elbows on a desk. Breathe slowly and let the warmth soothe your eyes for 30 seconds.",
+    imagePlaceholder: "🤲 Palming",
+  },
+  {
+    id: "eye-posture-7",
+    name: "Neck Side Stretch",
+    category: "eye-posture",
+    durationSec: 20,
+    instructions:
+      "Tilt your head gently to the right, bringing your ear toward your shoulder. Place your right hand on the left side of your head for a gentle stretch. Hold for 10 seconds, then switch sides.",
+    imagePlaceholder: "🦒 Neck Stretch",
+  },
+  {
+    id: "eye-posture-8",
+    name: "Shoulder Rolls",
+    category: "eye-posture",
+    durationSec: 20,
+    reps: 10,
+    instructions:
+      "Sit upright. Roll both shoulders backward in slow circles. Do 5 rolls backward, then 5 forward. This releases tension from screen-hunching posture.",
+    imagePlaceholder: "🔄 Shoulder Rolls",
+  },
+  {
+    id: "eye-posture-9",
+    name: "Temple Massage",
+    category: "eye-posture",
+    durationSec: 20,
+    instructions:
+      "Place your fingertips on your temples. Apply gentle pressure and make slow circular motions. Breathe deeply as you massage for 20 seconds. This relieves eye strain headaches.",
+    imagePlaceholder: "💆 Temple Massage",
+  },
+  {
+    id: "eye-posture-10",
+    name: "Look Up Stretch",
+    category: "eye-posture",
+    durationSec: 20,
+    instructions:
+      "Sit tall with hands on your lap. Slowly tilt your head back to look up at the ceiling. Hold for 10 seconds, feeling the stretch in your neck. Return slowly to neutral. Repeat once.",
+    imagePlaceholder: "🔝 Look Up",
   },
 ];
 

@@ -8,11 +8,13 @@ import { GlassCard } from "@/src/components/GlassCard";
 import { LumiIllustration } from "@/src/components/LumiIllustration";
 import { getLumiAssetForAlternative } from "@/src/data/lumi";
 import {
+  BREATHING_EXERCISES,
   getBreathingExerciseForDuration,
   getGroundingExerciseForDuration,
   getRandomJournalingPrompt,
+  GROUNDING_EXERCISES,
 } from "@/src/data/mindfulness";
-import { getPrayerForDuration, Prayer } from "@/src/data/prayers";
+import { getPrayerForDuration, Prayer, PRAYERS } from "@/src/data/prayers";
 import {
   launchApp,
   markAppHandled,
@@ -69,13 +71,13 @@ export default function AlternativesScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const isCompactScreen = screenHeight < 860;
   const heroHeight = isCompactScreen ? 150 : 220;
-  const breatheHeroHeight = isCompactScreen ? 165 : 250;
+
   const groundingHeroHeight = isCompactScreen ? 155 : 230;
   const prayerHeroHeight = isCompactScreen ? 165 : 240;
 
   // Breathing state - use pause duration from settings
   const pauseDuration = settings.pauseDurationSec || 15;
-  const [breathingExercise] = useState(() =>
+  const [breathingExercise, setBreathingExercise] = useState(() =>
     getBreathingExerciseForDuration(pauseDuration),
   );
   const [currentCycle, setCurrentCycle] = useState(1);
@@ -84,7 +86,7 @@ export default function AlternativesScreen() {
   const [phaseTimeLeft, setPhaseTimeLeft] = useState(breathingExercise.inhale);
 
   // Grounding state - use pause duration from settings
-  const [groundingExercise] = useState(() =>
+  const [groundingExercise, setGroundingExercise] = useState(() =>
     getGroundingExerciseForDuration(pauseDuration),
   );
   const [groundingTimeLeft, setGroundingTimeLeft] = useState(
@@ -110,8 +112,8 @@ export default function AlternativesScreen() {
   }, [type]);
 
   // Prayer state
-  const [prayer] = useState<Prayer>(() => getPrayerForDuration(pauseDuration));
-  const [prayerTimeLeft, setPrayerTimeLeft] = useState(pauseDuration);
+  const [prayer, setPrayer] = useState<Prayer>(() => getPrayerForDuration(pauseDuration));
+  const [prayerTimeLeft, setPrayerTimeLeft] = useState(prayer.durationSec);
 
   // Animations
   const breathScale = useSharedValue(1);
@@ -221,7 +223,7 @@ export default function AlternativesScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [type, isComplete]);
+  }, [type, isComplete, groundingExercise]);
 
   // Prayer timer
   useEffect(() => {
@@ -239,7 +241,7 @@ export default function AlternativesScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [type, isComplete]);
+  }, [type, isComplete, prayer]);
 
   // Prayer glow animation
   useEffect(() => {
@@ -359,6 +361,46 @@ export default function AlternativesScreen() {
     }
   };
 
+  const handleNewGroundingExercise = () => {
+    // Pick from all grounding exercises, excluding the current one
+    const others = GROUNDING_EXERCISES.filter(
+      (ex) => ex.id !== groundingExercise.id,
+    );
+    const picked = others[Math.floor(Math.random() * others.length)];
+    setGroundingExercise({ ...picked });
+    setGroundingTimeLeft(picked.durationSec);
+    setGroundingStep(0);
+    setIsComplete(false);
+  };
+
+  const handleNewPrayer = () => {
+    const others = PRAYERS.filter((p) => p.id !== prayer.id);
+    const picked = others[Math.floor(Math.random() * others.length)];
+    setPrayer({ ...picked });
+    setPrayerTimeLeft(picked.durationSec);
+    setIsComplete(false);
+  };
+
+  const handleNewBreathingExercise = () => {
+    const others = BREATHING_EXERCISES.filter(
+      (ex) => ex.id !== breathingExercise.id,
+    );
+    const picked = others[Math.floor(Math.random() * others.length)];
+    // Use the picked exercise but recalculate cycles to fit pause duration
+    const cycleTime = picked.inhale + picked.hold1 + picked.exhale + picked.hold2;
+    const maxCycles = Math.max(1, Math.floor(pauseDuration / cycleTime));
+    const newExercise = {
+      ...picked,
+      cycles: Math.min(maxCycles, picked.cycles),
+    };
+    setBreathingExercise({ ...newExercise, totalTime: maxCycles * cycleTime });
+    setCurrentCycle(1);
+    currentCycleRef.current = 1;
+    setBreathPhase("inhale");
+    setPhaseTimeLeft(newExercise.inhale);
+    setIsComplete(false);
+  };
+
   const getBreathPhaseLabel = (phase: BreathPhase): string => {
     const labels: Record<BreathPhase, string> = {
       inhale: "Breathe In",
@@ -389,29 +431,33 @@ export default function AlternativesScreen() {
     },
     header: {
       alignItems: "center",
-      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
+      marginBottom: spacing.xs,
     },
     exerciseName: {
       fontFamily: fonts.light,
       fontSize: isCompactScreen
-        ? typography.sectionTitle.fontSize
-        : typography.title.fontSize,
+        ? typography.heading.fontSize
+        : typography.sectionTitle.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: isCompactScreen ? spacing.xs : spacing.sm,
+      marginBottom: 2,
     },
     exerciseDescription: {
       fontFamily: fonts.regular,
-      fontSize: isCompactScreen
-        ? typography.caption.fontSize
-        : typography.body.fontSize,
+      fontSize: typography.caption.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
-      lineHeight: isCompactScreen ? 20 : typography.body.lineHeight,
+      lineHeight: 18,
     },
-    breathStatusCard: {
-      alignItems: "center",
-      marginBottom: isCompactScreen ? spacing.md : spacing.xl,
+    breatheContainer: {
+      flex: 1,
+      justifyContent: "space-between",
+      paddingTop: spacing.md,
+    },
+    breatheCenter: {
+      flex: 1,
+      alignItems: "center" as const,
+      justifyContent: "center",
     },
     phaseText: {
       fontFamily: fonts.medium,
@@ -420,19 +466,19 @@ export default function AlternativesScreen() {
       letterSpacing: 2,
       textTransform: "uppercase",
       textAlign: "center",
+      marginBottom: spacing.xs,
     },
     timerText: {
       fontFamily: fonts.thin,
-      fontSize: isCompactScreen ? 42 : typography.display.fontSize,
+      fontSize: isCompactScreen ? 48 : 60,
       color: colors.text,
-      marginTop: isCompactScreen ? spacing.xs : spacing.sm,
     },
     cycleInfo: {
       fontFamily: fonts.regular,
       fontSize: typography.caption.fontSize,
       color: colors.textSecondary,
       textAlign: "center",
-      marginBottom: isCompactScreen ? spacing.md : spacing.lg,
+      marginTop: spacing.sm,
     },
     // Grounding styles
     groundingContainer: {
@@ -605,16 +651,21 @@ export default function AlternativesScreen() {
     // Prayer styles
     prayerContainer: {
       flex: 1,
-      justifyContent: "center",
+      justifyContent: "space-between",
+      paddingTop: spacing.md,
+    },
+    prayerHeader: {
+      alignItems: "center" as const,
+      marginBottom: spacing.xs,
     },
     prayerName: {
       fontFamily: fonts.light,
       fontSize: isCompactScreen
-        ? typography.sectionTitle.fontSize
-        : typography.title.fontSize,
+        ? typography.heading.fontSize
+        : typography.sectionTitle.fontSize,
       color: colors.text,
       textAlign: "center",
-      marginBottom: spacing.xs,
+      marginBottom: 2,
     },
     prayerAttribution: {
       fontFamily: fonts.regular,
@@ -623,15 +674,29 @@ export default function AlternativesScreen() {
       textAlign: "center",
       fontStyle: "italic",
     },
-    prayerTimer: {
-      fontFamily: fonts.thin,
-      fontSize: isCompactScreen ? 38 : 48,
-      color: colors.textSecondary,
-      textAlign: "center",
-      marginBottom: isCompactScreen ? spacing.md : spacing.lg,
+    prayerTimerRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
     },
-    prayerTextCard: {
-      padding: isCompactScreen ? spacing.md : spacing.lg,
+    prayerTimerText: {
+      fontFamily: fonts.thin,
+      fontSize: isCompactScreen ? 28 : 34,
+      color: colors.textSecondary,
+    },
+    prayerCategoryBadge: {
+      fontFamily: fonts.semiBold,
+      fontSize: 11,
+      color: colors.primary,
+      textTransform: "uppercase",
+      letterSpacing: 1.5,
+    },
+    prayerTextArea: {
+      flex: 1,
+      justifyContent: "center" as const,
+      paddingVertical: spacing.sm,
     },
     prayerText: {
       fontFamily: fonts.regular,
@@ -640,16 +705,7 @@ export default function AlternativesScreen() {
         : typography.bodyLarge.fontSize,
       color: colors.text,
       textAlign: "center",
-      lineHeight: isCompactScreen ? 22 : 28,
-      marginBottom: isCompactScreen ? spacing.sm : spacing.md,
-    },
-    categoryText: {
-      fontFamily: fonts.medium,
-      fontSize: typography.caption.fontSize,
-      color: colors.primary,
-      textAlign: "center",
-      textTransform: "uppercase",
-      letterSpacing: 1.5,
+      lineHeight: isCompactScreen ? 24 : 28,
     },
     // Buttons
     buttonContainer: {
@@ -672,8 +728,8 @@ export default function AlternativesScreen() {
     },
   });
 
-  // Completed state (except for reflect and prayer which handle completion inline)
-  if (isComplete && type !== "reflect" && type !== "prayer") {
+  // Completed state (except for reflect, prayer, and breathe which handle completion inline)
+  if (isComplete && type !== "reflect" && type !== "prayer" && type !== "breathe") {
     return (
       <BackgroundWrapper>
         <SafeAreaView style={styles.container}>
@@ -695,6 +751,13 @@ export default function AlternativesScreen() {
                 onPress={handleComplete}
                 variant="primary"
               />
+              {type === "grounding" && (
+                <Button
+                  label="Try Another Exercise"
+                  onPress={handleNewGroundingExercise}
+                  variant="secondary"
+                />
+              )}
               <Button label="Back" onPress={handleSkip} variant="ghost" />
             </View>
           </View>
@@ -709,11 +772,12 @@ export default function AlternativesScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* BREATHING EXERCISE */}
         {type === "breathe" && (
-          <>
+          <View style={styles.breatheContainer}>
             <LumiIllustration
               source={getLumiAssetForAlternative("breathe")}
-              maxHeight={breatheHeroHeight}
+              maxHeight={isCompactScreen ? 110 : 150}
             />
+
             <View style={styles.header}>
               <Text style={styles.exerciseName}>{breathingExercise.name}</Text>
               <Text style={styles.exerciseDescription}>
@@ -721,19 +785,42 @@ export default function AlternativesScreen() {
               </Text>
             </View>
 
-            <Animated.View style={circleAnimatedStyle}>
-              <GlassCard glowColor="primary" style={styles.breathStatusCard}>
-                <Text style={styles.phaseText}>
-                  {getBreathPhaseLabel(breathPhase)}
-                </Text>
-                <Text style={styles.timerText}>{phaseTimeLeft}</Text>
-              </GlassCard>
+            <Animated.View style={[circleAnimatedStyle, styles.breatheCenter]}>
+              <Text style={styles.phaseText}>
+                {getBreathPhaseLabel(breathPhase)}
+              </Text>
+              <Text style={styles.timerText}>{phaseTimeLeft}</Text>
+              <Text style={styles.cycleInfo}>
+                Cycle {currentCycle} of {breathingExercise.cycles}
+              </Text>
             </Animated.View>
 
-            <Text style={styles.cycleInfo}>
-              Cycle {currentCycle} of {breathingExercise.cycles}
-            </Text>
-          </>
+            <View style={styles.buttonContainer}>
+              {isComplete ? (
+                <>
+                  <Button
+                    label="I Feel Better"
+                    onPress={handleComplete}
+                    variant="primary"
+                  />
+                  <Button
+                    label="Try Another Breathing Exercise"
+                    onPress={handleNewBreathingExercise}
+                    variant="secondary"
+                  />
+                </>
+              ) : (
+                <>
+                  <Button
+                    label="Try Different Exercise"
+                    onPress={handleNewBreathingExercise}
+                    variant="secondary"
+                  />
+                  <Button label="Skip" onPress={handleSkip} variant="ghost" />
+                </>
+              )}
+            </View>
+          </View>
         )}
 
         {/* GROUNDING EXERCISE - 5-4-3-2-1 */}
@@ -782,6 +869,11 @@ export default function AlternativesScreen() {
                   variant="primary"
                 />
               )}
+              <Button
+                label="Try Different Exercise"
+                onPress={handleNewGroundingExercise}
+                variant="secondary"
+              />
               <Button label="Back" onPress={handleSkip} variant="ghost" />
             </View>
           </View>
@@ -813,6 +905,11 @@ export default function AlternativesScreen() {
                 label={isComplete ? "Done" : "I'm Done Early"}
                 onPress={() => setIsComplete(true)}
                 variant="primary"
+              />
+              <Button
+                label="Try Different Exercise"
+                onPress={handleNewGroundingExercise}
+                variant="secondary"
               />
               <Button label="Back" onPress={handleSkip} variant="ghost" />
             </View>
@@ -923,9 +1020,10 @@ export default function AlternativesScreen() {
           <View style={styles.prayerContainer}>
             <LumiIllustration
               source={getLumiAssetForAlternative("prayer")}
-              maxHeight={prayerHeroHeight}
+              maxHeight={isCompactScreen ? 110 : 150}
             />
-            <View style={styles.header}>
+
+            <View style={styles.prayerHeader}>
               <Text style={styles.prayerName}>{prayer.name}</Text>
               {prayer.attribution && (
                 <Text style={styles.prayerAttribution}>
@@ -934,41 +1032,45 @@ export default function AlternativesScreen() {
               )}
             </View>
 
-            <Text style={styles.prayerTimer}>{prayerTimeLeft}s</Text>
-
-            <GlassCard glowColor="secondary" style={styles.prayerTextCard}>
-              <Text style={styles.prayerText}>{prayer.text}</Text>
-
+            <View style={styles.prayerTimerRow}>
+              <Text style={styles.prayerTimerText}>{prayerTimeLeft}s</Text>
               {prayer.category && (
-                <Text style={styles.categoryText}>{prayer.category}</Text>
+                <Text style={styles.prayerCategoryBadge}>{prayer.category}</Text>
               )}
-            </GlassCard>
+            </View>
 
-            {!isComplete && (
-              <View style={styles.buttonContainer}>
-                <Button label="Skip" onPress={handleSkip} variant="ghost" />
-              </View>
-            )}
+            <View style={styles.prayerTextArea}>
+              <Text style={styles.prayerText}>{prayer.text}</Text>
+            </View>
 
-            {isComplete && (
-              <View style={styles.buttonContainer}>
-                <Button
-                  label="Complete Prayer"
-                  onPress={handleComplete}
-                  variant="primary"
-                />
-              </View>
-            )}
+            <View style={styles.buttonContainer}>
+              {isComplete ? (
+                <>
+                  <Button
+                    label="Complete Prayer"
+                    onPress={handleComplete}
+                    variant="primary"
+                  />
+                  <Button
+                    label="Try Another Prayer"
+                    onPress={handleNewPrayer}
+                    variant="secondary"
+                  />
+                </>
+              ) : (
+                <>
+                  <Button
+                    label="Try Different Prayer"
+                    onPress={handleNewPrayer}
+                    variant="secondary"
+                  />
+                  <Button label="Skip" onPress={handleSkip} variant="ghost" />
+                </>
+              )}
+            </View>
           </View>
         )}
         </ScrollView>
-
-        {/* Breathing skip button */}
-        {type === "breathe" && !isComplete && (
-          <View style={styles.buttonContainer}>
-            <Button label="Skip" onPress={handleSkip} variant="ghost" />
-          </View>
-        )}
       </SafeAreaView>
     </BackgroundWrapper>
   );
