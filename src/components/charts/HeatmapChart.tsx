@@ -11,6 +11,7 @@ interface HeatmapChartProps {
   primaryColor: string;
   textColor: string;
   mutedColor: string;
+  accentColors?: readonly string[];
 }
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -22,6 +23,7 @@ export function HeatmapChart({
   primaryColor,
   textColor,
   mutedColor,
+  accentColors,
 }: HeatmapChartProps) {
   // Find max value for color scaling
   const maxVal = Math.max(1, ...data.flat());
@@ -46,7 +48,13 @@ export function HeatmapChart({
         {/* Day labels on top */}
         <View style={styles.dayLabelsRow}>
           {DAY_LABELS.map((label, i) => (
-            <Text key={i} style={[styles.dayLabel, { color: mutedColor }]}>
+            <Text
+              key={i}
+              style={[
+                styles.dayLabel,
+                { color: accentColors?.[i % accentColors.length] ?? mutedColor },
+              ]}
+            >
               {label}
             </Text>
           ))}
@@ -63,6 +71,13 @@ export function HeatmapChart({
                   (dayData[hour + 1] || 0) +
                   (dayData[hour + 2] || 0);
                 const intensity = value / (maxVal * 3);
+                const dayColor =
+                  accentColors?.[dayIndex % accentColors.length] ?? primaryColor;
+                const alphaHex = Math.round(
+                  Math.max(0.18, Math.min(0.92, intensity)) * 255
+                )
+                  .toString(16)
+                  .padStart(2, "0");
 
                 return (
                   <View
@@ -72,13 +87,12 @@ export function HeatmapChart({
                       {
                         backgroundColor:
                           value === 0
-                            ? mutedColor + "15"
-                            : primaryColor +
-                              Math.round(
-                                Math.max(0.15, Math.min(1, intensity)) * 255
-                              )
-                                .toString(16)
-                                .padStart(2, "0"),
+                            ? mutedColor + "14"
+                            : dayColor + alphaHex,
+                        borderColor:
+                          value === 0 ? mutedColor + "12" : dayColor + "55",
+                        shadowColor: value === 0 ? "transparent" : dayColor,
+                        shadowOpacity: value === 0 ? 0 : 0.16,
                       },
                     ]}
                   />
@@ -136,5 +150,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     maxWidth: 32,
     maxHeight: 32,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
   },
 });

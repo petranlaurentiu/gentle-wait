@@ -34,12 +34,66 @@ const lumiAiVideo = require("@/assets/lumi/video/lumi_ai.mp4");
 const lumiAiImage = require("@/assets/lumi/lumi_ai.png");
 
 const QUICK_ACTIONS = [
-  { label: "Breathe", icon: "flower-outline", onPress: "/alternatives", params: { type: "breathe" } },
-  { label: "Pray", icon: "heart-outline", onPress: "/alternatives", params: { type: "prayer" } },
-  { label: "Move", icon: "fitness-outline", onPress: "/exercise", params: { entry: "move" } },
-  { label: "Eye Reset", icon: "eye-outline", onPress: "/exercise", params: { entry: "eye-reset" } },
-  { label: "Journal", icon: "journal-outline", onPress: "/alternatives", params: { type: "reflect" } },
-  { label: "Ground", icon: "leaf-outline", onPress: "/alternatives", params: { type: "grounding" } },
+  {
+    label: "Breathe",
+    icon: "flower-outline",
+    onPress: "/alternatives",
+    params: { type: "breathe" },
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.52)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    label: "Pray",
+    icon: "heart-outline",
+    onPress: "/alternatives",
+    params: { type: "prayer" },
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.5)",
+    surface: "rgba(255, 122, 182, 0.1)",
+  },
+  {
+    label: "Move",
+    icon: "fitness-outline",
+    onPress: "/exercise",
+    params: { entry: "move" },
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.52)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+  {
+    label: "Eye Reset",
+    icon: "eye-outline",
+    onPress: "/exercise",
+    params: { entry: "eye-reset" },
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.5)",
+    surface: "rgba(244, 211, 94, 0.1)",
+  },
+  {
+    label: "Journal",
+    icon: "journal-outline",
+    onPress: "/alternatives",
+    params: { type: "reflect" },
+    accent: "#A78BFA",
+    glow: "rgba(167, 139, 250, 0.5)",
+    surface: "rgba(167, 139, 250, 0.1)",
+  },
+  {
+    label: "Ground",
+    icon: "leaf-outline",
+    onPress: "/alternatives",
+    params: { type: "grounding" },
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.52)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+] as const;
+
+const DASHBOARD_STAT_ACCENTS = [
+  "#7EE6C6",
+  "#52C0FF",
+  "#F4D35E",
 ] as const;
 
 export default function HomeScreen() {
@@ -227,6 +281,9 @@ export default function HomeScreen() {
       width: 10,
       height: 10,
       borderRadius: 5,
+      shadowOpacity: 0.42,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 0 },
     },
     appsList: {
       gap: spacing.sm,
@@ -257,23 +314,18 @@ export default function HomeScreen() {
       width: "48.2%",
       minHeight: 112,
       borderRadius: radius.glass,
-      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       padding: spacing.lg,
       justifyContent: "space-between",
-      shadowColor: colors.glassShadowSoft,
       shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.14,
-      shadowRadius: 22,
+      shadowOpacity: 0.2,
+      shadowRadius: 24,
     },
     iconBadge: {
       width: 42,
       height: 42,
       borderRadius: 21,
-      backgroundColor: colors.surfaceElevated,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: spacing.md,
@@ -546,19 +598,43 @@ export default function HomeScreen() {
             <AppText variant="eyebrow" color="secondary">Weekly overview</AppText>
             <View style={styles.statGrid}>
               <View style={styles.statRow}>
-                <View style={[styles.statDot, { backgroundColor: colors.primary }]} />
+                <View
+                  style={[
+                    styles.statDot,
+                    {
+                      backgroundColor: DASHBOARD_STAT_ACCENTS[0],
+                      shadowColor: DASHBOARD_STAT_ACCENTS[0],
+                    },
+                  ]}
+                />
                 <AppText variant="bodyLarge">
                   <AppText variant="bodyLarge" color="primary">{weeklyStats.pausesTotal}</AppText> mindful pauses
                 </AppText>
               </View>
               <View style={styles.statRow}>
-                <View style={[styles.statDot, { backgroundColor: colors.secondary }]} />
+                <View
+                  style={[
+                    styles.statDot,
+                    {
+                      backgroundColor: DASHBOARD_STAT_ACCENTS[1],
+                      shadowColor: DASHBOARD_STAT_ACCENTS[1],
+                    },
+                  ]}
+                />
                 <AppText variant="bodyLarge">
                   <AppText variant="bodyLarge" color="primary">{weeklyStats.choseCalmCount}</AppText> moments of calm
                 </AppText>
               </View>
               <View style={styles.statRow}>
-                <View style={[styles.statDot, { backgroundColor: colors.accent }]} />
+                <View
+                  style={[
+                    styles.statDot,
+                    {
+                      backgroundColor: DASHBOARD_STAT_ACCENTS[2],
+                      shadowColor: DASHBOARD_STAT_ACCENTS[2],
+                    },
+                  ]}
+                />
                 <AppText variant="bodyLarge">
                   <AppText variant="bodyLarge" color="primary">{weeklyStats.mindfulMinutes}</AppText> minutes reclaimed
                 </AppText>
@@ -629,7 +705,14 @@ export default function HomeScreen() {
               {QUICK_ACTIONS.map((action) => (
                 <TouchableOpacity
                   key={action.label}
-                  style={styles.quickActionCard}
+                  style={[
+                    styles.quickActionCard,
+                    {
+                      backgroundColor: action.surface,
+                      borderColor: action.glow,
+                      shadowColor: action.accent,
+                    },
+                  ]}
                   activeOpacity={0.82}
                   onPress={() => {
                     if (action.params) {
@@ -640,8 +723,16 @@ export default function HomeScreen() {
                   }}
                 >
                   <View>
-                    <View style={styles.iconBadge}>
-                      <Ionicons name={action.icon} size={22} color={colors.primary} />
+                    <View
+                      style={[
+                        styles.iconBadge,
+                        {
+                          backgroundColor: action.surface,
+                          borderColor: action.glow,
+                        },
+                      ]}
+                    >
+                      <Ionicons name={action.icon} size={22} color={action.accent} />
                     </View>
                     <AppText variant="heading">{action.label}</AppText>
                   </View>

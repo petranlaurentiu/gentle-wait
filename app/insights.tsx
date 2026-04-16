@@ -35,6 +35,46 @@ import {
 import { useTheme } from "@/src/theme/ThemeProvider";
 import { fonts, radius, spacing, typography } from "@/src/theme/theme";
 
+const INSIGHT_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.42)",
+    surface: "rgba(126, 230, 198, 0.12)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.4)",
+    surface: "rgba(82, 192, 255, 0.12)",
+  },
+  {
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.4)",
+    surface: "rgba(244, 211, 94, 0.13)",
+  },
+  {
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.38)",
+    surface: "rgba(255, 122, 182, 0.12)",
+  },
+  {
+    accent: "#A78BFA",
+    glow: "rgba(167, 139, 250, 0.38)",
+    surface: "rgba(167, 139, 250, 0.12)",
+  },
+  {
+    accent: "#FB7185",
+    glow: "rgba(251, 113, 133, 0.38)",
+    surface: "rgba(251, 113, 133, 0.12)",
+  },
+] as const;
+
+const MINI_STAT_ACCENTS = [
+  INSIGHT_ACCENTS[1],
+  INSIGHT_ACCENTS[5],
+  INSIGHT_ACCENTS[0],
+  INSIGHT_ACCENTS[4],
+] as const;
+
 function formatDelta(value: number) {
   if (value === 0) {
     return "Same as last week";
@@ -177,7 +217,7 @@ export default function InsightsScreen() {
     },
     header: {
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
+      paddingTop: spacing.xl,
       paddingBottom: spacing.md,
       flexDirection: "row",
       justifyContent: "space-between",
@@ -211,6 +251,7 @@ export default function InsightsScreen() {
     },
     content: {
       paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xs,
       paddingBottom: spacing.xxl * 2,
       gap: spacing.md,
     },
@@ -225,6 +266,9 @@ export default function InsightsScreen() {
       backgroundColor: colors.primaryLight,
       borderWidth: 1,
       borderColor: colors.glassStroke,
+    },
+    heroBadgeText: {
+      color: INSIGHT_ACCENTS[0].accent,
     },
     heroTitleText: {
       fontFamily: fonts.semiBold,
@@ -245,6 +289,16 @@ export default function InsightsScreen() {
     scoreCard: {
       flex: 1,
       gap: spacing.xs,
+    },
+    scoreAccentRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    scoreDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
     },
     scoreValue: {
       fontFamily: fonts.thin,
@@ -280,6 +334,16 @@ export default function InsightsScreen() {
     miniCard: {
       width: "47%",
       gap: spacing.xs,
+    },
+    miniHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    miniDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
     },
     miniValue: {
       fontFamily: fonts.light,
@@ -341,6 +405,9 @@ export default function InsightsScreen() {
       borderRadius: 999,
       backgroundColor: colors.secondary,
       minHeight: 8,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
     },
     trendDay: {
       fontFamily: fonts.medium,
@@ -373,7 +440,13 @@ export default function InsightsScreen() {
       fontFamily: fonts.semiBold,
       fontSize: typography.body.fontSize,
       color: colors.accent,
-      marginLeft: spacing.md,
+    },
+    insightValuePill: {
+      minWidth: 34,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 5,
+      borderRadius: radius.pills,
+      alignItems: "center",
     },
     premiumCard: {
       gap: spacing.md,
@@ -419,8 +492,8 @@ export default function InsightsScreen() {
       borderColor: colors.glassStroke,
     },
     timeRangePillActive: {
-      backgroundColor: colors.primary + "20",
-      borderColor: colors.primary,
+      backgroundColor: INSIGHT_ACCENTS[1].surface,
+      borderColor: INSIGHT_ACCENTS[1].accent,
     },
     timeRangePillText: {
       fontFamily: fonts.medium,
@@ -428,7 +501,7 @@ export default function InsightsScreen() {
       color: colors.textMuted,
     },
     timeRangePillTextActive: {
-      color: colors.primary,
+      color: INSIGHT_ACCENTS[1].accent,
     },
     lockedPill: {
       flexDirection: "row" as const,
@@ -462,7 +535,7 @@ export default function InsightsScreen() {
 
   if (weeklyStats.pausesTotal === 0) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <View style={styles.header}>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.eyebrow}>Weekly reflection</Text>
@@ -479,12 +552,12 @@ export default function InsightsScreen() {
           actionLabel="Go Home"
           onAction={() => router.back()}
         />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.eyebrow}>
@@ -545,8 +618,16 @@ export default function InsightsScreen() {
         </View>
 
         <GlassCard glowColor="primary" style={styles.heroCard}>
-          <View style={styles.heroBadge}>
-            <Text style={styles.eyebrow}>Your week so far</Text>
+          <View
+            style={[
+              styles.heroBadge,
+              {
+                backgroundColor: INSIGHT_ACCENTS[0].surface,
+                borderColor: INSIGHT_ACCENTS[0].accent,
+              },
+            ]}
+          >
+            <Text style={[styles.eyebrow, styles.heroBadgeText]}>Your week so far</Text>
           </View>
           <View>
             <Text style={styles.heroTitleText}>{heroTitle}</Text>
@@ -555,15 +636,35 @@ export default function InsightsScreen() {
 
           <View style={styles.scoreRow}>
             <View style={styles.scoreCard}>
-              <Text style={styles.scoreLabel}>Calm rate</Text>
-              <Text style={styles.scoreValue}>{calmRate}%</Text>
+              <View style={styles.scoreAccentRow}>
+                <View
+                  style={[
+                    styles.scoreDot,
+                    { backgroundColor: INSIGHT_ACCENTS[0].accent },
+                  ]}
+                />
+                <Text style={styles.scoreLabel}>Calm rate</Text>
+              </View>
+              <Text style={[styles.scoreValue, { color: INSIGHT_ACCENTS[0].accent }]}>
+                {calmRate}%
+              </Text>
               <Text style={styles.scoreHint}>
                 {weeklyStats.choseCalmCount} of {weeklyStats.pausesTotal} pauses ended with intention
               </Text>
             </View>
             <View style={styles.scoreCard}>
-              <Text style={styles.scoreLabel}>Mindful time</Text>
-              <Text style={styles.scoreValue}>{weeklyStats.mindfulMinutes}m</Text>
+              <View style={styles.scoreAccentRow}>
+                <View
+                  style={[
+                    styles.scoreDot,
+                    { backgroundColor: INSIGHT_ACCENTS[1].accent },
+                  ]}
+                />
+                <Text style={styles.scoreLabel}>Mindful time</Text>
+              </View>
+              <Text style={[styles.scoreValue, { color: INSIGHT_ACCENTS[1].accent }]}>
+                {weeklyStats.mindfulMinutes}m
+              </Text>
               <Text style={styles.scoreHint}>
                 {weeklyStats.choseCalmCount} intentional outcomes this week
               </Text>
@@ -574,26 +675,54 @@ export default function InsightsScreen() {
         <View>
           <Text style={styles.sectionTitle}>This week</Text>
           <View style={styles.miniGrid}>
-            <GlassCard intensity="light" style={styles.miniCard}>
-              <Text style={styles.miniLabel}>Total pauses</Text>
-              <Text style={styles.miniValue}>{weeklyStats.pausesTotal}</Text>
-              <Text style={styles.miniHint}>Every interruption you noticed</Text>
-            </GlassCard>
-            <GlassCard intensity="light" style={styles.miniCard}>
-              <Text style={styles.miniLabel}>Opened anyway</Text>
-              <Text style={styles.miniValue}>{weeklyStats.openedAnyway}</Text>
-              <Text style={styles.miniHint}>Moments the habit still won</Text>
-            </GlassCard>
-            <GlassCard intensity="light" style={styles.miniCard}>
-              <Text style={styles.miniLabel}>Closed</Text>
-              <Text style={styles.miniValue}>{weeklyStats.closedCount}</Text>
-              <Text style={styles.miniHint}>Times you stepped away fully</Text>
-            </GlassCard>
-            <GlassCard intensity="light" style={styles.miniCard}>
-              <Text style={styles.miniLabel}>Chose calm</Text>
-              <Text style={styles.miniValue}>{weeklyStats.choseCalmCount}</Text>
-              <Text style={styles.miniHint}>Closed or redirected with intention</Text>
-            </GlassCard>
+            {[
+              {
+                label: "Total pauses",
+                value: weeklyStats.pausesTotal,
+                hint: "Every interruption you noticed",
+              },
+              {
+                label: "Opened anyway",
+                value: weeklyStats.openedAnyway,
+                hint: "Moments the habit still won",
+              },
+              {
+                label: "Closed",
+                value: weeklyStats.closedCount,
+                hint: "Times you stepped away fully",
+              },
+              {
+                label: "Chose calm",
+                value: weeklyStats.choseCalmCount,
+                hint: "Closed or redirected with intention",
+              },
+            ].map((stat, index) => {
+              const accent = MINI_STAT_ACCENTS[index];
+
+              return (
+                <GlassCard intensity="light" style={styles.miniCard} key={stat.label}>
+                  <View style={styles.miniHeaderRow}>
+                    <View
+                      style={[
+                        styles.miniDot,
+                        {
+                          backgroundColor: accent.accent,
+                          shadowColor: accent.glow,
+                          shadowOffset: { width: 0, height: 0 },
+                          shadowOpacity: 0.55,
+                          shadowRadius: 8,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.miniLabel}>{stat.label}</Text>
+                  </View>
+                  <Text style={[styles.miniValue, { color: accent.accent }]}>
+                    {stat.value}
+                  </Text>
+                  <Text style={styles.miniHint}>{stat.hint}</Text>
+                </GlassCard>
+              );
+            })}
           </View>
         </View>
 
@@ -608,19 +737,27 @@ export default function InsightsScreen() {
               <Text style={styles.trendDelta}>{formatDelta(weekDelta)}</Text>
             </View>
             <View style={styles.trendBars}>
-              {trendData.map((day) => (
-                <View key={day.date} style={styles.trendBarItem}>
-                  <View style={styles.trendBarTrack}>
-                    <View
-                      style={[
-                        styles.trendBar,
-                        { height: Math.max(8, (day.count / maxTrendValue) * 84) },
-                      ]}
-                    />
+              {trendData.map((day, index) => {
+                const accent = INSIGHT_ACCENTS[index % INSIGHT_ACCENTS.length];
+
+                return (
+                  <View key={day.date} style={styles.trendBarItem}>
+                    <View style={styles.trendBarTrack}>
+                      <View
+                        style={[
+                          styles.trendBar,
+                          {
+                            height: Math.max(8, (day.count / maxTrendValue) * 84),
+                            backgroundColor: accent.accent,
+                            shadowColor: accent.glow,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.trendDay}>{getDayLabel(day.date)}</Text>
                   </View>
-                  <Text style={styles.trendDay}>{getDayLabel(day.date)}</Text>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </GlassCard>
         </View>
@@ -632,20 +769,33 @@ export default function InsightsScreen() {
                 <Text style={styles.sectionTitle}>What pulls you in</Text>
                 <GlassCard glowColor="accent">
                   <View style={styles.insightList}>
-                    {topTriggers.map((trigger, index) => (
-                      <View
-                        key={trigger.reason}
-                        style={[
-                          styles.insightRow,
-                          index < topTriggers.length - 1 && styles.insightRowBorder,
-                        ]}
-                      >
-                        <Text style={styles.insightLabel}>
-                          {reasonLabels[trigger.reason] || trigger.reason}
-                        </Text>
-                        <Text style={styles.insightValue}>{trigger.count}</Text>
-                      </View>
-                    ))}
+                    {topTriggers.map((trigger, index) => {
+                      const accent = INSIGHT_ACCENTS[index % INSIGHT_ACCENTS.length];
+
+                      return (
+                        <View
+                          key={trigger.reason}
+                          style={[
+                            styles.insightRow,
+                            index < topTriggers.length - 1 && styles.insightRowBorder,
+                          ]}
+                        >
+                          <Text style={styles.insightLabel}>
+                            {reasonLabels[trigger.reason] || trigger.reason}
+                          </Text>
+                          <View
+                            style={[
+                              styles.insightValuePill,
+                              { backgroundColor: accent.surface },
+                            ]}
+                          >
+                            <Text style={[styles.insightValue, { color: accent.accent }]}>
+                              {trigger.count}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 </GlassCard>
               </View>
@@ -656,18 +806,31 @@ export default function InsightsScreen() {
                 <Text style={styles.sectionTitle}>Most intercepted apps</Text>
                 <GlassCard>
                   <View style={styles.insightList}>
-                    {topApps.map((app, index) => (
-                      <View
-                        key={`${app.appLabel}-${index}`}
-                        style={[
-                          styles.insightRow,
-                          index < topApps.length - 1 && styles.insightRowBorder,
-                        ]}
-                      >
-                        <Text style={styles.insightLabel}>{app.appLabel}</Text>
-                        <Text style={styles.insightValue}>{app.count}</Text>
-                      </View>
-                    ))}
+                    {topApps.map((app, index) => {
+                      const accent = INSIGHT_ACCENTS[(index + 2) % INSIGHT_ACCENTS.length];
+
+                      return (
+                        <View
+                          key={`${app.appLabel}-${index}`}
+                          style={[
+                            styles.insightRow,
+                            index < topApps.length - 1 && styles.insightRowBorder,
+                          ]}
+                        >
+                          <Text style={styles.insightLabel}>{app.appLabel}</Text>
+                          <View
+                            style={[
+                              styles.insightValuePill,
+                              { backgroundColor: accent.surface },
+                            ]}
+                          >
+                            <Text style={[styles.insightValue, { color: accent.accent }]}>
+                              {app.count}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 </GlassCard>
               </View>
@@ -686,8 +849,8 @@ export default function InsightsScreen() {
                         ? Math.round((app.calmCount / app.totalPauses) * 100)
                         : 0,
                     }))}
-                    primaryColor={colors.primary}
-                    accentColor={colors.accent}
+                    primaryColor={INSIGHT_ACCENTS[0].accent}
+                    accentColor={INSIGHT_ACCENTS[2].accent}
                     textColor={colors.text}
                     mutedColor={colors.textMuted}
                   />
@@ -702,9 +865,10 @@ export default function InsightsScreen() {
                 <GlassCard>
                   <HeatmapChart
                     data={heatmapData}
-                    primaryColor={colors.primary}
+                    primaryColor={INSIGHT_ACCENTS[1].accent}
                     textColor={colors.text}
                     mutedColor={colors.textMuted}
+                    accentColors={INSIGHT_ACCENTS.map((item) => item.accent)}
                   />
                 </GlassCard>
               </View>
@@ -720,7 +884,7 @@ export default function InsightsScreen() {
                       label: p.weekLabel,
                       value: p.calmRate,
                     }))}
-                    primaryColor={colors.primary}
+                    primaryColor={INSIGHT_ACCENTS[0].accent}
                     textColor={colors.text}
                     mutedColor={colors.textMuted}
                   />
@@ -749,18 +913,28 @@ export default function InsightsScreen() {
             </View>
 
             <View style={styles.premiumPills}>
-              <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>App breakdowns</Text>
-              </View>
-              <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>Hourly heatmap</Text>
-              </View>
-              <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>Calm rate trend</Text>
-              </View>
-              <View style={styles.premiumPill}>
-                <Text style={styles.premiumPillText}>Monthly & all-time</Text>
-              </View>
+              {["App breakdowns", "Hourly heatmap", "Calm rate trend", "Monthly & all-time"].map(
+                (label, index) => {
+                  const accent = INSIGHT_ACCENTS[index % INSIGHT_ACCENTS.length];
+
+                  return (
+                    <View
+                      key={label}
+                      style={[
+                        styles.premiumPill,
+                        {
+                          backgroundColor: accent.surface,
+                          borderColor: accent.accent,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.premiumPillText, { color: accent.accent }]}>
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                }
+              )}
             </View>
 
             <View style={styles.ctaRow}>

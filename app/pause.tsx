@@ -47,6 +47,39 @@ const { width } = Dimensions.get("window");
 const CIRCLE_SIZE = width * 0.45;
 const LUMI_BREATHE_SIZE = CIRCLE_SIZE * 0.7;
 
+const PAUSE_CARD_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.44)",
+    surface: "rgba(126, 230, 198, 0.12)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.44)",
+    surface: "rgba(82, 192, 255, 0.12)",
+  },
+  {
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.42)",
+    surface: "rgba(244, 211, 94, 0.12)",
+  },
+  {
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.42)",
+    surface: "rgba(255, 122, 182, 0.12)",
+  },
+  {
+    accent: "#A78BFA",
+    glow: "rgba(167, 139, 250, 0.42)",
+    surface: "rgba(167, 139, 250, 0.12)",
+  },
+  {
+    accent: "#FB7185",
+    glow: "rgba(251, 113, 133, 0.42)",
+    surface: "rgba(251, 113, 133, 0.12)",
+  },
+] as const;
+
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -311,16 +344,19 @@ export default function PauseScreen() {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.sm,
       borderRadius: radius.button,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
       alignItems: "center",
       justifyContent: "center",
       minHeight: 52,
+      shadowOpacity: 0.14,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 8 },
     },
     chipSelected: {
-      backgroundColor: "rgba(0, 212, 255, 0.25)",
-      borderColor: colors.primary,
+      shadowOpacity: 0.26,
+      shadowRadius: 16,
     },
     chipIcon: {
       marginBottom: 4,
@@ -363,12 +399,15 @@ export default function PauseScreen() {
       paddingVertical: spacing.md + 4,
       paddingHorizontal: spacing.sm,
       borderRadius: radius.button,
-      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: colors.glassStroke,
       alignItems: "center" as const,
       justifyContent: "center" as const,
       minHeight: 80,
+      shadowOpacity: 0.18,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 10 },
     },
     actionCardLabel: {
       fontFamily: fonts.medium,
@@ -505,32 +544,47 @@ export default function PauseScreen() {
                   ?
                 </Text>
                 <View style={styles.chipGrid}>
-                  {reasonChoices.map((choice) => (
-                    <TouchableOpacity
-                      key={choice.value}
-                      style={[
-                        styles.chip,
-                        selectedReason === choice.value && styles.chipSelected,
-                      ]}
-                      onPress={() => handleReasonSelect(choice.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={choice.icon}
-                        size={24}
-                        color={selectedReason === choice.value ? colors.primary : colors.textSecondary}
-                      />
-                      <Text
+                  {reasonChoices.map((choice, index) => {
+                    const accent =
+                      PAUSE_CARD_ACCENTS[index % PAUSE_CARD_ACCENTS.length];
+                    const isSelected = selectedReason === choice.value;
+
+                    return (
+                      <TouchableOpacity
+                        key={choice.value}
                         style={[
-                          styles.chipText,
-                          selectedReason === choice.value &&
-                            styles.chipSelectedText,
+                          styles.chip,
+                          {
+                            backgroundColor: isSelected
+                              ? accent.surface
+                              : colors.glassFill,
+                            borderColor: isSelected
+                              ? accent.glow
+                              : colors.glassStroke,
+                            shadowColor: accent.accent,
+                          },
+                          isSelected && styles.chipSelected,
                         ]}
+                        onPress={() => handleReasonSelect(choice.value)}
+                        activeOpacity={0.7}
                       >
-                        {choice.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Ionicons
+                          name={choice.icon}
+                          size={24}
+                          color={isSelected ? accent.accent : colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.chipText,
+                            isSelected && styles.chipSelectedText,
+                            isSelected && { color: accent.accent },
+                          ]}
+                        >
+                          {choice.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </Animated.View>
             )}
@@ -539,29 +593,48 @@ export default function PauseScreen() {
           <View style={styles.actionContainer}>
             <Text style={styles.actionTitle}>What would you like to do?</Text>
             <View style={styles.actionGrid}>
-              {actionChoices.map((choice) => (
-                <TouchableOpacity
-                  key={choice.value}
-                  style={styles.actionCard}
-                  onPress={() => handleAlternative(choice.value)}
-                  activeOpacity={0.7}
-                >
-                  {choice.iconSet === "material" ? (
-                    <MaterialCommunityIcons
-                      name={choice.icon as never}
-                      size={26}
-                      color={colors.textSecondary}
-                    />
-                  ) : (
-                    <Ionicons
-                      name={choice.icon as never}
-                      size={26}
-                      color={colors.textSecondary}
-                    />
-                  )}
-                  <Text style={styles.actionCardLabel}>{choice.label}</Text>
-                </TouchableOpacity>
-              ))}
+              {actionChoices.map((choice, index) => {
+                const accent =
+                  PAUSE_CARD_ACCENTS[index % PAUSE_CARD_ACCENTS.length];
+
+                return (
+                  <TouchableOpacity
+                    key={choice.value}
+                    style={[
+                      styles.actionCard,
+                      {
+                        backgroundColor: accent.surface,
+                        borderColor: accent.glow,
+                        shadowColor: accent.accent,
+                      },
+                    ]}
+                    onPress={() => handleAlternative(choice.value)}
+                    activeOpacity={0.7}
+                  >
+                    {choice.iconSet === "material" ? (
+                      <MaterialCommunityIcons
+                        name={choice.icon as never}
+                        size={26}
+                        color={accent.accent}
+                      />
+                    ) : (
+                      <Ionicons
+                        name={choice.icon as never}
+                        size={26}
+                        color={accent.accent}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.actionCardLabel,
+                        { color: accent.accent },
+                      ]}
+                    >
+                      {choice.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <View style={styles.divider} />
             <Button

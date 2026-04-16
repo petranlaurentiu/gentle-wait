@@ -145,11 +145,121 @@ const HERO_VALUE_PROPS = [
     surface: "rgba(255, 122, 182, 0.1)",
   },
   {
+    icon: "heart-outline",
+    text: "Pray",
+    accent: "#FB7185",
+    glow: "rgba(251, 113, 133, 0.42)",
+    surface: "rgba(251, 113, 133, 0.1)",
+  },
+  {
     icon: "leaf-outline",
     text: "Ground",
     accent: "#A78BFA",
     glow: "rgba(167, 139, 250, 0.42)",
     surface: "rgba(167, 139, 250, 0.1)",
+  },
+] as const;
+
+const CURRENT_STATE_STAT_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.46)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.48)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+  {
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.46)",
+    surface: "rgba(244, 211, 94, 0.1)",
+  },
+] as const;
+
+const CURRENT_STATE_SUPPORT_ACCENTS = [
+  "#7EE6C6",
+  "#52C0FF",
+  "#FF7AB6",
+] as const;
+
+const TIME_OPTION_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.44)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.44)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+  {
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.42)",
+    surface: "rgba(244, 211, 94, 0.1)",
+  },
+  {
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.42)",
+    surface: "rgba(255, 122, 182, 0.1)",
+  },
+] as const;
+
+const CURRENT_TIME_OPTION_ACCENTS = [
+  TIME_OPTION_ACCENTS[0],
+  TIME_OPTION_ACCENTS[0],
+  TIME_OPTION_ACCENTS[1],
+  TIME_OPTION_ACCENTS[1],
+  TIME_OPTION_ACCENTS[2],
+  TIME_OPTION_ACCENTS[2],
+  TIME_OPTION_ACCENTS[3],
+  TIME_OPTION_ACCENTS[3],
+  TIME_OPTION_ACCENTS[3],
+] as const;
+
+const ANALYSIS_STAT_ACCENTS = [
+  {
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.46)",
+    surface: "rgba(255, 122, 182, 0.1)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.46)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+] as const;
+
+const PROJECTION_STAT_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.48)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    accent: "#F4D35E",
+    glow: "rgba(244, 211, 94, 0.46)",
+    surface: "rgba(244, 211, 94, 0.1)",
+  },
+] as const;
+
+const SUMMARY_GOAL_ACCENTS = [
+  {
+    accent: "#7EE6C6",
+    glow: "rgba(126, 230, 198, 0.42)",
+    surface: "rgba(126, 230, 198, 0.1)",
+  },
+  {
+    accent: "#52C0FF",
+    glow: "rgba(82, 192, 255, 0.42)",
+    surface: "rgba(82, 192, 255, 0.1)",
+  },
+  {
+    accent: "#FF7AB6",
+    glow: "rgba(255, 122, 182, 0.4)",
+    surface: "rgba(255, 122, 182, 0.1)",
   },
 ] as const;
 
@@ -308,6 +418,8 @@ export default function OnboardingScreen() {
   const [stepKey, setStepKey] = useState(0);
   const [iosPickerKey, setIOSPickerKey] = useState(0);
   const [iosRawSelection, setIOSRawSelection] = useState<string | null>(null);
+  const [hasShownIOSAppSelectionSkipNotice, setHasShownIOSAppSelectionSkipNotice] =
+    useState(false);
 
   // Onboarding state - initialize from current settings if in complete-profile mode
   const [userName, setUserName] = useState(
@@ -704,10 +816,23 @@ export default function OnboardingScreen() {
 
     if (
       step === "select-apps" &&
+      isIOSFamilyControlsFlow &&
       !isSimulatorScreenshotMode &&
-      ((isIOSFamilyControlsFlow &&
-        !hasIOSProtectedApps(iosFamilyActivitySelection)) ||
-        (!isIOSFamilyControlsFlow && selectedAppSet.size === 0))
+      !hasShownIOSAppSelectionSkipNotice &&
+      !hasIOSProtectedApps(iosFamilyActivitySelection)
+    ) {
+      Alert.alert(
+        "You can choose apps later",
+        "GentleWait will finish setup now. When you're ready, open Settings and choose the apps you want GentleWait to pause before.",
+      );
+      setHasShownIOSAppSelectionSkipNotice(true);
+    }
+
+    if (
+      step === "select-apps" &&
+      !isIOSFamilyControlsFlow &&
+      !isSimulatorScreenshotMode &&
+      selectedAppSet.size === 0
     ) {
       Alert.alert(
         "Select Apps",
@@ -719,6 +844,7 @@ export default function OnboardingScreen() {
     if (
       step === "select-apps" &&
       isIOSFamilyControlsFlow &&
+      hasIOSProtectedApps(iosFamilyActivitySelection) &&
       !validateIOSSelectionForPlan()
     ) {
       return;
@@ -820,12 +946,16 @@ export default function OnboardingScreen() {
       });
 
       try {
-        if (isIOSFamilyControlsFlow && nextIOSSelection) {
+        if (
+          isIOSFamilyControlsFlow &&
+          nextIOSSelection &&
+          hasIOSProtectedApps(nextIOSSelection)
+        ) {
           await configureIOSProtection(
             nextIOSSelection,
             currentSettings.cooldownMinutes || cooldownMinutes,
           );
-        } else {
+        } else if (!isIOSFamilyControlsFlow) {
           await syncSelectedAppsToNative(selectedApps);
         }
       } catch (error) {
@@ -889,9 +1019,13 @@ export default function OnboardingScreen() {
       });
 
       try {
-        if (isIOSFamilyControlsFlow && nextIOSSelection) {
+        if (
+          isIOSFamilyControlsFlow &&
+          nextIOSSelection &&
+          hasIOSProtectedApps(nextIOSSelection)
+        ) {
           await configureIOSProtection(nextIOSSelection, cooldownMinutes);
-        } else {
+        } else if (!isIOSFamilyControlsFlow) {
           await syncSelectedAppsToNative(selectedApps);
         }
       } catch (error) {
@@ -1459,7 +1593,7 @@ export default function OnboardingScreen() {
     timeValue: {
       fontFamily: fonts.thin,
       fontSize: typography.display.fontSize,
-      color: colors.primary,
+      color: "#7EE6C6",
       letterSpacing: typography.display.letterSpacing,
     },
     timeLabel: {
@@ -1478,16 +1612,17 @@ export default function OnboardingScreen() {
     timeButton: {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
-      backgroundColor: colors.glassFill,
       borderRadius: radius.button,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       minWidth: 60,
       alignItems: "center",
+      shadowOpacity: 0.16,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
     },
     timeButtonSelected: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 18,
     },
     timeButtonText: {
       fontFamily: fonts.medium,
@@ -1495,7 +1630,7 @@ export default function OnboardingScreen() {
       color: colors.text,
     },
     timeButtonTextSelected: {
-      color: colors.bg,
+      color: colors.text,
     },
     savingsCard: {
       marginTop: spacing.xl,
@@ -1528,14 +1663,14 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.surfaceElevated,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(126, 230, 198, 0.34)",
     },
     summaryBadgeText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.small.fontSize,
-      color: colors.secondary,
+      color: "#7EE6C6",
       letterSpacing: 0.8,
       textTransform: "uppercase",
     },
@@ -1548,7 +1683,7 @@ export default function OnboardingScreen() {
     },
     summaryHighlight: {
       fontFamily: fonts.semiBold,
-      color: colors.primary,
+      color: "#7EE6C6",
     },
     summaryHeroCard: {
       overflow: "hidden",
@@ -1574,7 +1709,7 @@ export default function OnboardingScreen() {
     summaryValueLabel: {
       fontFamily: fonts.semiBold,
       fontSize: typography.bodyLarge.fontSize,
-      color: colors.primary,
+      color: "#7EE6C6",
       textAlign: "center",
     },
     summaryHeroText: {
@@ -1592,12 +1727,10 @@ export default function OnboardingScreen() {
       gap: spacing.sm,
     },
     summaryGoalPill: {
-      backgroundColor: colors.glassFill,
       borderRadius: radius.pills,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
     },
     summaryGoalText: {
       fontFamily: fonts.medium,
@@ -1652,14 +1785,14 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.surfaceElevated,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(126, 230, 198, 0.32)",
     },
     currentStateBadgeText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.small.fontSize,
-      color: colors.secondary,
+      color: "#7EE6C6",
       letterSpacing: 0.8,
     },
     currentStateHeroCard: {
@@ -1701,9 +1834,9 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.glassFill,
+      backgroundColor: "rgba(255, 122, 182, 0.1)",
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(255, 122, 182, 0.3)",
     },
     currentStateEmotionText: {
       fontFamily: fonts.medium,
@@ -1720,10 +1853,11 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.sm + 2,
       paddingHorizontal: spacing.md,
       borderRadius: radius.button,
-      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       marginTop: spacing.sm,
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
     },
     currentStateStatIcon: {
       width: 34,
@@ -1731,9 +1865,7 @@ export default function OnboardingScreen() {
       borderRadius: 17,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.surfaceElevated,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
     },
     currentStateStatMeta: {
       flex: 1,
@@ -1785,9 +1917,9 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: "rgba(126, 230, 198, 0.38)",
     },
     currentStateLogoText: {
       fontFamily: fonts.semiBold,
@@ -1849,14 +1981,14 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.surfaceElevated,
+      backgroundColor: "rgba(255, 122, 182, 0.1)",
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(255, 122, 182, 0.34)",
     },
     analysisBadgeText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.small.fontSize,
-      color: colors.secondary,
+      color: "#FF7AB6",
       letterSpacing: 0.8,
       textTransform: "uppercase",
     },
@@ -1869,7 +2001,7 @@ export default function OnboardingScreen() {
     },
     analysisHighlight: {
       fontFamily: fonts.semiBold,
-      color: colors.primary,
+      color: "#FF7AB6",
     },
     analysisSubtitle: {
       fontFamily: fonts.regular,
@@ -1906,7 +2038,7 @@ export default function OnboardingScreen() {
     analysisValueLabel: {
       fontFamily: fonts.semiBold,
       fontSize: typography.bodyLarge.fontSize,
-      color: colors.primary,
+      color: "#FF7AB6",
       textAlign: "center",
     },
     analysisDescription: {
@@ -1927,11 +2059,12 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       borderRadius: radius.button,
-      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       alignItems: "center",
       gap: spacing.xs,
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
     },
     analysisStatValue: {
       fontFamily: fonts.semiBold,
@@ -1975,14 +2108,14 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: "rgba(126, 230, 198, 0.38)",
     },
     analysisInsightChipText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.caption.fontSize,
-      color: colors.primary,
+      color: "#7EE6C6",
       textTransform: "uppercase",
       letterSpacing: 0.7,
     },
@@ -2022,14 +2155,14 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
       borderRadius: radius.pills,
-      backgroundColor: colors.surfaceElevated,
+      backgroundColor: "rgba(126, 230, 198, 0.1)",
       borderWidth: 1,
-      borderColor: colors.glassStroke,
+      borderColor: "rgba(126, 230, 198, 0.34)",
     },
     projectionBadgeText: {
       fontFamily: fonts.semiBold,
       fontSize: typography.small.fontSize,
-      color: colors.secondary,
+      color: "#7EE6C6",
       letterSpacing: 0.8,
       textTransform: "uppercase",
     },
@@ -2042,7 +2175,7 @@ export default function OnboardingScreen() {
     },
     projectionHighlight: {
       fontFamily: fonts.semiBold,
-      color: colors.primary,
+      color: "#7EE6C6",
     },
     projectionHeroCard: {
       overflow: "hidden",
@@ -2071,7 +2204,7 @@ export default function OnboardingScreen() {
     projectionValueLabel: {
       fontFamily: fonts.semiBold,
       fontSize: typography.bodyLarge.fontSize,
-      color: colors.primary,
+      color: "#7EE6C6",
       textAlign: "center",
     },
     projectionDescription: {
@@ -2091,11 +2224,12 @@ export default function OnboardingScreen() {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       borderRadius: radius.button,
-      backgroundColor: colors.glassFill,
       borderWidth: 1,
-      borderColor: colors.glassStroke,
       alignItems: "center",
       gap: spacing.xs,
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
     },
     projectionStatValue: {
       fontFamily: fonts.semiBold,
@@ -2595,7 +2729,7 @@ export default function OnboardingScreen() {
 
               {/* Value props */}
               <View style={styles.heroValueProps}>
-                {[HERO_VALUE_PROPS.slice(0, 2), HERO_VALUE_PROPS.slice(2)].map(
+                {[HERO_VALUE_PROPS.slice(0, 3), HERO_VALUE_PROPS.slice(3)].map(
                   (row, rowIndex) => (
                     <View
                       key={`hero-value-row-${rowIndex}`}
@@ -2994,7 +3128,7 @@ export default function OnboardingScreen() {
                   <Ionicons
                     name="sparkles-outline"
                     size={14}
-                    color={colors.secondary}
+                    color="#7EE6C6"
                   />
                   <Text style={styles.currentStateBadgeText}>
                     Your pattern so far
@@ -3048,7 +3182,7 @@ export default function OnboardingScreen() {
                         <Ionicons
                           name="alert-circle-outline"
                           size={16}
-                          color={colors.secondary}
+                          color="#FF7AB6"
                         />
                         <Text style={styles.currentStateEmotionText}>
                           {emotion}
@@ -3059,25 +3193,50 @@ export default function OnboardingScreen() {
                 </View>
 
                 <View style={styles.currentStateStatsGrid}>
-                  {currentStateStats.map((item) => (
-                    <View key={item.label} style={styles.currentStateStatCard}>
-                      <View style={styles.currentStateStatIcon}>
-                        <Ionicons
-                          name={item.icon}
-                          size={18}
-                          color={colors.primary}
-                        />
+                  {currentStateStats.map((item, index) => {
+                    const accent =
+                      CURRENT_STATE_STAT_ACCENTS[
+                        index % CURRENT_STATE_STAT_ACCENTS.length
+                      ];
+
+                    return (
+                      <View
+                        key={item.label}
+                        style={[
+                          styles.currentStateStatCard,
+                          {
+                            backgroundColor: accent.surface,
+                            borderColor: accent.glow,
+                            shadowColor: accent.accent,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.currentStateStatIcon,
+                            {
+                              backgroundColor: accent.surface,
+                              borderColor: accent.glow,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={18}
+                            color={accent.accent}
+                          />
+                        </View>
+                        <View style={styles.currentStateStatMeta}>
+                          <Text style={styles.currentStateStatLabel}>
+                            {item.label}
+                          </Text>
+                          <Text style={styles.currentStateStatValue}>
+                            {item.value}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.currentStateStatMeta}>
-                        <Text style={styles.currentStateStatLabel}>
-                          {item.label}
-                        </Text>
-                        <Text style={styles.currentStateStatValue}>
-                          {item.value}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </GlassCard>
 
@@ -3106,12 +3265,16 @@ export default function OnboardingScreen() {
                 </View>
 
                 <View style={styles.currentStateSupportList}>
-                  {gentleWaitSupports.map((item) => (
+                  {gentleWaitSupports.map((item, index) => (
                     <View key={item} style={styles.currentStateSupportRow}>
                       <Ionicons
                         name="checkmark-circle-outline"
                         size={18}
-                        color={colors.primary}
+                        color={
+                          CURRENT_STATE_SUPPORT_ACCENTS[
+                            index % CURRENT_STATE_SUPPORT_ACCENTS.length
+                          ]
+                        }
                         style={{ marginTop: 2 }}
                       />
                       <Text style={styles.currentStateSupportText}>{item}</Text>
@@ -3167,7 +3330,7 @@ export default function OnboardingScreen() {
                       <Ionicons
                         name="pulse-outline"
                         size={14}
-                        color={colors.secondary}
+                        color="#FF7AB6"
                       />
                       <Text style={styles.analysisBadgeText}>
                         Your attention pattern
@@ -3189,8 +3352,8 @@ export default function OnboardingScreen() {
                   >
                     <LinearGradient
                       colors={[
-                        colors.primaryLight,
-                        "rgba(126, 230, 198, 0.12)",
+                        "rgba(255, 122, 182, 0.16)",
+                        "rgba(82, 192, 255, 0.1)",
                         "transparent",
                       ]}
                       start={{ x: 0, y: 0 }}
@@ -3210,8 +3373,22 @@ export default function OnboardingScreen() {
                   </GlassCard>
 
                   <View style={styles.analysisStatsRow}>
-                    <View style={styles.analysisStatCard}>
-                      <Text style={styles.analysisStatValue}>
+                    <View
+                      style={[
+                        styles.analysisStatCard,
+                        {
+                          backgroundColor: ANALYSIS_STAT_ACCENTS[0].surface,
+                          borderColor: ANALYSIS_STAT_ACCENTS[0].glow,
+                          shadowColor: ANALYSIS_STAT_ACCENTS[0].accent,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.analysisStatValue,
+                          { color: ANALYSIS_STAT_ACCENTS[0].accent },
+                        ]}
+                      >
                         +{difference}%
                       </Text>
                       <Text style={styles.analysisStatLabel}>
@@ -3219,8 +3396,22 @@ export default function OnboardingScreen() {
                       </Text>
                     </View>
 
-                    <View style={styles.analysisStatCard}>
-                      <Text style={styles.analysisStatValue}>
+                    <View
+                      style={[
+                        styles.analysisStatCard,
+                        {
+                          backgroundColor: ANALYSIS_STAT_ACCENTS[1].surface,
+                          borderColor: ANALYSIS_STAT_ACCENTS[1].glow,
+                          shadowColor: ANALYSIS_STAT_ACCENTS[1].accent,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.analysisStatValue,
+                          { color: ANALYSIS_STAT_ACCENTS[1].accent },
+                        ]}
+                      >
                         {selectedEmotions.size}/2
                       </Text>
                       <Text style={styles.analysisStatLabel}>
@@ -3251,12 +3442,16 @@ export default function OnboardingScreen() {
                     </View>
 
                     <View style={styles.analysisInsightList}>
-                      {analysisInsights.map((item) => (
+                      {analysisInsights.map((item, index) => (
                         <View key={item} style={styles.analysisInsightRow}>
                           <Ionicons
                             name="checkmark-circle-outline"
                             size={18}
-                            color={colors.primary}
+                            color={
+                              CURRENT_STATE_SUPPORT_ACCENTS[
+                                index % CURRENT_STATE_SUPPORT_ACCENTS.length
+                              ]
+                            }
                             style={{ marginTop: 2 }}
                           />
                           <Text style={styles.analysisInsightText}>{item}</Text>
@@ -3288,7 +3483,7 @@ export default function OnboardingScreen() {
                       <Ionicons
                         name="time-outline"
                         size={14}
-                        color={colors.secondary}
+                        color="#7EE6C6"
                       />
                       <Text style={styles.projectionBadgeText}>
                         Time you can reclaim
@@ -3309,8 +3504,8 @@ export default function OnboardingScreen() {
                   >
                     <LinearGradient
                       colors={[
-                        colors.primaryLight,
-                        "rgba(126, 230, 198, 0.12)",
+                        "rgba(126, 230, 198, 0.16)",
+                        "rgba(244, 211, 94, 0.1)",
                         "transparent",
                       ]}
                       start={{ x: 0, y: 0 }}
@@ -3328,8 +3523,22 @@ export default function OnboardingScreen() {
                   </GlassCard>
 
                   <View style={styles.projectionStatsRow}>
-                    <View style={styles.projectionStatCard}>
-                      <Text style={styles.projectionStatValue}>
+                    <View
+                      style={[
+                        styles.projectionStatCard,
+                        {
+                          backgroundColor: PROJECTION_STAT_ACCENTS[0].surface,
+                          borderColor: PROJECTION_STAT_ACCENTS[0].glow,
+                          shadowColor: PROJECTION_STAT_ACCENTS[0].accent,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.projectionStatValue,
+                          { color: PROJECTION_STAT_ACCENTS[0].accent },
+                        ]}
+                      >
                         {yearsInLifetime}
                       </Text>
                       <Text style={styles.projectionStatLabel}>
@@ -3337,8 +3546,22 @@ export default function OnboardingScreen() {
                       </Text>
                     </View>
 
-                    <View style={styles.projectionStatCard}>
-                      <Text style={styles.projectionStatValue}>
+                    <View
+                      style={[
+                        styles.projectionStatCard,
+                        {
+                          backgroundColor: PROJECTION_STAT_ACCENTS[1].surface,
+                          borderColor: PROJECTION_STAT_ACCENTS[1].glow,
+                          shadowColor: PROJECTION_STAT_ACCENTS[1].accent,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.projectionStatValue,
+                          { color: PROJECTION_STAT_ACCENTS[1].accent },
+                        ]}
+                      >
                         {dailyScreenTime - targetScreenTime}h
                       </Text>
                       <Text style={styles.projectionStatLabel}>
@@ -3355,6 +3578,16 @@ export default function OnboardingScreen() {
             })()}
 
           {step === "time-current" && (
+            (() => {
+              const currentTimeIndex = [2, 3, 4, 5, 6, 7, 8, 9, 10].indexOf(
+                dailyScreenTime
+              );
+              const currentTimeAccent =
+                CURRENT_TIME_OPTION_ACCENTS[
+                  currentTimeIndex >= 0 ? currentTimeIndex : 0
+                ];
+
+              return (
             <>
               <Text style={styles.title}>
                 How much time do you{" "}
@@ -3366,36 +3599,70 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={styles.timePickerContainer}>
-                <Text style={styles.timeValue}>{dailyScreenTime}h</Text>
+                <Text
+                  style={[
+                    styles.timeValue,
+                    { color: currentTimeAccent.accent },
+                  ]}
+                >
+                  {dailyScreenTime}h
+                </Text>
                 <Text style={styles.timeLabel}>per day</Text>
 
                 <View style={styles.timeButtonsRow}>
-                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((hour) => (
-                    <TouchableOpacity
-                      key={hour}
-                      style={[
-                        styles.timeButton,
-                        dailyScreenTime === hour && styles.timeButtonSelected,
-                      ]}
-                      onPress={() => setDailyScreenTime(hour)}
-                    >
-                      <Text
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((hour, index) => {
+                    const accent = CURRENT_TIME_OPTION_ACCENTS[index];
+                    const isSelected = dailyScreenTime === hour;
+
+                    return (
+                      <TouchableOpacity
+                        key={hour}
                         style={[
-                          styles.timeButtonText,
-                          dailyScreenTime === hour &&
-                            styles.timeButtonTextSelected,
+                          styles.timeButton,
+                          {
+                            backgroundColor: isSelected
+                              ? accent.surface
+                              : colors.glassFill,
+                            borderColor: isSelected
+                              ? accent.glow
+                              : colors.glassStroke,
+                            shadowColor: accent.accent,
+                          },
+                          isSelected && styles.timeButtonSelected,
                         ]}
+                        onPress={() => setDailyScreenTime(hour)}
                       >
-                        {hour}h
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.timeButtonText,
+                            isSelected && styles.timeButtonTextSelected,
+                            isSelected && { color: accent.accent },
+                          ]}
+                        >
+                          {hour}h
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             </>
+              );
+            })()
           )}
 
           {step === "time-goal" && (
+            (() => {
+              const goalTimeIndex = [1, 2, 3, 4, 5, 6].indexOf(
+                targetScreenTime
+              );
+              const goalTimeAccent =
+                TIME_OPTION_ACCENTS[
+                  (goalTimeIndex >= 0 ? goalTimeIndex : 0) %
+                    TIME_OPTION_ACCENTS.length
+                ];
+
+              return (
             <>
               <Text style={styles.title}>
                 How much time do you{" "}
@@ -3407,37 +3674,73 @@ export default function OnboardingScreen() {
               </Text>
 
               <View style={styles.timePickerContainer}>
-                <Text style={styles.timeValue}>{targetScreenTime}h</Text>
+                <Text
+                  style={[
+                    styles.timeValue,
+                    { color: goalTimeAccent.accent },
+                  ]}
+                >
+                  {targetScreenTime}h
+                </Text>
                 <Text style={styles.timeLabel}>target per day</Text>
 
                 <View style={styles.timeButtonsRow}>
-                  {[1, 2, 3, 4, 5, 6].map((hour) => (
-                    <TouchableOpacity
-                      key={hour}
-                      style={[
-                        styles.timeButton,
-                        targetScreenTime === hour && styles.timeButtonSelected,
-                      ]}
-                      onPress={() => setTargetScreenTime(hour)}
-                    >
-                      <Text
+                  {[1, 2, 3, 4, 5, 6].map((hour, index) => {
+                    const accent =
+                      TIME_OPTION_ACCENTS[index % TIME_OPTION_ACCENTS.length];
+                    const isSelected = targetScreenTime === hour;
+
+                    return (
+                      <TouchableOpacity
+                        key={hour}
                         style={[
-                          styles.timeButtonText,
-                          targetScreenTime === hour &&
-                            styles.timeButtonTextSelected,
+                          styles.timeButton,
+                          {
+                            backgroundColor: isSelected
+                              ? accent.surface
+                              : colors.glassFill,
+                            borderColor: isSelected
+                              ? accent.glow
+                              : colors.glassStroke,
+                            shadowColor: accent.accent,
+                          },
+                          isSelected && styles.timeButtonSelected,
                         ]}
+                        onPress={() => setTargetScreenTime(hour)}
                       >
-                        {hour}h
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.timeButtonText,
+                            isSelected && styles.timeButtonTextSelected,
+                            isSelected && { color: accent.accent },
+                          ]}
+                        >
+                          {hour}h
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {dailyScreenTime > targetScreenTime && (
-                  <View style={styles.savingsCard}>
+                  <View
+                    style={[
+                      styles.savingsCard,
+                      {
+                        backgroundColor: goalTimeAccent.surface,
+                        borderColor: goalTimeAccent.glow,
+                        shadowColor: goalTimeAccent.accent,
+                      },
+                    ]}
+                  >
                     <Text style={styles.savingsText}>
                       That&apos;s{" "}
-                      <Text style={styles.savingsHighlight}>
+                      <Text
+                        style={[
+                          styles.savingsHighlight,
+                          { color: goalTimeAccent.accent },
+                        ]}
+                      >
                         {dailyScreenTime - targetScreenTime} hours
                       </Text>{" "}
                       of your life back every day!
@@ -3446,6 +3749,8 @@ export default function OnboardingScreen() {
                 )}
               </View>
             </>
+              );
+            })()
           )}
 
           {step === "summary" && (
@@ -3455,7 +3760,7 @@ export default function OnboardingScreen() {
                   <Ionicons
                     name="sparkles-outline"
                     size={14}
-                    color={colors.secondary}
+                    color="#7EE6C6"
                   />
                   <Text style={styles.summaryBadgeText}>Your reset plan</Text>
                 </View>
@@ -3468,8 +3773,8 @@ export default function OnboardingScreen() {
               <GlassCard glowColor="primary" style={styles.summaryHeroCard}>
                 <LinearGradient
                   colors={[
-                    colors.primaryLight,
-                    "rgba(126, 230, 198, 0.12)",
+                    "rgba(126, 230, 198, 0.16)",
+                    "rgba(82, 192, 255, 0.1)",
                     "transparent",
                   ]}
                   start={{ x: 0, y: 0 }}
@@ -3488,13 +3793,37 @@ export default function OnboardingScreen() {
                 </View>
 
                 <View style={styles.summaryGoalsRow}>
-                  {selectedGoalList.slice(0, 3).map((goal) => (
-                    <View key={goal} style={styles.summaryGoalPill}>
-                      <Text style={styles.summaryGoalText}>{goal}</Text>
-                    </View>
-                  ))}
+                  {selectedGoalList.slice(0, 3).map((goal, index) => {
+                    const accent =
+                      SUMMARY_GOAL_ACCENTS[
+                        index % SUMMARY_GOAL_ACCENTS.length
+                      ];
+
+                    return (
+                      <View
+                        key={goal}
+                        style={[
+                          styles.summaryGoalPill,
+                          {
+                            backgroundColor: accent.surface,
+                            borderColor: accent.glow,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.summaryGoalText}>{goal}</Text>
+                      </View>
+                    );
+                  })}
                   {selectedGoalList.length === 0 && (
-                    <View style={styles.summaryGoalPill}>
+                    <View
+                      style={[
+                        styles.summaryGoalPill,
+                        {
+                          backgroundColor: SUMMARY_GOAL_ACCENTS[0].surface,
+                          borderColor: SUMMARY_GOAL_ACCENTS[0].glow,
+                        },
+                      ]}
+                    >
                       <Text style={styles.summaryGoalText}>
                         Reduce screen time
                       </Text>
