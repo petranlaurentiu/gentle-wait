@@ -116,35 +116,21 @@ export default function ExerciseScreen() {
 
   // Video player for exercise demonstrations
   const videoSource = exercise ? getExerciseVideo(exercise.id) : undefined;
-  console.log("[Exercise] Video debug:", {
-    exerciseId: exercise?.id,
-    videoSource,
-    videoSourceType: typeof videoSource,
-    hasExercise: !!exercise,
-  });
 
   const videoPlayer = useVideoPlayer(videoSource ?? null, (player) => {
-    console.log("[Exercise] VideoPlayer setup callback called");
     player.loop = true;
     player.muted = true;
     player.play();
   });
 
-  console.log("[Exercise] VideoPlayer instance:", {
-    hasPlayer: !!videoPlayer,
-    playerStatus: videoPlayer?.status,
-  });
-
   // When exercise changes, update the video source and replay
   useEffect(() => {
-    console.log("[Exercise] Video useEffect triggered:", { videoSource, hasPlayer: !!videoPlayer });
     if (!videoSource || !videoPlayer) return;
     try {
       videoPlayer.replace(videoSource);
       videoPlayer.loop = true;
       videoPlayer.muted = true;
       videoPlayer.play();
-      console.log("[Exercise] Video replaced and playing");
     } catch (e) {
       console.warn("[Exercise] Video replace failed:", e);
     }

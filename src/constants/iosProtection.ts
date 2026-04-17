@@ -144,10 +144,10 @@ export function getIOSSelectionValidationMessage(
   if (!options.hasPremiumAccess) {
     // Free users: categories and web domains require premium
     if ((selection?.categoryCount ?? 0) > 0 || (selection?.webDomainCount ?? 0) > 0) {
-      return `Free plan: pick individual apps only (up to ${options.freeLimit}). Categories and websites are a Pro feature.`;
+      return `Free plan: pick individual apps only (up to ${options.freeLimit}). Upgrade to protect categories and websites too.`;
     }
     if ((selection?.applicationCount ?? 0) > options.freeLimit) {
-      return `Free plan: protect up to ${options.freeLimit} app${options.freeLimit === 1 ? "" : "s"}. GentleWait Pro increases that to ${maxProtectedApps}.`;
+      return `Free plan: protect up to ${options.freeLimit} app${options.freeLimit === 1 ? "" : "s"}. GentleWait Pro lets you protect your full distraction stack.`;
     }
   }
 
@@ -162,7 +162,7 @@ export function getIOSProtectionFootnote(
     return `Pick up to ${IOS_MAX_PROTECTED_APPS} items — apps, categories, or websites.`;
   }
 
-  return `Free plan: up to ${freeLimit} app${freeLimit === 1 ? "" : "s"} (no categories). GentleWait Pro increases that to ${IOS_MAX_PROTECTED_APPS}.`;
+  return `Free plan: up to ${freeLimit} app${freeLimit === 1 ? "" : "s"} with no categories or websites. GentleWait Pro expands that to ${IOS_MAX_PROTECTED_APPS}.`;
 }
 
 export function getIOSSanitizationNotice(

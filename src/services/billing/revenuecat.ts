@@ -26,6 +26,11 @@ export type BillingPackage = {
   introOffer?: string;
 };
 
+type RevenueCatPackage =
+  NonNullable<
+    Awaited<ReturnType<PurchasesModule["getOfferings"]>>["current"]
+  >["availablePackages"][number];
+
 type BillingInitialization = {
   available: boolean;
   configured: boolean;
@@ -119,9 +124,7 @@ function getAvailableOfferingIdentifiers(
   return Object.keys(offerings?.all ?? {});
 }
 
-function mapPackage(
-  pkg: NonNullable<Awaited<ReturnType<PurchasesModule["getOfferings"]>>["current"]>["availablePackages"][number],
-): BillingPackage {
+function mapPackage(pkg: RevenueCatPackage): BillingPackage {
   const introPrice = pkg.product.introPrice;
 
   return {
@@ -135,6 +138,41 @@ function mapPackage(
       introPrice?.priceString && introPrice?.period
         ? `${introPrice.priceString} for ${introPrice.period}`
         : undefined,
+  };
+}
+
+function getPackageSortRank(pkg: BillingPackage) {
+  const value = `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier}`.toLowerCase();
+
+  if (value.includes("annual") || value.includes("year")) return 0;
+  if (value.includes("month")) return 1;
+  if (value.includes("week")) return 2;
+  if (value.includes("life")) return 3;
+
+  return 4;
+}
+
+function isLifetimePackage(pkg: BillingPackage) {
+  const value = `${pkg.packageType} ${pkg.identifier} ${pkg.productIdentifier} ${pkg.title}`.toLowerCase();
+  return value.includes("life");
+}
+
+function filterVisiblePackages(packages: BillingPackage[]) {
+  return packages
+    .filter((pkg) => !isLifetimePackage(pkg))
+    .sort((a, b) => getPackageSortRank(a) - getPackageSortRank(b));
+}
+
+async function getResolvedOfferingAndPackages() {
+  const Purchases = await getPurchasesModule();
+  const offerings = await Purchases?.getOfferings();
+  const offering = resolveOffering(offerings);
+
+  return {
+    Purchases,
+    offerings,
+    offering,
+    packages: offering?.availablePackages ?? [],
   };
 }
 
@@ -226,12 +264,8 @@ export async function getBillingPackages(): Promise<BillingPackage[]> {
     return [];
   }
 
-  const Purchases = await getPurchasesModule();
-  const offerings = await Purchases?.getOfferings();
-  const offering = resolveOffering(offerings);
-  const packages = offering?.availablePackages ?? [];
-
-  return packages.map(mapPackage);
+  const { packages } = await getResolvedOfferingAndPackages();
+  return filterVisiblePackages(packages.map(mapPackage));
 }
 
 export async function restoreBillingPurchases() {
@@ -292,9 +326,7 @@ export async function presentBillingPaywall() {
   }
 
   try {
-    const Purchases = await getPurchasesModule();
-    const offerings = await Purchases?.getOfferings();
-    const offering = resolveOffering(offerings);
+    const { offerings, offering } = await getResolvedOfferingAndPackages();
 
     if (!offering) {
       const availableOfferingIdentifiers =
@@ -352,6 +384,72 @@ export async function presentBillingPaywall() {
       restored: false,
       result: "error",
       error: error?.message || "Unable to present paywall.",
+    };
+  }
+}
+
+export async function purchaseBillingPackage(
+  targetPackage: Pick<BillingPackage, "identifier" | "productIdentifier">,
+) {
+  const init = await initializeBilling();
+  if (!init.configured) {
+    return {
+      success: false,
+      cancelled: false,
+      purchased: false,
+      customerInfo: null,
+      error: "Billing is not configured yet.",
+    };
+  }
+
+  try {
+    const { Purchases, packages } = await getResolvedOfferingAndPackages();
+
+    if (!Purchases) {
+      return {
+        success: false,
+        cancelled: false,
+        purchased: false,
+        customerInfo: null,
+        error: "Billing SDK is unavailable.",
+      };
+    }
+
+    const selectedPackage = packages.find(
+      (pkg) =>
+        pkg.identifier === targetPackage.identifier ||
+        pkg.product.identifier === targetPackage.productIdentifier,
+    );
+
+    if (!selectedPackage) {
+      return {
+        success: false,
+        cancelled: false,
+        purchased: false,
+        customerInfo: null,
+        error: "The selected subscription is not available right now.",
+      };
+    }
+
+    const purchaseResult = await Purchases.purchasePackage(selectedPackage);
+    const customerInfo = purchaseResult.customerInfo ?? null;
+
+    return {
+      success: hasPremiumAccess(customerInfo),
+      cancelled: false,
+      purchased: hasPremiumAccess(customerInfo),
+      customerInfo,
+    };
+  } catch (error: any) {
+    const cancelled =
+      Boolean(error?.userCancelled) || error?.code === "PURCHASE_CANCELLED";
+
+    return {
+      success: false,
+      cancelled,
+      purchased: false,
+      customerInfo: null,
+      error: cancelled ? undefined : error?.message || "Unable to complete purchase.",
     };
   }
 }

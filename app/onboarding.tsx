@@ -626,7 +626,7 @@ export default function OnboardingScreen() {
       ) {
         setValidationMessage(null);
         setUpgradePromptMessage(
-          `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
+          `Free protects ${FREE_PROTECTED_APPS_LIMIT} app. Upgrade when you want to protect the full set of apps that pull you in.\n\n${getUpgradePitch()}`,
         );
         return;
       }
@@ -705,7 +705,7 @@ export default function OnboardingScreen() {
         if (remainingSlots === 0) {
           setValidationMessage(null);
           setUpgradePromptMessage(
-            `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} apps on the free plan.\n\n${getUpgradePitch()}`,
+            `Free protects ${FREE_PROTECTED_APPS_LIMIT} app. Upgrade when you want to protect the full set of apps that pull you in.\n\n${getUpgradePitch()}`,
           );
           return;
         }
@@ -723,7 +723,7 @@ export default function OnboardingScreen() {
           setUpgradePromptMessage(
             `Only ${remainingSlots} more ${
               remainingSlots === 1 ? "app fits" : "apps fit"
-            } on the free plan.\n\n${getUpgradePitch()}`,
+            } on the free plan. Upgrade to protect your full distraction stack.\n\n${getUpgradePitch()}`,
           );
         }
 
@@ -899,8 +899,8 @@ export default function OnboardingScreen() {
       ) {
         setUpgradePromptMessage(
           hasCategories || hasWebDomains
-            ? `Free plan: pick individual apps only (up to ${FREE_PROTECTED_APPS_LIMIT}). Categories and websites are a Pro feature.\n\n${getUpgradePitch()}`
-            : `You can protect up to ${FREE_PROTECTED_APPS_LIMIT} app on the free plan.\n\n${getUpgradePitch()}`,
+            ? `Free plan: pick individual apps only (up to ${FREE_PROTECTED_APPS_LIMIT}). Upgrade to protect categories and websites too.\n\n${getUpgradePitch()}`
+            : `Free protects ${FREE_PROTECTED_APPS_LIMIT} app. Upgrade to protect the full set of apps that pull you in.\n\n${getUpgradePitch()}`,
         );
         return;
       }
@@ -4425,7 +4425,7 @@ export default function OnboardingScreen() {
                   style={{ marginTop: 2 }}
                 />
                 <Text style={styles.upgradePromptTitle}>
-                  Unlock more protected apps and Lumi
+                  Protect your full distraction stack
                 </Text>
               </View>
 
@@ -4467,7 +4467,7 @@ export default function OnboardingScreen() {
                       styles.upgradePromptButtonTextPrimary,
                     ]}
                   >
-                    View Premium
+                    See Pro
                   </Text>
                 </TouchableOpacity>
               </View>

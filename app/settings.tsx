@@ -209,7 +209,7 @@ export default function SettingsScreen() {
     if (hasReachedFreeAppLimit) {
       Alert.alert(
         "Free plan limit",
-        `The free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} protected apps.\n\n${getUpgradePitch()}`,
+        `The free plan supports up to ${FREE_PROTECTED_APPS_LIMIT} protected app.\n\n${getUpgradePitch()}`,
         [
           { text: "Not now", style: "cancel" },
           { text: "View Premium", onPress: () => router.push("/paywall") },
@@ -884,11 +884,11 @@ export default function SettingsScreen() {
                 <AppText variant="caption" color="secondary">
                   {settings.premium
                     ? isIOSFamilyControlsFlow
-                      ? `Protect up to ${IOS_MAX_PROTECTED_APPS} focused iPhone apps and unlock Lumi access.`
-                      : "More protected apps and Lumi access."
+                      ? `Protect up to ${IOS_MAX_PROTECTED_APPS} focused iPhone apps, plus deeper pattern tracking and guidance.`
+                      : "Protect all your high-risk apps, see your patterns, and get guidance when focus slips."
                     : isIOSFamilyControlsFlow
-                      ? `Free includes ${FREE_PROTECTED_APPS_LIMIT} iPhone app and no Lumi.`
-                      : `Free includes ${FREE_PROTECTED_APPS_LIMIT} protected apps and no Lumi.`}
+                      ? `Free includes ${FREE_PROTECTED_APPS_LIMIT} iPhone app and the basic pause flow.`
+                      : `Free includes ${FREE_PROTECTED_APPS_LIMIT} protected app and the basic pause flow.`}
                 </AppText>
               </View>
               <AppText variant="heading" color="primary">{settings.premium ? "Premium" : "Free"}</AppText>
@@ -902,7 +902,7 @@ export default function SettingsScreen() {
                 <View style={styles.settingMain}>
                   <AppText variant="heading">Upgrade to Premium</AppText>
                   <AppText variant="caption" color="secondary">
-                    Unlimited apps, Lumi, and deeper guidance.
+                    Protect all your high-risk apps and see what triggers them.
                   </AppText>
                 </View>
                 <Ionicons name="sparkles-outline" size={20} color={colors.primary} />

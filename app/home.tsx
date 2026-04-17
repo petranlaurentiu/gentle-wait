@@ -757,9 +757,9 @@ export default function HomeScreen() {
                 return;
               }
 
-              Alert.alert("Lumi is Premium", getUpgradePitch(), [
+              Alert.alert("Protect more than one app", getUpgradePitch(), [
                 { text: "Not now", style: "cancel" },
-                { text: "View Premium", onPress: () => router.push("/paywall") },
+                { text: "See Pro", onPress: () => router.push("/paywall") },
               ]);
             }}
             activeOpacity={0.86}

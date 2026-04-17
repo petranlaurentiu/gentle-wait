@@ -905,10 +905,10 @@ export default function InsightsScreen() {
         ) : (
           <GlassCard glowColor="accent" style={styles.premiumCard}>
             <View>
-              <Text style={styles.sectionTitle}>Premium insight layer</Text>
-              <Text style={styles.heroTitleText}>See the patterns behind the numbers</Text>
+              <Text style={styles.sectionTitle}>Upgrade your insight layer</Text>
+              <Text style={styles.heroTitleText}>See which apps and times cost you the most attention</Text>
               <Text style={styles.heroBodyText}>
-                Unlock app breakdowns, stronger trigger analysis, and week-over-week context with GentleWait Pro.
+                GentleWait Pro shows the patterns behind your pauses so you can protect the right apps and notice when you are most vulnerable.
               </Text>
             </View>
 

@@ -557,10 +557,10 @@ export default function AssistantScreen() {
             </View>
 
             <View style={styles.lockedTextGroup}>
-              <Text style={styles.lockedTitle}>Lumi is part of Premium</Text>
+              <Text style={styles.lockedTitle}>Get guidance tied to your pause history</Text>
               <Text style={styles.lockedDescription}>
-                Lumi is included with Premium so GentleWait can keep the core
-                experience free while covering live model costs.
+                GentleWait Pro adds coaching based on your real pauses, goals,
+                and journal history after you protect the apps that pull you in.
               </Text>
             </View>
 
@@ -568,19 +568,19 @@ export default function AssistantScreen() {
               <View style={styles.lockedFeatureRow}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
                 <Text style={styles.lockedFeatureText}>
-                  Personalized coaching based on your pauses, goals, and journal history.
+                  Personalized coaching grounded in the habits you are actually trying to change.
                 </Text>
               </View>
               <View style={styles.lockedFeatureRow}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
                 <Text style={styles.lockedFeatureText}>
-                  More protected apps and richer support when focus slips.
+                  Protect more high-risk apps and get support exactly when focus slips.
                 </Text>
               </View>
             </View>
 
             <Text style={styles.lockedFooter}>
-              Upgrade to Premium for the full experience.
+              Upgrade when you want support that reflects your real patterns.
             </Text>
           </View>
 
