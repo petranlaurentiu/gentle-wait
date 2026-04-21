@@ -693,8 +693,8 @@ export async function unlockPendingAppAndStartCooldown(
     callbackName: "intervalDidEnd",
     actions: [
       {
-        type: "removeSelectionByIdFromWhitelistAndUpdateBlock" as any,
-        familyActivitySelectionId: cooldownSelectionKey,
+        type: "removeSelectionFromWhitelist" as const,
+        familyActivitySelection: { activitySelectionId: cooldownSelectionKey },
       },
       {
         type: "stopMonitoring" as const,
