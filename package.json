@@ -1,7 +1,7 @@
 {
   "name": "gentle-wait",
   "main": "expo-router/entry",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "postinstall": "patch-package",
     "start": "NODE_OPTIONS='--no-warnings' expo start",

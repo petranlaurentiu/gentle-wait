@@ -9,7 +9,7 @@ export default {
   expo: {
     name: "GentleWait",
     slug: "gentle-wait",
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "portrait",
     icon: "./assets/images/main_logo-app.png",
     scheme: "gentlewait",
@@ -26,14 +26,14 @@ export default {
       entitlements: {
         "com.apple.security.application-groups": [iosAppGroup],
       },
-      buildNumber: "3",
+      buildNumber: "4",
     },
     android: {
       icon: "./assets/images/main_logo-app.png",
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: "com.petran_laurentiu.gentlewait",
-      versionCode: 3,
+      versionCode: 4,
     },
     web: {
       output: "server",
